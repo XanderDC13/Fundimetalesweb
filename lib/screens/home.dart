@@ -45,6 +45,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double logoSize = screenWidth < 600 ? 200 : 300;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -60,21 +63,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
 
+          // Logo con animación y tamaño adaptable
           Center(
-            child: SlideTransition(
-              position: _imageAnimation,
-              child: Transform(
-                alignment: Alignment.center,
-                transform:
-                    Matrix4.identity()
-                      ..setEntry(3, 2, 0.001)
-                      ..rotateX(0.1)
-                      ..rotateY(0.1),
-                child: Image.asset(
-                  'lib/assets/logo.png',
-                  width: 400,
-                  height: 400,
-                  fit: BoxFit.contain,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: SlideTransition(
+                position: _imageAnimation,
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform:
+                      Matrix4.identity()
+                        ..setEntry(3, 2, 0.001)
+                        ..rotateX(0.1)
+                        ..rotateY(0.1),
+                  child: Image.asset(
+                    'lib/assets/logo.png',
+                    width: logoSize,
+                    height: logoSize,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             ),
