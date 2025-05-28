@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "726525590326",
+    "project_id": "fundimetwork",
+    "storage_bucket": "fundimetwork.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:726525590326:android:d095da6e20b86367435197",
+        "android_client_info": {
+          "package_name": "com.example.basefundi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA4iU5MUlHaif-KFMZZHA6FPxmC2nk9vp4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:726525590326:android:268205fb93f58f09435197",
+        "android_client_info": {
+          "package_name": "com.example.fundimetales"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA4iU5MUlHaif-KFMZZHA6FPxmC2nk9vp4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
