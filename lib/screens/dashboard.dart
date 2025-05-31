@@ -16,45 +16,41 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   String productosFiltro = 'Diario';
-  String inventarioFiltro = 'Diario';
   List<List<String>> productosMasVendidos = [];
   List<List<String>> inventarioBajo = [];
   String nombreUsuario = '';
+
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _cargarNombreUsuario();
     _cargarInventarioBajo();
+    _cargarProductosMasVendidos();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _cargarNombreUsuario() async {
     final user = FirebaseAuth.instance.currentUser;
 
-    if (user == null) {
-      print('No hay usuario autenticado');
-      return;
-    }
+    if (user == null) return;
 
-    print('UID actual: ${user.uid}');
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('usuarios_activos')
+            .doc(user.uid)
+            .get();
 
-    try {
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('usuarios_activos')
-              .doc(user.uid)
-              .get();
-
-      if (doc.exists) {
-        print("Documento encontrado: ${doc.data()}");
-        setState(() {
-          nombreUsuario = doc.data()?['nombre'] ?? 'Usuario';
-        });
-      } else {
-        print("Documento no encontrado para UID: ${user.uid}");
-      }
-    } catch (e) {
-      print('Error cargando nombre de usuario: $e');
+    if (doc.exists) {
+      setState(() {
+        nombreUsuario = doc.data()?['nombre'] ?? 'Usuario';
+      });
     }
   }
 
@@ -80,7 +76,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final List<List<String>> inventario = [
-      ['Producto', 'Cantidad Disponible'],
+      ['Producto', 'Cant Disponible'],
     ];
 
     for (var doc in inventarioSnapshot.docs) {
@@ -97,8 +93,71 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     }
 
+    inventario.sort((a, b) {
+      if (a == inventario[0]) return -1;
+      if (b == inventario[0]) return 1;
+      return int.parse(a[1]).compareTo(int.parse(b[1]));
+    });
+
     setState(() {
       inventarioBajo = inventario;
+    });
+  }
+
+  Future<void> _cargarProductosMasVendidos() async {
+    final now = DateTime.now();
+    late DateTime startDate;
+
+    if (productosFiltro == 'Diario') {
+      startDate = DateTime(now.year, now.month, now.day);
+    } else if (productosFiltro == 'Mensual') {
+      startDate = DateTime(now.year, now.month, 1);
+    } else {
+      startDate = DateTime(now.year, 1, 1);
+    }
+
+    final ventasSnapshot =
+        await FirebaseFirestore.instance
+            .collection('ventas')
+            .where('fecha', isGreaterThanOrEqualTo: startDate)
+            .get();
+
+    final Map<String, int> productosVendidos = {};
+    final Map<String, String> nombresProductos = {};
+
+    for (var venta in ventasSnapshot.docs) {
+      final productos = List<Map<String, dynamic>>.from(venta['productos']);
+      for (var producto in productos) {
+        final codigo = producto['codigo'];
+        final cantidad = producto['cantidad'];
+        final nombre = producto['nombre'];
+
+        if (codigo != null && cantidad != null) {
+          productosVendidos[codigo] =
+              (productosVendidos[codigo] ?? 0) + (cantidad as int);
+          nombresProductos[codigo] = nombre ?? 'Sin nombre';
+        }
+      }
+    }
+
+    final topProductos =
+        productosVendidos.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+
+    final List<List<String>> top3 = [
+      ['Producto', 'Cant Vendida'],
+    ];
+
+    for (var i = 0; i < topProductos.length && i < 3; i++) {
+      final codigo = topProductos[i].key;
+      final cantidad = topProductos[i].value;
+      final nombre = nombresProductos[codigo] ?? 'Sin nombre';
+
+      top3.add([nombre, cantidad.toString()]);
+    }
+
+    setState(() {
+      productosMasVendidos = top3;
     });
   }
 
@@ -127,19 +186,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _buildSectionCard(
                 title: 'PRODUCTOS MÁS VENDIDOS',
                 filterValue: productosFiltro,
-                onFilterChanged:
-                    (value) => setState(() => productosFiltro = value),
+                onFilterChanged: (value) {
+                  setState(() => productosFiltro = value);
+                  _cargarProductosMasVendidos();
+                },
                 child:
                     productosMasVendidos.isEmpty
                         ? const Text('Sin datos')
-                        : _buildStyledTable(productosMasVendidos),
+                        : _buildStyledTable(
+                          productosMasVendidos,
+                          scrollable: false,
+                        ),
               ),
               const SizedBox(height: 16),
-              _buildSectionCard(
+              _buildSimpleSectionCard(
                 title: 'INVENTARIO BAJO',
-                filterValue: inventarioFiltro,
-                onFilterChanged:
-                    (value) => setState(() => inventarioFiltro = value),
                 child:
                     inventarioBajo.isEmpty
                         ? const Text('Sin datos')
@@ -260,31 +321,123 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildStyledTable(List<List<String>> rows) {
+  Widget _buildSimpleSectionCard({
+    required String title,
+    required Widget child,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E40AF),
+              ),
+            ),
+            const SizedBox(height: 12),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStyledTable(List<List<String>> rows, {bool scrollable = true}) {
+    final header = rows[0];
+    final dataRows = rows.length > 1 ? rows.sublist(1) : [];
+
+    return Column(
+      children: [
+        Table(
+          columnWidths: const {0: FlexColumnWidth(2), 1: FlexColumnWidth(1)},
+          border: TableBorder(
+            bottom: BorderSide(color: Colors.grey.shade400, width: 1),
+          ),
+          children: [
+            TableRow(
+              children:
+                  header
+                      .map(
+                        (cell) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            cell,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        if (scrollable)
+          SizedBox(
+            height: 100,
+            child: Scrollbar(
+              thumbVisibility: true,
+              controller: _scrollController,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                child: _buildTableBody(dataRows.cast<List<String>>()),
+              ),
+            ),
+          )
+        else
+          _buildTableBody(dataRows.cast<List<String>>()),
+      ],
+    );
+  }
+
+  Widget _buildTableBody(List<List<String>> dataRows) {
     return Table(
-      columnWidths: const {0: FlexColumnWidth(1), 1: FlexColumnWidth(2)},
+      columnWidths: const {0: FlexColumnWidth(2), 1: FlexColumnWidth(1)},
       border: TableBorder(
         horizontalInside: BorderSide(color: Colors.grey.shade300, width: 1),
       ),
-      children: List.generate(rows.length, (index) {
-        final isHeader = index == 0;
-        final style = TextStyle(
-          fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
-          fontSize: 14,
-          color: isHeader ? Colors.black87 : Colors.black54,
-        );
-        return TableRow(
-          children:
-              rows[index]
-                  .map(
-                    (cell) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(cell, style: style),
-                    ),
-                  )
-                  .toList(),
-        );
-      }),
+      children:
+          dataRows
+              .map(
+                (row) => TableRow(
+                  children:
+                      row
+                          .map(
+                            (cell) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Text(
+                                cell,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                ),
+              )
+              .toList(),
     );
   }
 
@@ -336,7 +489,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ],
             ),
-            child: Icon(icon, color: Color(0xFF1E3A8A), size: 30),
+            child: Icon(icon, color: const Color(0xFF1E3A8A), size: 30),
           ),
           const SizedBox(height: 8),
           Text(

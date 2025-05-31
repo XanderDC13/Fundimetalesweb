@@ -205,7 +205,7 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
                       crossAxisCount: 3,
                       crossAxisSpacing: 8,
                       mainAxisSpacing: 8,
-                      childAspectRatio: 0.75,
+                      childAspectRatio: 0.6,
                       children:
                           filtered
                               .map((data) => _buildProductoCard(data, context))
@@ -249,6 +249,7 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
                 codigo: data['codigo'],
                 nombre: data['nombre'],
                 precio: data['precio'],
+                disponibles: data['cantidad'],
               );
 
               Provider.of<CarritoController>(

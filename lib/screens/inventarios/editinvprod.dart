@@ -18,8 +18,8 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
   @override
   void initState() {
     super.initState();
-    _fundicionController.text = '0';
-    _pinturaController.text = '0';
+    _fundicionController.text = '';
+    _pinturaController.text = '';
     _fundicionController.addListener(_calcularGeneral);
     _pinturaController.addListener(_calcularGeneral);
   }
@@ -189,10 +189,10 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      icon: const Icon(Icons.save),
+                      icon: const Icon(Icons.save, color: Colors.white),
                       label: const Text(
                         'Guardar',
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                       onPressed: () async {
                         await _guardarDatos();

@@ -158,13 +158,19 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                                                           Icons
                                                               .add_circle_outline,
                                                         ),
-                                                        onPressed: () {
-                                                          carrito.actualizarCantidad(
-                                                            producto.codigo,
-                                                            producto.cantidad +
-                                                                1,
-                                                          );
-                                                        },
+                                                        onPressed:
+                                                            producto.cantidad <
+                                                                    producto
+                                                                        .disponibles
+                                                                ? () {
+                                                                  carrito.actualizarCantidad(
+                                                                    producto
+                                                                        .codigo,
+                                                                    producto.cantidad +
+                                                                        1,
+                                                                  );
+                                                                }
+                                                                : null,
                                                       ),
                                                     ],
                                                   ),
