@@ -21,6 +21,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
   late TextEditingController _clienteController;
   DateTime _fecha = DateTime.now();
   List<Map<String, dynamic>> _productos = [];
+  Map<String, int> _disponibles = {};
 
   @override
   void initState() {
@@ -33,18 +34,65 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
     _productos = List<Map<String, dynamic>>.from(
       widget.datosVenta['productos'] ?? [],
     );
+    _cargarDisponibles();
   }
 
-  @override
-  void dispose() {
-    _clienteController.dispose();
-    super.dispose();
+  Future<void> _cargarDisponibles() async {
+    final historialSnapshot =
+        await FirebaseFirestore.instance
+            .collection('historial_inventario_general')
+            .orderBy('fecha_actualizacion', descending: true)
+            .get();
+
+    final ventasSnapshot =
+        await FirebaseFirestore.instance.collection('ventas').get();
+
+    final ventasPorProducto = <String, int>{};
+    for (var venta in ventasSnapshot.docs) {
+      // Evitar sumar la venta que se está editando
+      if (venta.id == widget.ventaId) continue;
+
+      final productosVenta = List<Map<String, dynamic>>.from(
+        venta['productos'] ?? [],
+      );
+      for (var producto in productosVenta) {
+        final codigo = producto['codigo'];
+        final cantidad = (producto['cantidad'] ?? 0) as int;
+        ventasPorProducto[codigo] = (ventasPorProducto[codigo] ?? 0) + cantidad;
+      }
+    }
+
+    final disponibles = <String, int>{};
+
+    for (var doc in historialSnapshot.docs) {
+      final data = doc.data();
+      final codigo = (data['codigo'] ?? '').toString();
+      final cantidad = (data['cantidad'] ?? 0) as int;
+      final tipo = (data['tipo'] ?? 'entrada').toString();
+      final ajuste = tipo == 'salida' ? -cantidad : cantidad;
+
+      disponibles[codigo] = (disponibles[codigo] ?? 0) + ajuste;
+    }
+
+    // Restar ventas
+    ventasPorProducto.forEach((codigo, vendidos) {
+      disponibles[codigo] = (disponibles[codigo] ?? 0) - vendidos;
+    });
+
+    // Sumar lo que ya está en esta venta (para no bloquear los productos que el usuario ya tiene asignados)
+
+    setState(() {
+      _disponibles = disponibles;
+    });
   }
 
   double _calcularTotal() {
     return _productos.fold(0.0, (suma, prod) {
-      final precio = prod['precio'] ?? 0.0;
+      final codigo = prod['codigo'];
+      final disponibles = _disponibles[codigo] ?? 0;
       final cantidad = prod['cantidad'] ?? 1;
+      if (cantidad > disponibles) return suma;
+      final precio = prod['precio'] ?? 0.0;
       return suma + (precio * cantidad);
     });
   }
@@ -53,7 +101,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
     final snapshot =
         await FirebaseFirestore.instance.collection('inventario_general').get();
 
-    final productosDisponibles =
+    List<Map<String, dynamic>> productosDisponibles =
         snapshot.docs.map((doc) {
           final data = doc.data();
           return {
@@ -64,61 +112,133 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
           };
         }).toList();
 
+    String searchTerm = '';
+
     if (!context.mounted) return;
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Selecciona un Producto'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: productosDisponibles.length,
-              itemBuilder: (context, index) {
-                final producto = productosDisponibles[index];
-                final yaExiste = _productos.any(
-                  (p) => p['nombre'] == producto['nombre'],
-                );
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final filtrados =
+                productosDisponibles
+                    .where(
+                      (p) => p['nombre'].toLowerCase().contains(
+                        searchTerm.toLowerCase(),
+                      ),
+                    )
+                    .toList();
 
-                return ListTile(
-                  title: Text(producto['nombre']),
-                  subtitle: Text('\$${producto['precio'].toStringAsFixed(2)}'),
-                  trailing:
-                      yaExiste
-                          ? const Icon(Icons.check, color: Colors.grey)
-                          : null,
-                  onTap:
-                      yaExiste
-                          ? null
-                          : () {
-                            setState(() {
-                              _productos.add({
-                                'nombre': producto['nombre'],
-                                'precio': producto['precio'],
-                                'cantidad': 1,
-                                'codigo': producto['codigo'],
-                              });
-                            });
-                            Navigator.pop(context);
-                          },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-          ],
+            return AlertDialog(
+              title: const Text('Selecciona un Producto'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      decoration: const InputDecoration(
+                        hintText: 'Buscar producto...',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        setState(() => searchTerm = value);
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: filtrados.length,
+                        itemBuilder: (context, index) {
+                          final producto = filtrados[index];
+                          final yaExiste = _productos.any(
+                            (p) => p['codigo'] == producto['codigo'],
+                          );
+
+                          return Container(
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black12,
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: ListTile(
+                              title: Text(producto['nombre']),
+                              subtitle: Text(
+                                'Código: ${producto['codigo']} • \$${producto['precio'].toStringAsFixed(2)}',
+                              ),
+                              trailing:
+                                  yaExiste
+                                      ? const Icon(
+                                        Icons.check,
+                                        color: Colors.grey,
+                                      )
+                                      : const Icon(
+                                        Icons.add_circle_outline,
+                                        color: Color(0xFF1E40AF),
+                                      ),
+                              onTap:
+                                  yaExiste
+                                      ? null
+                                      : () {
+                                        setState(() {
+                                          _productos.add({
+                                            'nombre': producto['nombre'],
+                                            'precio': producto['precio'],
+                                            'cantidad': 1,
+                                            'codigo': producto['codigo'],
+                                          });
+                                        });
+                                        Navigator.pop(context);
+                                        _cargarDisponibles();
+                                      },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
 
   void _guardarCambios() async {
+    for (var producto in _productos) {
+      final codigo = producto['codigo'];
+      final cantidad = producto['cantidad'] ?? 0;
+      final disponible = _disponibles[codigo] ?? 0;
+      if (cantidad > disponible) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Cantidad de "${producto['nombre']}" excede los disponibles',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
     if (_formKey.currentState?.validate() ?? false) {
       await FirebaseFirestore.instance
           .collection('ventas')
@@ -129,7 +249,6 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
             'productos': _productos,
             'total': _calcularTotal(),
           });
-
       Navigator.pop(context);
     }
   }
@@ -144,7 +263,6 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
           child: ListView(
             padding: const EdgeInsets.all(0),
             children: [
-              // Encabezado personalizado con texto centrado y sin flecha
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
@@ -236,62 +354,82 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                     ..._productos.asMap().entries.map((entry) {
                       final index = entry.key;
                       final producto = entry.value;
+                      final codigo = producto['codigo'];
+                      final disponibles = _disponibles[codigo] ?? 0;
 
-                      final nombreController = TextEditingController(
-                        text: producto['nombre'],
-                      );
-                      final precioController = TextEditingController(
-                        text: producto['precio'].toString(),
-                      );
-                      final cantidadController = TextEditingController(
-                        text: producto['cantidad'].toString(),
-                      );
-
-                      return Card(
-                        color: Colors.white,
-                        margin: const EdgeInsets.symmetric(vertical: 6),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      return Container(
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 6,
+                              offset: Offset(0, 3),
+                            ),
+                          ],
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(16),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              TextFormField(
-                                controller: nombreController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Nombre',
-                                ),
-                                onChanged:
-                                    (value) =>
-                                        _productos[index]['nombre'] = value,
-                                validator:
-                                    (value) =>
-                                        value == null || value.isEmpty
-                                            ? 'Requerido'
-                                            : null,
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      producto['nombre'],
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF1E3A8A),
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _productos.removeAt(index);
+                                      });
+                                      _cargarDisponibles();
+                                    },
+                                  ),
+                                ],
                               ),
-                              TextFormField(
-                                initialValue: producto['codigo'] ?? '',
-                                decoration: const InputDecoration(
-                                  labelText: 'Código',
+                              const SizedBox(height: 6),
+                              Text(
+                                'Código: $codigo',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
                                 ),
-                                readOnly: true,
                               ),
-
                               const SizedBox(height: 8),
                               Row(
                                 children: [
                                   Expanded(
                                     child: TextFormField(
-                                      controller: precioController,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Precio',
-                                      ),
+                                      initialValue:
+                                          producto['precio'].toString(),
                                       keyboardType:
                                           const TextInputType.numberWithOptions(
                                             decimal: true,
                                           ),
+                                      decoration: InputDecoration(
+                                        labelText: 'Precio',
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        filled: true,
+                                        fillColor: const Color(0xFFF1F5FF),
+                                      ),
                                       onChanged:
                                           (value) =>
                                               _productos[index]['precio'] =
@@ -306,39 +444,57 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  Expanded(
-                                    child: TextFormField(
-                                      controller: cantidadController,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Cantidad',
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: Colors.grey.shade300,
                                       ),
-                                      keyboardType: TextInputType.number,
-                                      onChanged:
-                                          (value) =>
-                                              _productos[index]['cantidad'] =
-                                                  int.tryParse(value) ?? 1,
-                                      validator:
-                                          (value) =>
-                                              value == null ||
-                                                      int.tryParse(value) ==
-                                                          null
-                                                  ? 'Inválido'
+                                      borderRadius: BorderRadius.circular(12),
+                                      color: const Color(0xFFF9FAFB),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.remove),
+                                          onPressed:
+                                              producto['cantidad'] > 1
+                                                  ? () {
+                                                    setState(() {
+                                                      _productos[index]['cantidad']--;
+                                                    });
+                                                  }
                                                   : null,
+                                        ),
+                                        Text(
+                                          '${producto['cantidad']}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.add),
+                                          onPressed:
+                                              producto['cantidad'] < disponibles
+                                                  ? () {
+                                                    setState(() {
+                                                      _productos[index]['cantidad']++;
+                                                    });
+                                                  }
+                                                  : null,
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                  IconButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _productos.removeAt(index);
-                                      });
-                                    },
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      color: Colors.red,
-                                    ),
-                                    tooltip: 'Eliminar producto',
                                   ),
                                 ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Disponibles: $disponibles',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey,
+                                  fontStyle: FontStyle.italic,
+                                ),
                               ),
                             ],
                           ),

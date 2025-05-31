@@ -55,19 +55,72 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
           context: context,
           builder:
               (context) => AlertDialog(
-                title: const Text('Eliminar producto'),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                backgroundColor: Colors.white,
+                contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+                title: Row(
+                  children: const [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.red,
+                      size: 30,
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Eliminar producto',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 content: const Text(
-                  '¿Estás seguro de eliminar este producto? Esto eliminará todos los registros en Fundición, Pintura y General.',
+                  '¿Estás seguro de eliminar este producto? Se eliminarán todos los registros en Fundición, Pintura y General.',
+                  style: TextStyle(fontSize: 16),
+                ),
+                actionsPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
                 actions: [
                   TextButton(
-                    child: const Text('Cancelar'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                    ),
+                    child: const Text(
+                      'Cancelar',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
                     onPressed: () => Navigator.of(context).pop(false),
                   ),
-                  TextButton(
-                    child: const Text(
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                    ),
+                    icon: const Icon(
+                      Icons.delete_forever,
+                      size: 20,
+                      color: Colors.white,
+                    ),
+                    label: const Text(
                       'Eliminar',
-                      style: TextStyle(color: Colors.red),
+                      style: TextStyle(color: Colors.white, fontSize: 16),
                     ),
                     onPressed: () => Navigator.of(context).pop(true),
                   ),

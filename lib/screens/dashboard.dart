@@ -14,7 +14,8 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with WidgetsBindingObserver {
   String productosFiltro = 'Diario';
   List<List<String>> productosMasVendidos = [];
   List<List<String>> inventarioBajo = [];
@@ -25,6 +26,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _cargarNombreUsuario();
     _cargarInventarioBajo();
     _cargarProductosMasVendidos();
@@ -32,8 +34,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _cargarInventarioBajo();
+      _cargarProductosMasVendidos();
+    }
   }
 
   Future<void> _cargarNombreUsuario() async {
@@ -162,15 +173,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _navegarConFade(BuildContext context, Widget pantalla) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 150),
-      ),
-    );
+    Navigator.of(context)
+        .push(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => pantalla,
+            transitionsBuilder: (
+              context,
+              animation,
+              secondaryAnimation,
+              child,
+            ) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 150),
+          ),
+        )
+        .then((_) {
+          _cargarInventarioBajo();
+          _cargarProductosMasVendidos();
+        });
   }
 
   @override
