@@ -93,8 +93,9 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFD6EAF8),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Colors.blue.shade800,
+        backgroundColor: const Color(0xFF4682B4),
         icon: const Icon(Icons.shopping_cart, color: Colors.white),
         label: const Text('Ver Carrito', style: TextStyle(color: Colors.white)),
         onPressed: () {
@@ -111,7 +112,7 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+                  colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
@@ -126,7 +127,7 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
                 child: Text(
                   'Realizar Venta',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Color.fromARGB(255, 255, 255, 255),
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
@@ -222,49 +223,109 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
   }
 
   Widget _buildProductoCard(Map<String, dynamic> data, BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Icon(Icons.inventory_2, size: 40, color: Colors.grey),
-          Text(
-            '\$ ${data['precio']}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Text(data['nombre'], textAlign: TextAlign.center, maxLines: 2),
-          Text(
-            '${data['cantidad']} disponibles',
-            style: const TextStyle(color: Colors.blue),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add_shopping_cart),
-            onPressed: () {
-              final producto = ProductoEnCarrito(
-                codigo: data['codigo'],
-                nombre: data['nombre'],
-                precio: data['precio'],
-                disponibles: data['cantidad'],
-              );
+    return GestureDetector(
+      onTap: () {
+        final producto = ProductoEnCarrito(
+          codigo: data['codigo'],
+          nombre: data['nombre'],
+          precio: data['precio'],
+          disponibles: data['cantidad'],
+        );
 
-              Provider.of<CarritoController>(
-                context,
-                listen: false,
-              ).agregarProducto(producto);
+        Provider.of<CarritoController>(
+          context,
+          listen: false,
+        ).agregarProducto(producto);
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${data['nombre']} agregado al carrito'),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${data['nombre']} agregado al carrito')),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.shopping_bag_rounded,
+              size: 40,
+              color: Color(0xFF2ECC71),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              data['nombre'],
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Color(0xFF2C3E50),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '\$ ${data['precio'].toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF2C3E50),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${data['cantidad']} disponibles',
+              style: const TextStyle(fontSize: 13, color: Color(0xFFB0BEC5)),
+            ),
+            const Spacer(),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4682B4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
                 ),
-              );
-            },
-          ),
-        ],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 0,
+              ),
+              icon: const Icon(
+                Icons.add_shopping_cart,
+                color: Colors.white,
+                size: 18,
+              ),
+              label: const Text(
+                'Agregar',
+                style: TextStyle(color: Colors.white, fontSize: 13),
+              ),
+              onPressed: () {
+                final producto = ProductoEnCarrito(
+                  codigo: data['codigo'],
+                  nombre: data['nombre'],
+                  precio: data['precio'],
+                  disponibles: data['cantidad'],
+                );
+
+                Provider.of<CarritoController>(
+                  context,
+                  listen: false,
+                ).agregarProducto(producto);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${data['nombre']} agregado al carrito'),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

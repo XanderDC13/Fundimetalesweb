@@ -36,7 +36,7 @@ class _VentasScreenState extends State<VentasScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: SafeArea(
@@ -49,47 +49,26 @@ class _VentasScreenState extends State<VentasScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: ListView(
                     children: [
-                      const SizedBox(height: 16),
-                      TarjetaAccion(
-                        icono: Icons.edit,
+                      const SizedBox(height: 12),
+                      _buildBoton(
+                        icono: Icons.receipt_long,
                         titulo: 'Ventas Totales',
-                        valor: '',
-                        onTap: () {
-                          navigateWithTransition(
-                            context: context,
-                            destination: const VentasTotalesScreen(),
-                            transition: TransitionType.fade,
-                            replace: false,
-                          );
-                        },
+                        subtitulo: 'Historial de ventas realizadas',
+                        destino: const VentasTotalesScreen(),
                       ),
-                      const SizedBox(height: 16),
-                      TarjetaAccion(
-                        icono: Icons.edit,
+                      const SizedBox(height: 12),
+                      _buildBoton(
+                        icono: Icons.edit_note,
                         titulo: 'Modificar Ventas',
-                        valor: '',
-                        onTap: () {
-                          navigateWithTransition(
-                            context: context,
-                            destination: const ModificarVentasScreen(),
-                            transition: TransitionType.fade,
-                            replace: false,
-                          );
-                        },
+                        subtitulo: 'Editar ventas registradas',
+                        destino: const ModificarVentasScreen(),
                       ),
-                      const SizedBox(height: 16),
-                      TarjetaAccion(
+                      const SizedBox(height: 12),
+                      _buildBoton(
                         icono: Icons.shopping_cart,
                         titulo: 'Realizar Venta',
-                        valor: '',
-                        onTap: () {
-                          navigateWithTransition(
-                            context: context,
-                            destination: const VentasDetalleScreen(),
-                            transition: TransitionType.fade,
-                            replace: false,
-                          );
-                        },
+                        subtitulo: 'Registrar nueva venta',
+                        destino: const VentasDetalleScreen(),
                       ),
                     ],
                   ),
@@ -102,12 +81,56 @@ class _VentasScreenState extends State<VentasScreen>
     );
   }
 
+  Widget _buildBoton({
+    required IconData icono,
+    required String titulo,
+    required String subtitulo,
+    required Widget destino,
+  }) {
+    return InkWell(
+      onTap: () {
+        navigateWithTransition(
+          context: context,
+          destination: destino,
+          transition: TransitionType.fade,
+          replace: false,
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Card(
+        color: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 12,
+          ),
+          leading: Icon(icono, color: const Color(0xFF2C3E50), size: 30),
+          title: Text(
+            titulo,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C3E50),
+              fontSize: 18,
+            ),
+          ),
+          subtitle: Text(
+            subtitulo,
+            style: const TextStyle(color: Color(0xFFB0BEC5)),
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+          colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -125,84 +148,6 @@ class _VentasScreenState extends State<VentasScreen>
             fontSize: 22,
             fontWeight: FontWeight.bold,
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class TarjetaAccion extends StatelessWidget {
-  final IconData icono;
-  final String titulo;
-  final String valor;
-  final VoidCallback? onTap;
-
-  const TarjetaAccion({
-    super.key,
-    required this.icono,
-    required this.titulo,
-    required this.valor,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(2, 4),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
-                ),
-              ),
-              child: Icon(icono, color: Colors.white, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    titulo,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E3A8A),
-                    ),
-                  ),
-                  if (valor.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      valor,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E3A8A),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );

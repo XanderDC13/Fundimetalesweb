@@ -7,57 +7,27 @@ class SettingsScreen extends StatelessWidget {
 
   void _cerrarSesion(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
-    Navigator.of(
-      context,
-    ).pushReplacementNamed('/login'); // Cambia la ruta según tu app
+    Navigator.of(context).pushReplacementNamed('/login');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: SafeArea(
         child: Column(
           children: [
-            // Encabezado
-            Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    'Configuración',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Lista de configuraciones
+            _buildHeader(),
+            const SizedBox(height: 20),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
                   const SectionTitle(title: 'Perfil'),
-                  SettingsTile(
+                  _buildBoton(
                     icon: Icons.person,
-                    title: 'Editar perfil',
+                    titulo: 'Editar perfil',
+                    subtitulo: 'Cambiar datos de usuario',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -67,32 +37,34 @@ class SettingsScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                   const SectionTitle(title: 'Soporte'),
-                  SettingsTile(
+                  _buildBoton(
                     icon: Icons.help_outline,
-                    title: 'Centro de ayuda',
+                    titulo: 'Centro de ayuda',
+                    subtitulo: 'Consulta preguntas frecuentes',
                     onTap: () {},
                   ),
-                  SettingsTile(
+                  const SizedBox(height: 12),
+                  _buildBoton(
                     icon: Icons.feedback,
-                    title: 'Enviar feedback',
+                    titulo: 'Enviar feedback',
+                    subtitulo: 'Opinión o sugerencias',
                     onTap: () {},
                   ),
-                  SettingsTile(
+                  const SizedBox(height: 12),
+                  _buildBoton(
                     icon: Icons.info_outline,
-                    title: 'Versión de la app',
-                    trailing: const Text(
-                      '1.0.0',
-                      style: TextStyle(color: Colors.black54),
-                    ),
+                    titulo: 'Versión de la app',
+                    subtitulo: '1.0.0',
                     onTap: () {},
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 24),
                   const SectionTitle(title: 'Cuenta'),
-                  SettingsTile(
+                  _buildBoton(
                     icon: Icons.logout,
-                    title: 'Cerrar sesión',
+                    titulo: 'Cerrar sesión',
+                    subtitulo: 'Salir de la aplicación',
                     onTap: () => _cerrarSesion(context),
                   ),
                 ],
@@ -103,10 +75,74 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildHeader() {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: const Center(
+        child: Text(
+          'Configuración',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBoton({
+    required IconData icon,
+    required String titulo,
+    required String subtitulo,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Card(
+        color: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 12,
+          ),
+          leading: Icon(icon, color: Color(0xFF2C3E50)),
+          title: Text(
+            titulo,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C3E50),
+              fontSize: 18,
+            ),
+          ),
+          subtitle: Text(
+            subtitulo,
+            style: const TextStyle(color: Color(0xFFB0BEC5)),
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey),
+        ),
+      ),
+    );
+  }
 }
 
-// ---------- Widgets reutilizables ----------
-
+// ---------- Reusable section title ----------
 class SectionTitle extends StatelessWidget {
   final String title;
 
@@ -121,57 +157,8 @@ class SectionTitle extends StatelessWidget {
         style: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF1E3A8A),
+          color: Color(0xFF2C3E50),
         ),
-      ),
-    );
-  }
-}
-
-class SettingsTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-  final Widget? trailing;
-
-  const SettingsTile({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.onTap,
-    this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFFC0C0C0),
-          child: Icon(icon, color: const Color(0xFF1E3A8A)),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-        trailing: trailing ?? const Icon(Icons.chevron_right),
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
     );
   }

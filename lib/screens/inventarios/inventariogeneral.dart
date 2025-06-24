@@ -196,7 +196,7 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
                   ),
                   child: DataTable(
                     columnSpacing: 16,
-                    headingRowColor: MaterialStateProperty.all(
+                    headingRowColor: WidgetStateProperty.all(
                       const Color(0xFF1E3A8A),
                     ),
                     headingTextStyle: const TextStyle(color: Colors.white),

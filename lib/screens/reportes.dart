@@ -1,3 +1,6 @@
+import 'package:basefundi/screens/reportes/reporteinv.dart';
+import 'package:basefundi/screens/reportes/reportetransporte.dart';
+import 'package:basefundi/screens/reportes/reporteventas.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -37,7 +40,7 @@ class _ReportesScreenState extends State<ReportesScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: Column(
         children: [
           FadeTransition(
@@ -50,19 +53,45 @@ class _ReportesScreenState extends State<ReportesScreen>
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: ListView(
                 children: [
-                  _buildCard(
+                  _buildBoton(
                     icon: LucideIcons.clipboardList,
-                    label: 'Reporte de Inventario',
+                    titulo: 'Reporte de Inventario',
+                    subtitulo: 'Detalle de productos',
                     onTap: () {
-                      // Acción al presionar
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ReporteInventarioScreen(),
+                        ),
+                      );
                     },
                   ),
-                  const SizedBox(height: 16),
-                  _buildCard(
+                  const SizedBox(height: 12),
+                  _buildBoton(
                     icon: LucideIcons.barChart2,
-                    label: 'Reporte de Ventas',
+                    titulo: 'Reporte de Ventas',
+                    subtitulo: 'Historial de ventas',
                     onTap: () {
-                      // Acción al presionar
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ReporteVentasScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildBoton(
+                    icon: LucideIcons.truck,
+                    titulo: 'Reporte de Transporte',
+                    subtitulo: 'Tiempos y entregas',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ReporteTransporteScreen(),
+                        ),
+                      );
                     },
                   ),
                 ],
@@ -79,7 +108,7 @@ class _ReportesScreenState extends State<ReportesScreen>
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+          colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -102,50 +131,38 @@ class _ReportesScreenState extends State<ReportesScreen>
     );
   }
 
-  Widget _buildCard({
+  Widget _buildBoton({
     required IconData icon,
-    required String label,
+    required String titulo,
+    required String subtitulo,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(2, 4),
+      borderRadius: BorderRadius.circular(16),
+      child: Card(
+        color: Colors.white,
+        elevation: 0, // sin sombra
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 12,
+          ),
+          leading: Icon(icon, color: Color(0xFF2C3E50), size: 30),
+          title: Text(
+            titulo,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C3E50),
+              fontSize: 18,
             ),
-          ],
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
-                ),
-              ),
-              child: Icon(icon, color: Colors.white, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E3A8A),
-                ),
-              ),
-            ),
-          ],
+          ),
+          subtitle: Text(
+            subtitulo,
+            style: const TextStyle(color: Color(0xFFB0BEC5)),
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey),
         ),
       ),
     );

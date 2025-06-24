@@ -1,4 +1,4 @@
-import 'package:basefundi/screens/inventarios/editinvprod.dart'; // <-- importamos la pantalla para editar
+import 'package:basefundi/screens/inventarios/editinvprod.dart';
 import 'package:basefundi/screens/inventarios/editprod.dart';
 import 'package:basefundi/screens/inventarios/scaninv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -210,7 +210,7 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: SafeArea(
         child: Column(
           children: [
@@ -219,7 +219,7 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
               width: double.infinity,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+                  colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
@@ -253,7 +253,7 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                         hintText: 'Buscar productos...',
                         prefixIcon: const Icon(Icons.search),
                         filled: true,
-                        fillColor: const Color(0xFFE5E7EB),
+                        fillColor: const Color.fromARGB(255, 255, 255, 255),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
@@ -303,9 +303,13 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                             ),
                           )
                           .where(
-                            (p) => p.nombre.toLowerCase().contains(
-                              searchQuery.toLowerCase(),
-                            ),
+                            (p) =>
+                                p.nombre.toLowerCase().contains(
+                                  searchQuery.toLowerCase(),
+                                ) ||
+                                p.codigo.toLowerCase().contains(
+                                  searchQuery.toLowerCase(),
+                                ),
                           )
                           .toList();
 
@@ -319,13 +323,12 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                             crossAxisCount: 3,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            childAspectRatio: 0.8,
+                            childAspectRatio: 0.7,
                           ),
                       itemBuilder: (context, index) {
                         final producto = productos[index];
                         return GestureDetector(
                           onTap: () async {
-                            // Navegar a EditInvProdScreen con el producto completo
                             await Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -337,82 +340,121 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                           },
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              border: Border.all(color: Colors.grey[300]!),
-                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            padding: const EdgeInsets.all(8),
+
+                            padding: const EdgeInsets.all(12),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Icon(
-                                  Icons.inventory_2,
-                                  size: 40,
-                                  color: Colors.grey,
+                                Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF2ECC71),
+                                        Color(0xFF2ECC71),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.tire_repair,
+                                    size: 28,
+                                    color: Colors.white,
+                                  ),
                                 ),
+                                const SizedBox(height: 8),
                                 Text(
                                   producto.nombre,
                                   textAlign: TextAlign.center,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w600,
                                     fontSize: 14,
+                                    color: Color(0xFF2C3E50),
                                   ),
                                 ),
+                                Text(
+                                  'Stock: ${producto.cantidad}',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFFB0BEC5),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
                                 Row(
                                   mainAxisAlignment:
-                                      MainAxisAlignment.spaceEvenly,
+                                      MainAxisAlignment.spaceAround,
                                   children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete,
-                                        color: Colors.red,
-                                      ),
-                                      onPressed:
-                                          () => eliminarProductoPorNombre(
-                                            producto.nombre,
+                                    Tooltip(
+                                      message: 'Eliminar',
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(12),
+                                        onTap:
+                                            () => eliminarProductoPorNombre(
+                                              producto.nombre,
+                                            ),
+                                        child: const Padding(
+                                          padding: EdgeInsets.all(6),
+                                          child: Icon(
+                                            Icons.delete_outline,
+                                            color: Colors.red,
                                           ),
+                                        ),
+                                      ),
                                     ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.edit,
-                                        color: Colors.blue,
-                                      ),
-                                      onPressed: () async {
-                                        // Navegamos a EditarProductoScreen para editar
-                                        final resultado = await Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder:
-                                                (context) =>
-                                                    EditarProductoScreen(
-                                                      codigoBarras:
-                                                          producto.codigo,
-                                                      nombreInicial:
-                                                          producto.nombre,
-                                                      precioInicial:
-                                                          producto.precio,
-                                                    ),
+                                    Tooltip(
+                                      message: 'Editar',
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(12),
+                                        onTap: () async {
+                                          final resultado =
+                                              await Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder:
+                                                      (context) =>
+                                                          EditarProductoScreen(
+                                                            codigoBarras:
+                                                                producto.codigo,
+                                                            nombreInicial:
+                                                                producto.nombre,
+                                                            precioInicial:
+                                                                producto.precio,
+                                                          ),
+                                                ),
+                                              );
+                                          if (resultado != null) {
+                                            await _firestore
+                                                .collection(
+                                                  'inventario_general',
+                                                )
+                                                .doc(resultado['codigo'])
+                                                .set({
+                                                  'codigo': resultado['codigo'],
+                                                  'nombre': resultado['nombre'],
+                                                  'precio': resultado['precio'],
+                                                  'cantidad':
+                                                      resultado['cantidad'],
+                                                  'fecha_creacion':
+                                                      Timestamp.now(),
+                                                  'estado': 'en_proceso',
+                                                });
+                                          }
+                                        },
+                                        child: const Padding(
+                                          padding: EdgeInsets.all(6),
+                                          child: Icon(
+                                            Icons.edit_outlined,
+                                            color: Colors.blue,
                                           ),
-                                        );
-                                        // Actualizamos Firestore si se devuelve resultado
-                                        if (resultado != null) {
-                                          await _firestore
-                                              .collection('inventario_general')
-                                              .doc(resultado['codigo'])
-                                              .set({
-                                                'codigo': resultado['codigo'],
-                                                'nombre': resultado['nombre'],
-                                                'precio': resultado['precio'],
-                                                'cantidad':
-                                                    resultado['cantidad'],
-                                                'fecha_creacion':
-                                                    Timestamp.now(),
-                                                'estado': 'en_proceso',
-                                              });
-                                        }
-                                      },
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),

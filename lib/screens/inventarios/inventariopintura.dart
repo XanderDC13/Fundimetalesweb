@@ -1,7 +1,6 @@
 import 'package:basefundi/screens/inventarios/tablainv_pintura.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-// Asegúrate de importar correctamente
 
 class InventarioPinturaScreen extends StatefulWidget {
   const InventarioPinturaScreen({super.key});
@@ -156,7 +155,7 @@ class _InventarioPinturaScreenState extends State<InventarioPinturaScreen>
               ),
               child: DataTable(
                 columnSpacing: 16,
-                headingRowColor: MaterialStateProperty.all(
+                headingRowColor: WidgetStateProperty.all(
                   const Color(0xFF1E3A8A),
                 ),
                 headingTextStyle: const TextStyle(color: Colors.white),

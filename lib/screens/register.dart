@@ -19,6 +19,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   String _selectedRole = 'Empleado';
+  String? _selectedSede = 'Tulcán';
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -38,7 +39,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         final name = _nameController.text.trim();
         final email = _emailController.text.trim();
         final password = _passwordController.text;
-        final pin = _pinController.text.trim();
 
         final userCredential = await _auth.createUserWithEmailAndPassword(
           email: email,
@@ -52,8 +52,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               'nombre': name,
               'email': email,
               'rol': _selectedRole,
+              'sede': _selectedSede,
               'uid': userCredential.user!.uid,
-              'pin': pin,
               'estado': 'pendiente',
               'fechaRegistro': FieldValue.serverTimestamp(),
             });
@@ -78,7 +78,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           errorMessage = 'La contraseña es demasiado débil';
         } else {
           errorMessage = 'Error: ${e.message}';
-          print('FirebaseAuthException: ${e.code} - ${e.message}');
         }
         if (!mounted) return;
         ScaffoldMessenger.of(
@@ -91,210 +90,347 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF1E3A8A), Color(0xFF1E3A8A)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-          Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(32.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    Image.asset('lib/assets/logoletters.png', height: 75),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Registro',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isWideScreen = constraints.maxWidth > 800;
+
+          return Row(
+            children: [
+              if (isWideScreen)
+                Expanded(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
                     ),
-                    const SizedBox(height: 40),
-
-                    // Nombre
-                    TextFormField(
-                      controller: _nameController,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'),
+                    child: const Center(
+                      child: Text(
+                        '¡Bienvenido a Fundimetales!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
                         ),
-                      ],
-                      decoration: _inputDecoration(
-                        icon: Icons.person,
-                        hint: 'Nombre Completo',
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Ingresa tu nombre';
-                        }
-                        if (!RegExp(
-                          r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
-                        ).hasMatch(value)) {
-                          return 'Solo letras y espacios';
-                        }
-                        return null;
-                      },
                     ),
-                    const SizedBox(height: 20),
-
-                    // Correo
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: _inputDecoration(
-                        icon: Icons.email,
-                        hint: 'Correo electrónico',
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Ingresa tu correo electrónico';
-                        }
-                        if (!RegExp(
-                          r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-                        ).hasMatch(value)) {
-                          return 'Ingresa un correo válido';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Contraseña
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      decoration: _inputDecoration(
-                        icon: Icons.lock,
-                        hint: 'Contraseña',
-                        suffix: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                            color: Color(0xFF1E3A8A),
+                  ),
+                ),
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(32),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 500),
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
                           ),
-                          onPressed: () {
-                            setState(
-                              () => _obscurePassword = !_obscurePassword,
-                            );
-                          },
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Ingresa una contraseña';
-                        }
-                        if (value.length < 6) return 'Mínimo 6 caracteres';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              children: [
+                                const Text(
+                                  '¡Nos alegra tenerte aquí!',
+                                  style: TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1E3A8A),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Regístrate para comenzar',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                                const SizedBox(height: 32),
 
-                    // Rol
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: DropdownButtonFormField<String>(
-                        value: _selectedRole,
-                        decoration: const InputDecoration.collapsed(
-                          hintText: '',
-                        ),
-                        icon: const Icon(
-                          Icons.arrow_drop_down,
-                          color: Color(0xFF1E3A8A),
-                        ),
-                        dropdownColor: Colors.white,
-                        items: [
-                          DropdownMenuItem(
-                            value: 'Administrador',
-                            child: Row(
-                              children: const [
-                                Icon(Icons.security, color: Color(0xFF1E3A8A)),
-                                SizedBox(width: 10),
-                                Text('Administrador'),
+                                // Nombre
+                                TextFormField(
+                                  controller: _nameController,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(
+                                      RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'),
+                                    ),
+                                  ],
+                                  decoration: _inputDecoration(
+                                    icon: Icons.person,
+                                    hint: 'Nombre Completo',
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Ingresa tu nombre';
+                                    }
+                                    if (!RegExp(
+                                      r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$',
+                                    ).hasMatch(value)) {
+                                      return 'Solo letras y espacios';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+
+                                // Correo
+                                TextFormField(
+                                  controller: _emailController,
+                                  decoration: _inputDecoration(
+                                    icon: Icons.email,
+                                    hint: 'Correo electrónico',
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Ingresa tu correo electrónico';
+                                    }
+                                    if (!RegExp(
+                                      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                                    ).hasMatch(value)) {
+                                      return 'Ingresa un correo válido';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+
+                                // Contraseña
+                                TextFormField(
+                                  controller: _passwordController,
+                                  obscureText: _obscurePassword,
+                                  decoration: _inputDecoration(
+                                    icon: Icons.lock,
+                                    hint: 'Contraseña',
+                                    suffix: IconButton(
+                                      icon: Icon(
+                                        _obscurePassword
+                                            ? Icons.visibility
+                                            : Icons.visibility_off,
+                                        color: const Color(0xFF1E3A8A),
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _obscurePassword = !_obscurePassword;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Ingresa una contraseña';
+                                    }
+                                    if (value.length < 6) {
+                                      return 'Mínimo 6 caracteres';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+
+                                // Rol
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: DropdownButtonFormField<String>(
+                                    value: _selectedRole,
+                                    decoration: const InputDecoration.collapsed(
+                                      hintText: '',
+                                    ),
+                                    icon: const Icon(
+                                      Icons.arrow_drop_down,
+                                      color: Color(0xFF1E3A8A),
+                                    ),
+                                    dropdownColor: Colors.white,
+                                    items: [
+                                      DropdownMenuItem(
+                                        value: 'Administrador',
+                                        child: Row(
+                                          children: const [
+                                            Icon(
+                                              Icons.security,
+                                              color: Color(0xFF1E3A8A),
+                                            ),
+                                            SizedBox(width: 10),
+                                            Text('Administrador'),
+                                          ],
+                                        ),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'Empleado',
+                                        child: Row(
+                                          children: const [
+                                            Icon(
+                                              Icons.work,
+                                              color: Color(0xFF1E3A8A),
+                                            ),
+                                            SizedBox(width: 10),
+                                            Text('Empleado'),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedRole = value!;
+                                      });
+                                    },
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Selecciona un rol';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+
+                                // Sede
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: DropdownButtonFormField<String>(
+                                    value: _selectedSede,
+                                    decoration: const InputDecoration.collapsed(
+                                      hintText: '',
+                                    ),
+                                    icon: const Icon(
+                                      Icons.arrow_drop_down,
+                                      color: Color(0xFF1E3A8A),
+                                    ),
+                                    dropdownColor: Colors.white,
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: 'Tulcán',
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.location_city,
+                                              color: Color(0xFF1E3A8A),
+                                            ),
+                                            SizedBox(width: 10),
+                                            Text('Tulcán'),
+                                          ],
+                                        ),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'Quito',
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.location_city,
+                                              color: Color(0xFF1E3A8A),
+                                            ),
+                                            SizedBox(width: 10),
+                                            Text('Quito'),
+                                          ],
+                                        ),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'Guayaquil',
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.location_city,
+                                              color: Color(0xFF1E3A8A),
+                                            ),
+                                            SizedBox(width: 10),
+                                            Text('Guayaquil'),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedSede = value!;
+                                      });
+                                    },
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Selecciona una sede';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(height: 30),
+
+                                // Botón de registro
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: _register,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF1E3A8A),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Registrarse',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text(
+                                    '¿Ya tienes cuenta? Inicia sesión',
+                                    style: TextStyle(color: Colors.black54),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                          DropdownMenuItem(
-                            value: 'Empleado',
-                            child: Row(
-                              children: const [
-                                Icon(Icons.work, color: Color(0xFF1E3A8A)),
-                                SizedBox(width: 10),
-                                Text('Empleado'),
-                              ],
-                            ),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedRole = value!;
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Selecciona un rol';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-
-                    // Botón de registro
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _register,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'Registrarse',
-                          style: TextStyle(
-                            color: Color(0xFF1E3A8A),
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 10),
-
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text(
-                        '¿Ya tienes cuenta? Inicia sesión',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -306,15 +442,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }) {
     return InputDecoration(
       filled: true,
-      fillColor: Colors.white,
+      fillColor: Colors.grey[100],
       hintText: hint,
       prefixIcon: Icon(icon, color: const Color(0xFF1E3A8A)),
       suffixIcon: suffix,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide.none,
       ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+      contentPadding: const EdgeInsets.symmetric(vertical: 18),
     );
   }
 }

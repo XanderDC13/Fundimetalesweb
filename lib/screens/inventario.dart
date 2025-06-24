@@ -1,6 +1,7 @@
 import 'package:basefundi/screens/inventarios/inventariogeneral.dart';
 import 'package:basefundi/screens/inventarios/inventariopintura.dart';
 import 'package:basefundi/screens/inventarios/totalinv.dart';
+import 'package:basefundi/screens/inventarios/transporte.dart';
 import 'package:flutter/material.dart';
 import 'package:basefundi/screens/inventarios/newinventario.dart';
 import 'package:basefundi/settings/transition.dart';
@@ -12,70 +13,86 @@ class InventarioScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: SafeArea(
         child: Column(
           children: [
             _buildHeader(),
             const SizedBox(height: 20),
             Expanded(
-              child: Padding(
+              child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ListView(
-                  children: [
-                    _buildCard(
-                      icon: LucideIcons.clipboardList,
-                      label: 'Productos',
-                      onTap: () {
-                        navigateWithTransition(
-                          context: context,
-                          destination: const TotalInvScreen(),
-                          transition: TransitionType.fade,
-                          replace: false,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _buildCard(
-                      icon: LucideIcons.flame,
-                      label: 'Inventario en Fundición',
-                      onTap: () {
-                        navigateWithTransition(
-                          context: context,
-                          destination: const InventarioFundicionScreen(),
-                          transition: TransitionType.fade,
-                          replace: false,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _buildCard(
-                      icon: LucideIcons.paintBucket,
-                      label: 'Inventario en Pintura',
-                      onTap: () {
-                        navigateWithTransition(
-                          context: context,
-                          destination: const InventarioPinturaScreen(),
-                          transition: TransitionType.fade,
-                          replace: false,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _buildCard(
-                      icon: LucideIcons.box,
-                      label: 'Inventario General',
-                      onTap: () {
-                        navigateWithTransition(
-                          context: context,
-                          destination: InventarioGeneralScreen(),
-                          transition: TransitionType.fade,
-                          replace: false,
-                        );
-                      },
-                    ),
-                  ],
-                ),
+                children: [
+                  _buildBoton(
+                    icon: LucideIcons.clipboardList,
+                    titulo: 'Productos',
+                    subtitulo: 'Listado completo',
+                    onTap: () {
+                      navigateWithTransition(
+                        context: context,
+                        destination: const TotalInvScreen(),
+                        transition: TransitionType.fade,
+                        replace: false,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildBoton(
+                    icon: LucideIcons.flame,
+                    titulo: 'Inventario en Fundición',
+                    subtitulo: 'Registro de fundición',
+                    onTap: () {
+                      navigateWithTransition(
+                        context: context,
+                        destination: const InventarioFundicionScreen(),
+                        transition: TransitionType.fade,
+                        replace: false,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildBoton(
+                    icon: LucideIcons.paintBucket,
+                    titulo: 'Inventario en Pintura',
+                    subtitulo: 'Registro de pintura',
+                    onTap: () {
+                      navigateWithTransition(
+                        context: context,
+                        destination: const InventarioPinturaScreen(),
+                        transition: TransitionType.fade,
+                        replace: false,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildBoton(
+                    icon: LucideIcons.box,
+                    titulo: 'Inventario General',
+                    subtitulo: 'Suma final de productos',
+                    onTap: () {
+                      navigateWithTransition(
+                        context: context,
+                        destination: InventarioGeneralScreen(),
+                        transition: TransitionType.fade,
+                        replace: false,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildBoton(
+                    icon: LucideIcons.car,
+                    titulo: 'Transporte',
+                    subtitulo: 'Tiempos de entrega',
+                    onTap: () {
+                      navigateWithTransition(
+                        context: context,
+                        destination: const ReporteTransporteFScreen(),
+                        transition: TransitionType.fade,
+                        replace: false,
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           ],
@@ -89,7 +106,7 @@ class InventarioScreen extends StatelessWidget {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+          colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -112,50 +129,38 @@ class InventarioScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCard({
+  Widget _buildBoton({
     required IconData icon,
-    required String label,
+    required String titulo,
+    required String subtitulo,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(2, 4),
+      borderRadius: BorderRadius.circular(16),
+      child: Card(
+        color: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 12,
+          ),
+          leading: Icon(icon, color: Color(0xFF2C3E50), size: 30),
+          title: Text(
+            titulo,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C3E50),
+              fontSize: 18,
             ),
-          ],
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
-                ),
-              ),
-              child: Icon(icon, color: Colors.white, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E3A8A),
-                ),
-              ),
-            ),
-          ],
+          ),
+          subtitle: Text(
+            subtitulo,
+            style: const TextStyle(color: Color(0xFFB0BEC5)),
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey),
         ),
       ),
     );

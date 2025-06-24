@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class EmpleadosActivosScreen extends StatelessWidget {
+class EmpleadosActivosScreen extends StatefulWidget {
   const EmpleadosActivosScreen({super.key});
+
+  @override
+  State<EmpleadosActivosScreen> createState() => _EmpleadosActivosScreenState();
+}
+
+class _EmpleadosActivosScreenState extends State<EmpleadosActivosScreen> {
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldMessengerKey,
       backgroundColor: const Color(0xFFF5F6FA),
       body: SafeArea(
         child: Column(
@@ -53,6 +62,11 @@ class EmpleadosActivosScreen extends StatelessWidget {
                       final email = empleado['email'] ?? 'Sin email';
                       final rol = empleado['rol'] ?? 'Empleado';
                       final roles = ['Administrador', 'Empleado'];
+                      final sede =
+                          empleado.data()!.containsKey('sede')
+                              ? empleado['sede']
+                              : 'Sin sede';
+
                       final valorRol = roles.firstWhere(
                         (r) => r.toLowerCase() == rol.toLowerCase(),
                         orElse: () => roles.first,
@@ -102,6 +116,14 @@ class EmpleadosActivosScreen extends StatelessWidget {
                                           style: const TextStyle(
                                             color: Colors.grey,
                                             fontSize: 14,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Sede: $sede',
+                                          style: const TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
                                           ),
                                         ),
                                       ],
@@ -289,7 +311,8 @@ class EmpleadosActivosScreen extends StatelessWidget {
                               .collection('usuarios_activos')
                               .doc(docId)
                               .delete();
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          if (!mounted) return;
+                          _scaffoldMessengerKey.currentState?.showSnackBar(
                             const SnackBar(
                               content: Text('Empleado eliminado correctamente'),
                             ),
@@ -304,5 +327,14 @@ class EmpleadosActivosScreen extends StatelessWidget {
             ),
           ),
     );
+  }
+}
+
+extension on Object {
+  bool containsKey(String s) {
+    if (this is Map) {
+      return (this as Map).containsKey(s);
+    }
+    return false;
   }
 }

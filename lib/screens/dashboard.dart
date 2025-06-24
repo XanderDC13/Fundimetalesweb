@@ -1,5 +1,6 @@
 import 'package:basefundi/screens/inventario.dart';
 import 'package:basefundi/screens/personal.dart';
+import 'package:basefundi/screens/personal/tareas.dart';
 import 'package:basefundi/screens/reportes.dart';
 import 'package:basefundi/screens/ventas.dart';
 import 'package:basefundi/settings/settings.dart';
@@ -20,6 +21,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<List<String>> productosMasVendidos = [];
   List<List<String>> inventarioBajo = [];
   String nombreUsuario = '';
+  String rolUsuario = 'Empleado';
+  String sedeUsuario = '';
 
   final ScrollController _scrollController = ScrollController();
 
@@ -27,9 +30,33 @@ class _DashboardScreenState extends State<DashboardScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _cargarNombreUsuario();
+    _cargarNombreYRolUsuario();
     _cargarInventarioBajo();
     _cargarProductosMasVendidos();
+  }
+
+  Future<void> _cargarNombreYRolUsuario() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return;
+
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('usuarios_activos')
+            .doc(user.uid)
+            .get();
+
+    if (doc.exists) {
+      final data = doc.data()!;
+      setState(() {
+        nombreUsuario = data['nombre'] ?? 'Usuario';
+        rolUsuario = data['rol'] ?? 'empleado';
+        sedeUsuario =
+            (data['sede'] ?? '').toString().trim().isEmpty
+                ? 'Sin sede'
+                : data['sede'];
+      });
+    }
   }
 
   @override
@@ -47,33 +74,29 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  Future<void> _cargarNombreUsuario() async {
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) return;
-
-    final doc =
-        await FirebaseFirestore.instance
-            .collection('usuarios_activos')
-            .doc(user.uid)
-            .get();
-
-    if (doc.exists) {
-      setState(() {
-        nombreUsuario = doc.data()?['nombre'] ?? 'Usuario';
-      });
-    }
-  }
-
   Future<void> _cargarInventarioBajo() async {
-    final inventarioSnapshot =
-        await FirebaseFirestore.instance.collection('inventario_general').get();
-
+    final pinturaSnapshot =
+        await FirebaseFirestore.instance.collection('inventario_pintura').get();
     final ventasSnapshot =
         await FirebaseFirestore.instance.collection('ventas').get();
 
-    final Map<String, int> productosVendidos = {};
+    final Map<String, int> cantidadPintura = {};
+    final Map<String, String> nombresProductos = {};
 
+    for (var doc in pinturaSnapshot.docs) {
+      final data = doc.data();
+      final codigo = data['codigo'] ?? '';
+      final nombre = data['nombre'] ?? 'Sin nombre';
+      final cantidad = data['cantidad'] ?? 0;
+
+      if (codigo.isNotEmpty) {
+        cantidadPintura[codigo] =
+            (cantidadPintura[codigo] ?? 0) + (cantidad as int);
+        nombresProductos[codigo] = nombre;
+      }
+    }
+
+    final Map<String, int> productosVendidos = {};
     for (var venta in ventasSnapshot.docs) {
       final productos = List<Map<String, dynamic>>.from(venta['productos']);
       for (var producto in productos) {
@@ -90,19 +113,15 @@ class _DashboardScreenState extends State<DashboardScreen>
       ['Producto', 'Cant Disponible'],
     ];
 
-    for (var doc in inventarioSnapshot.docs) {
-      final data = doc.data();
-      final nombre = data['nombre'] ?? 'Sin nombre';
-      final codigo = data['codigo'] ?? '';
-      final cantidad = data['cantidad'] ?? 0;
-
+    cantidadPintura.forEach((codigo, cantidadPint) {
       final cantidadVendida = productosVendidos[codigo] ?? 0;
-      final cantidadDisponible = cantidad - cantidadVendida;
+      final cantidadDisponible = cantidadPint - cantidadVendida;
 
       if (cantidadDisponible < 10) {
-        inventario.add([nombre.toString(), cantidadDisponible.toString()]);
+        final nombre = nombresProductos[codigo] ?? 'Sin nombre';
+        inventario.add([nombre, cantidadDisponible.toString()]);
       }
-    }
+    });
 
     inventario.sort((a, b) {
       if (a == inventario[0]) return -1;
@@ -196,44 +215,54 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 20),
-              _buildSectionCard(
-                title: 'PRODUCTOS MÁS VENDIDOS',
-                filterValue: productosFiltro,
-                onFilterChanged: (value) {
-                  setState(() => productosFiltro = value);
-                  _cargarProductosMasVendidos();
-                },
-                child:
-                    productosMasVendidos.isEmpty
-                        ? const Text('Sin datos')
-                        : _buildStyledTable(
-                          productosMasVendidos,
-                          scrollable: false,
-                        ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFD6EAF8),
+          body: SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildHeader(),
+                      const SizedBox(height: 20),
+                      _buildSectionCard(
+                        title: 'PRODUCTOS MÁS VENDIDOS',
+                        filterValue: productosFiltro,
+                        onFilterChanged: (value) {
+                          setState(() => productosFiltro = value);
+                          _cargarProductosMasVendidos();
+                        },
+                        child:
+                            productosMasVendidos.isEmpty
+                                ? const Text('Sin datos')
+                                : _buildStyledTable(
+                                  productosMasVendidos,
+                                  scrollable: false,
+                                ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildSimpleSectionCard(
+                        title: 'INVENTARIO BAJO',
+                        child:
+                            inventarioBajo.isEmpty
+                                ? const Text('Sin datos')
+                                : _buildStyledTable(inventarioBajo),
+                      ),
+                      const SizedBox(height: 20),
+                      _buildGridFunctions(),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
-              _buildSimpleSectionCard(
-                title: 'INVENTARIO BAJO',
-                child:
-                    inventarioBajo.isEmpty
-                        ? const Text('Sin datos')
-                        : _buildStyledTable(inventarioBajo),
-              ),
-              const SizedBox(height: 20),
-              _buildGridFunctions(),
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -242,7 +271,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+          colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -257,26 +286,24 @@ class _DashboardScreenState extends State<DashboardScreen>
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Hola',
-                style: TextStyle(color: Colors.white, fontSize: 18),
-              ),
               Text(
-                nombreUsuario.isEmpty ? '' : nombreUsuario,
+                'Hola $nombreUsuario',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              const SizedBox(height: 4),
+              Text(
+                'Sede $sedeUsuario',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
-          ),
-          const Spacer(),
-          Image.asset(
-            'lib/assets/logo.png',
-            width: 80,
-            height: 80,
-            fit: BoxFit.cover,
           ),
         ],
       ),
@@ -463,33 +490,63 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildGridFunctions() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.count(
-        crossAxisCount: 3,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        children: [
-          _gridButton(Icons.attach_money, 'Ventas', () {
-            _navegarConFade(context, const VentasScreen());
-          }),
-          _gridButton(Icons.inventory_2, 'Inventario', () {
-            _navegarConFade(context, const InventarioScreen());
-          }),
-          _gridButton(Icons.people, 'Personal', () {
-            _navegarConFade(context, const PersonalScreen());
-          }),
-          _gridButton(Icons.bar_chart, 'Reportes', () {
-            _navegarConFade(context, const ReportesScreen());
-          }),
-          _gridButton(Icons.settings, 'Ajustes', () {
-            _navegarConFade(context, const SettingsScreen());
-          }),
-        ],
-      ),
-    );
+    if (rolUsuario == 'Administrador') {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: GridView.count(
+          crossAxisCount: 3,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          children: [
+            _gridButton(Icons.attach_money, 'Ventas', () {
+              _navegarConFade(context, const VentasScreen());
+            }),
+            _gridButton(Icons.inventory_2, 'Inventario', () {
+              _navegarConFade(context, const InventarioScreen());
+            }),
+            _gridButton(Icons.people, 'Personal', () {
+              _navegarConFade(context, const PersonalScreen());
+            }),
+            _gridButton(Icons.bar_chart, 'Reportes', () {
+              _navegarConFade(context, const ReportesScreen());
+            }),
+            _gridButton(Icons.calculate, 'Contabilidad', () {}),
+
+            _gridButton(Icons.settings, 'Ajustes', () {
+              _navegarConFade(context, const SettingsScreen());
+            }),
+          ],
+        ),
+      );
+    } else {
+      // Vista para empleados
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: GridView.count(
+          crossAxisCount: 3,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          children: [
+            _gridButton(Icons.attach_money, 'Ventas', () {
+              _navegarConFade(context, const VentasScreen());
+            }),
+            _gridButton(Icons.inventory_2, 'Inventario', () {
+              _navegarConFade(context, const InventarioScreen());
+            }),
+            _gridButton(Icons.task_alt, 'Tareas', () {
+              _navegarConFade(context, const TareasPendientesScreen());
+            }),
+            _gridButton(Icons.settings, 'Ajustes', () {
+              _navegarConFade(context, const SettingsScreen());
+            }),
+          ],
+        ),
+      );
+    }
   }
 
   Widget _gridButton(IconData icon, String label, VoidCallback onTap) {
@@ -510,7 +567,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
               ],
             ),
-            child: Icon(icon, color: const Color(0xFF1E3A8A), size: 30),
+            child: Icon(icon, color: const Color(0xFF4682B4), size: 30),
           ),
           const SizedBox(height: 8),
           Text(
