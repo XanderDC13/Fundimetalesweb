@@ -120,7 +120,7 @@ class SettingsScreen extends StatelessWidget {
         child: ListTile(
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 20,
-            vertical: 12,
+            vertical: 3,
           ),
           leading: Icon(icon, color: Color(0xFF2C3E50)),
           title: Text(

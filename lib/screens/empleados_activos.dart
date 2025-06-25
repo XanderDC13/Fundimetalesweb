@@ -16,7 +16,7 @@ class _EmpleadosActivosScreenState extends State<EmpleadosActivosScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldMessengerKey,
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: SafeArea(
         child: Column(
           children: [
@@ -47,7 +47,7 @@ class _EmpleadosActivosScreenState extends State<EmpleadosActivosScreen> {
                         'No hay empleados activos.',
                         style: TextStyle(
                           fontSize: 16,
-                          color: Color(0xFF1E3A8A),
+                          color: Color(0xFFB0BEC5),
                         ),
                       ),
                     );
@@ -65,7 +65,7 @@ class _EmpleadosActivosScreenState extends State<EmpleadosActivosScreen> {
                       final sede =
                           empleado.data()!.containsKey('sede')
                               ? empleado['sede']
-                              : 'Sin sede';
+                              : 'S/R';
 
                       final valorRol = roles.firstWhere(
                         (r) => r.toLowerCase() == rol.toLowerCase(),
@@ -76,7 +76,7 @@ class _EmpleadosActivosScreenState extends State<EmpleadosActivosScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        elevation: 4,
+                        elevation: 0,
                         color: Colors.white,
                         margin: const EdgeInsets.only(bottom: 16),
                         child: Padding(
@@ -91,10 +91,15 @@ class _EmpleadosActivosScreenState extends State<EmpleadosActivosScreen> {
                                 children: [
                                   const CircleAvatar(
                                     radius: 24,
-                                    backgroundColor: Color(0xFF1E3A8A),
+                                    backgroundColor: Color.fromARGB(
+                                      255,
+                                      255,
+                                      255,
+                                      255,
+                                    ),
                                     child: Icon(
                                       Icons.person,
-                                      color: Colors.white,
+                                      color: Color(0xFF2C3E50),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -108,20 +113,20 @@ class _EmpleadosActivosScreenState extends State<EmpleadosActivosScreen> {
                                           style: const TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.bold,
-                                            color: Color(0xFF1E3A8A),
+                                            color: Color(0xFF2C3E50),
                                           ),
                                         ),
                                         Text(
                                           email,
                                           style: const TextStyle(
-                                            color: Colors.grey,
+                                            color: Color(0xFFB0BEC5),
                                             fontSize: 14,
                                           ),
                                         ),
                                         Text(
-                                          'Sede: $sede',
+                                          'Sede $sede',
                                           style: const TextStyle(
-                                            color: Colors.grey,
+                                            color: Color(0xFFB0BEC5),
                                             fontSize: 14,
                                             fontWeight: FontWeight.w500,
                                           ),
@@ -169,7 +174,7 @@ class _EmpleadosActivosScreenState extends State<EmpleadosActivosScreen> {
                                                       : Icons
                                                           .supervisor_account,
                                                   color: const Color(
-                                                    0xFF1E3A8A,
+                                                    0xFF2C3E50,
                                                   ),
                                                 ),
                                                 const SizedBox(width: 10),
@@ -209,7 +214,7 @@ class _EmpleadosActivosScreenState extends State<EmpleadosActivosScreen> {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+          colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),

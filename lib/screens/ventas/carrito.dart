@@ -24,6 +24,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFD6EAF8),
       body: SafeArea(
         child: Column(
           children: [
@@ -31,7 +32,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+                  colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -198,16 +199,29 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                           children: [
                             TextField(
                               controller: _clienteController,
+                              style: TextStyle(
+                                color: Color(0xFF2C3E50),
+                                fontWeight: FontWeight.w500,
+                              ),
                               decoration: const InputDecoration(
-                                prefixIcon: Icon(Icons.person),
+                                filled: true,
+                                fillColor: Colors.white,
+                                prefixIcon: Icon(
+                                  Icons.person,
+                                  color: Color(0xFF2C3E50),
+                                ),
+
                                 labelText: 'Nombre del cliente (opcional)',
+                                labelStyle: TextStyle(color: Color(0xFF2C3E50)),
                                 border: OutlineInputBorder(
+                                  borderSide: BorderSide.none,
                                   borderRadius: BorderRadius.all(
                                     Radius.circular(12),
                                   ),
                                 ),
                               ),
                             ),
+
                             const SizedBox(height: 16),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -248,7 +262,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E40AF),
+                              backgroundColor: const Color(0xFF4682B4),
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -292,7 +306,11 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                 children: [
                   const Text(
                     'Selecciona el método de pago',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2C3E50),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Wrap(
@@ -314,7 +332,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1E40AF), // Azul
+                        backgroundColor: const Color(0xFF4682B4), // Azul
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),

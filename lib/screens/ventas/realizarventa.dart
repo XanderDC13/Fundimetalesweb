@@ -203,10 +203,10 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
                       vertical: 8,
                     ),
                     child: GridView.count(
-                      crossAxisCount: 3,
+                      crossAxisCount: 2,
                       crossAxisSpacing: 8,
                       mainAxisSpacing: 8,
-                      childAspectRatio: 0.6,
+                      childAspectRatio: 0.90,
                       children:
                           filtered
                               .map((data) => _buildProductoCard(data, context))

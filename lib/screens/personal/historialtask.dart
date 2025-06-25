@@ -15,7 +15,7 @@ class _HistorialTareasScreenState extends State<HistorialTareasScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: Column(
         children: [
           SafeArea(child: _buildHeader()),
@@ -76,12 +76,15 @@ class _HistorialTareasScreenState extends State<HistorialTareasScreen> {
                       child: ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: CircleAvatar(
-                          backgroundColor: const Color(
-                            0xFF3B82F6,
+                          backgroundColor: const Color.fromRGBO(
+                            255,
+                            255,
+                            255,
+                            1,
                           ).withOpacity(0.15),
                           child: const Icon(
                             Icons.person,
-                            color: Color(0xFF1E40AF),
+                            color: Color(0xFF2C3E50),
                           ),
                         ),
                         title: Text(
@@ -89,7 +92,7 @@ class _HistorialTareasScreenState extends State<HistorialTareasScreen> {
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 16,
-                            color: Colors.black87,
+                            color: Color(0xFF2C3E50),
                           ),
                         ),
                         trailing: const Icon(
@@ -125,7 +128,7 @@ class _HistorialTareasScreenState extends State<HistorialTareasScreen> {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+          colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -196,7 +199,7 @@ class _HistorialUsuarioScreenState extends State<HistorialUsuarioScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: Column(
         children: [
           SafeArea(child: _buildHeader(widget.userName)),
@@ -253,7 +256,7 @@ class _HistorialUsuarioScreenState extends State<HistorialUsuarioScreen> {
                         const Icon(
                           Icons.assignment_outlined,
                           size: 64,
-                          color: Colors.grey,
+                          color: Color(0xFFB0BEC5),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -350,7 +353,7 @@ class _HistorialUsuarioScreenState extends State<HistorialUsuarioScreen> {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+          colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -413,7 +416,7 @@ class _HistorialUsuarioScreenState extends State<HistorialUsuarioScreen> {
                   children: [
                     Icon(
                       Icons.calendar_today,
-                      color: const Color(0xFF1E40AF),
+                      color: const Color(0xFF2C3E50),
                       size: 20,
                     ),
                     const SizedBox(width: 8),

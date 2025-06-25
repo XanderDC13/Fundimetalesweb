@@ -24,7 +24,7 @@ class _FuncionesScreenState extends State<FuncionesScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: SafeArea(
         child: Column(
           children: [
@@ -53,15 +53,16 @@ class _FuncionesScreenState extends State<FuncionesScreen> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0,
-                            vertical: 8,
+                            horizontal: 16,
+                            vertical: 0,
                           ),
                           child: TextField(
                             decoration: InputDecoration(
                               prefixIcon: const Icon(Icons.search),
                               hintText: 'Buscar usuario por nombre',
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
                               ),
                               fillColor: Colors.white,
                               filled: true,
@@ -88,7 +89,7 @@ class _FuncionesScreenState extends State<FuncionesScreen> {
             ),
             // Botón movido a la parte inferior
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.only(bottom: 16),
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.history, color: Colors.white),
                 label: const Text(
@@ -100,13 +101,14 @@ class _FuncionesScreenState extends State<FuncionesScreen> {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6),
-                  minimumSize: const Size.fromHeight(48),
+                  backgroundColor: const Color(0xFF4682B4),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
+                    borderRadius: BorderRadius.circular(30),
                   ),
-                  elevation: 5,
-                  shadowColor: Colors.blueAccent,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
+                  ),
                 ),
                 onPressed: () {
                   Navigator.of(context).push(
@@ -159,11 +161,12 @@ class _FuncionesScreenState extends State<FuncionesScreen> {
 
             return Card(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
               ),
-              elevation: 6,
+              elevation: 0,
               margin: const EdgeInsets.only(bottom: 20),
-              shadowColor: Colors.blueAccent.withOpacity(0.3),
+              color: Colors.white,
+              shadowColor: Colors.blueAccent.withOpacity(0.2),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
@@ -177,7 +180,7 @@ class _FuncionesScreenState extends State<FuncionesScreen> {
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E3A8A),
+                        color: Color(0xFF2C3E50),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -186,10 +189,11 @@ class _FuncionesScreenState extends State<FuncionesScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
-                        color: Colors.black87,
+                        color: Color(0xFF2C3E50),
                       ),
                     ),
                     const SizedBox(height: 8),
+
                     if (tareas.isEmpty)
                       const Text(
                         'Sin tareas asignadas',
@@ -245,15 +249,19 @@ class _FuncionesScreenState extends State<FuncionesScreen> {
                             controller: tareasController,
                             decoration: InputDecoration(
                               hintText: 'Nueva tarea',
+                              hintStyle: const TextStyle(
+                                color: Color(0xFFB0BEC5),
+                              ),
                               contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
+                                horizontal: 18,
+                                vertical: 14,
                               ),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(25),
+                                borderRadius: BorderRadius.circular(30),
+                                borderSide: BorderSide.none,
                               ),
                               filled: true,
-                              fillColor: Colors.grey[100],
+                              fillColor: const Color(0xFFF0F4F8),
                             ),
                           ),
                         ),
@@ -275,7 +283,7 @@ class _FuncionesScreenState extends State<FuncionesScreen> {
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1E40AF),
+                            backgroundColor: Color(0xFF4682B4),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 20,
                               vertical: 14,
@@ -283,8 +291,8 @@ class _FuncionesScreenState extends State<FuncionesScreen> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(25),
                             ),
-                            elevation: 4,
-                            shadowColor: Colors.blueAccent,
+                            elevation: 0,
+                            shadowColor: Color(0xFF4682B4),
                           ),
                           child: const Text(
                             'Agregar',
@@ -505,7 +513,7 @@ class _FuncionesScreenState extends State<FuncionesScreen> {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+          colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),

@@ -81,7 +81,7 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+                  colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -131,7 +131,7 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
                                   ),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF3B82F6),
+                                  backgroundColor: const Color(0xFF4682B4),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(15),
                                   ),
@@ -160,7 +160,7 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
                                   ),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF3B82F6),
+                                  backgroundColor: const Color(0xFF4682B4),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(15),
                                   ),
@@ -199,7 +199,7 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
                                       style: const TextStyle(
                                         fontSize: 28,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.blue,
+                                        color: Color(0xFF2C3E50),
                                       ),
                                     ),
                                   ],
@@ -255,7 +255,7 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3B82F6),
+                          backgroundColor: const Color(0xFF4682B4),
                           padding: const EdgeInsets.symmetric(
                             vertical: 18,
                             horizontal: 20,

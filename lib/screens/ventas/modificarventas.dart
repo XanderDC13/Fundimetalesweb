@@ -78,7 +78,7 @@ class _ModificarVentasScreenState extends State<ModificarVentasScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: SafeArea(
         child: Column(
           children: [
@@ -99,7 +99,7 @@ class _ModificarVentasScreenState extends State<ModificarVentasScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+          colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
         ),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(30),
@@ -168,8 +168,8 @@ class _ModificarVentasScreenState extends State<ModificarVentasScreen> {
                   : 'Filtrado: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E40AF),
-              foregroundColor: Colors.white,
+              backgroundColor: const Color(0xFF4682B4),
+              foregroundColor: Color.fromARGB(255, 255, 255, 255),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -231,7 +231,7 @@ class _ModificarVentasScreenState extends State<ModificarVentasScreen> {
           return const Center(
             child: Text(
               'No hay ventas registradas para modificar',
-              style: TextStyle(fontSize: 16, color: Color(0xFF1E3A8A)),
+              style: TextStyle(fontSize: 16, color: Color(0xFFB0BEC5)),
             ),
           );
         }
@@ -255,7 +255,7 @@ class _ModificarVentasScreenState extends State<ModificarVentasScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
-              elevation: 4,
+              elevation: 0,
               margin: const EdgeInsets.only(bottom: 14),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
@@ -267,12 +267,12 @@ class _ModificarVentasScreenState extends State<ModificarVentasScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE0E7FF),
+                        color: Color.fromARGB(255, 255, 255, 255),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
                         Icons.receipt_long,
-                        color: Color(0xFF1E40AF),
+                        color: Color(0xFF2C3E50),
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -306,7 +306,7 @@ class _ModificarVentasScreenState extends State<ModificarVentasScreen> {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E40AF),
+                            color: Color(0xFF2C3E50),
                           ),
                         ),
                         Row(

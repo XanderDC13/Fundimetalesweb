@@ -51,7 +51,7 @@ class EmpleadosPendientesScreen extends StatelessWidget {
                             'No hay usuarios pendientes',
                             style: TextStyle(
                               fontSize: 16,
-                              color: Color(0xFF1E3A8A),
+                              color: Color(0xFFB0BEC5),
                             ),
                           ),
                         );
@@ -71,7 +71,7 @@ class EmpleadosPendientesScreen extends StatelessWidget {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            elevation: 4,
+                            elevation: 0,
                             color: Colors.white,
                             margin: const EdgeInsets.only(bottom: 16),
                             child: Padding(
@@ -147,7 +147,7 @@ class EmpleadosPendientesScreen extends StatelessWidget {
                                               children: [
                                                 Icon(
                                                   Icons.security,
-                                                  color: Color(0xFF1E3A8A),
+                                                  color: Color(0xFF2C3E50),
                                                 ),
                                                 SizedBox(width: 10),
                                                 Text('Administrador'),
@@ -160,7 +160,7 @@ class EmpleadosPendientesScreen extends StatelessWidget {
                                               children: [
                                                 Icon(
                                                   Icons.supervisor_account,
-                                                  color: Color(0xFF1E3A8A),
+                                                  color: Color(0xFF2C3E50),
                                                 ),
                                                 SizedBox(width: 10),
                                                 Text('Empleado'),

@@ -23,15 +23,65 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   late TextEditingController codigoController;
   late TextEditingController cantidadController;
 
+  final List<String> categoriasDisponibles = [
+    'AGRICOLA',
+    'ALCANTARILLADO',
+    'ARAÑAS',
+    'ARTILLEROS',
+    'BOCINES',
+    'DISCOS',
+    'GIMNASIO',
+    'LIVIANOS',
+    'PLANCHAS',
+    'SERVICIOS',
+    'SISTEMAS',
+    'SOPORTERIA',
+    'TAMBORES',
+    'TRANSPORTE',
+  ];
+
+  String? categoriaSeleccionada;
+
   @override
   void initState() {
     super.initState();
     nombreController = TextEditingController(text: widget.nombreInicial);
     precioController = TextEditingController(
-      text: widget.precioInicial.toStringAsFixed(2),
+      text:
+          widget.precioInicial == 0
+              ? ''
+              : widget.precioInicial.toStringAsFixed(2),
     );
     codigoController = TextEditingController(text: widget.codigoBarras);
     cantidadController = TextEditingController();
+
+    if (widget.codigoBarras.isNotEmpty) {
+      _cargarDatosExistentes();
+    } else {
+      categoriaSeleccionada = categoriasDisponibles.first;
+    }
+  }
+
+  Future<void> _cargarDatosExistentes() async {
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('inventario_general')
+            .doc(widget.codigoBarras)
+            .get();
+
+    if (doc.exists) {
+      final data = doc.data()!;
+      final cat = data['categoria'];
+      if (cat != null && categoriasDisponibles.contains(cat)) {
+        setState(() {
+          categoriaSeleccionada = cat;
+        });
+      } else {
+        setState(() {
+          categoriaSeleccionada = categoriasDisponibles.first;
+        });
+      }
+    }
   }
 
   void guardarProducto() async {
@@ -55,14 +105,21 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
       return;
     }
 
+    if (categoriaSeleccionada == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Seleccione una categoría')));
+      return;
+    }
+
     final productoData = {
       'codigo': codigo,
       'nombre': nombre,
       'precio': precio,
       'fecha': FieldValue.serverTimestamp(),
+      'categoria': categoriaSeleccionada,
     };
 
-    // Si es nuevo (no tiene código preexistente), también guarda cantidad
     if (widget.codigoBarras.isEmpty) {
       final cantidad = int.tryParse(cantidadText) ?? 0;
       productoData['cantidad'] = cantidad;
@@ -70,9 +127,9 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
 
     try {
       await FirebaseFirestore.instance
-          .collection('productos')
+          .collection('inventario_general')
           .doc(codigo)
-          .set(productoData);
+          .set(productoData, SetOptions(merge: true));
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Producto guardado exitosamente')),
@@ -82,6 +139,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         'codigo': codigo,
         'nombre': nombre,
         'precio': precio,
+        'categoria': categoriaSeleccionada,
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -104,7 +162,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         boxShadow: [
           BoxShadow(
             color: Colors.grey.shade300,
-            blurRadius: 6,
+            blurRadius: 0,
             offset: const Offset(0, 3),
           ),
         ],
@@ -113,9 +171,11 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
       child: TextField(
         controller: controller,
         keyboardType: inputType,
+        style: const TextStyle(color: Color(0xFF1B4F72)),
         decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: Colors.blue.shade700),
+          prefixIcon: Icon(icon, color: Color(0xFF2C3E50)),
           labelText: label,
+          labelStyle: const TextStyle(color: Color(0xFF2C3E50)),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
@@ -127,20 +187,63 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     );
   }
 
+  Widget buildCategoriaDropdown() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade300,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: DropdownButtonFormField<String>(
+        value: categoriaSeleccionada,
+        decoration: InputDecoration(
+          labelText: 'Categoría',
+          filled: true,
+          fillColor: Colors.white,
+          prefixIcon: Icon(Icons.category, color: const Color(0xFF2C3E50)),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+        ),
+        style: TextStyle(fontSize: 16, color: Colors.grey.shade800),
+        dropdownColor: Colors.white,
+        items:
+            categoriasDisponibles.map((categoria) {
+              return DropdownMenuItem<String>(
+                value: categoria,
+                child: Text(categoria),
+              );
+            }).toList(),
+        onChanged: (value) {
+          setState(() {
+            categoriaSeleccionada = value;
+          });
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: Column(
         children: [
-          // AppBar con degradado
           SafeArea(
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 20),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF2563EB), Color(0xFF1E3A8A)],
+                  colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
@@ -161,14 +264,11 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
               ),
             ),
           ),
-
-          // Formulario
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(20.0),
               child: ListView(
                 children: [
-                  // Código de barras
                   widget.codigoBarras.isEmpty
                       ? buildTextField(
                         label: 'Código de Barras',
@@ -176,33 +276,38 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                         controller: codigoController,
                       )
                       : Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 10,
-                        ),
+                        margin: const EdgeInsets.only(bottom: 20),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.shade300,
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text(
-                          'Código de Barras: ${widget.codigoBarras}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.qr_code, color: Color(0xFF2C3E50)),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Código de Barras: ${widget.codigoBarras}',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                  const SizedBox(height: 20),
-
-                  // Nombre
                   buildTextField(
                     label: 'Nombre del Producto',
                     icon: Icons.inventory_2,
                     controller: nombreController,
                   ),
-
-                  // Precio
                   buildTextField(
                     label: 'Precio',
                     icon: Icons.attach_money,
@@ -211,28 +316,23 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                       decimal: true,
                     ),
                   ),
-
-                  const SizedBox(height: 30),
-
-                  // Botón guardar
-                  SizedBox(
-                    width: double.infinity,
+                  buildCategoriaDropdown(),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
                     child: ElevatedButton.icon(
                       onPressed: guardarProducto,
+                      icon: const Icon(Icons.save, color: Colors.white),
+                      label: const Text('Guardar'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade800,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: const Color(0xFF4682B4),
+                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
-                      ),
-                      icon: const Icon(Icons.save, color: Colors.white),
-                      label: const Text(
-                        'Guardar',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 14,
                         ),
                       ),
                     ),

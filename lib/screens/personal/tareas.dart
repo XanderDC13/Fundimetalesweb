@@ -17,12 +17,10 @@ class TareasPendientesScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: Column(
         children: [
-          SafeArea(
-            child: _buildHeader(),
-          ), // Asegura que respete la parte superior
+          SafeArea(child: _buildHeader()),
           Expanded(
             child: StreamBuilder<DocumentSnapshot>(
               stream:
@@ -43,7 +41,10 @@ class TareasPendientesScreen extends StatelessWidget {
 
                 if (tareas.isEmpty) {
                   return const Center(
-                    child: Text('No tienes tareas pendientes'),
+                    child: Text(
+                      'No tienes tareas pendientes',
+                      style: TextStyle(color: Color(0xFFB0BEC5)),
+                    ),
                   );
                 }
 
@@ -58,7 +59,7 @@ class TareasPendientesScreen extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      elevation: 3,
+                      elevation: 0,
                       child: ListTile(
                         leading: const Icon(
                           Icons.task_alt,
@@ -95,7 +96,7 @@ class TareasPendientesScreen extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.only(bottom: 16),
             child: ElevatedButton.icon(
               onPressed: () {
                 Navigator.of(context).push(
@@ -104,14 +105,17 @@ class TareasPendientesScreen extends StatelessWidget {
                   ),
                 );
               },
-              icon: const Icon(Icons.check_circle_outline),
+              icon: const Icon(Icons.check_circle_outline, color: Colors.white),
               label: const Text('Ver tareas completadas'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3B82F6),
+                backgroundColor: const Color(0xFF4682B4),
                 foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
                 ),
               ),
             ),
@@ -126,7 +130,7 @@ class TareasPendientesScreen extends StatelessWidget {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+          colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),

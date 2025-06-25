@@ -9,12 +9,14 @@ class Producto {
   String nombre;
   double precio;
   num cantidad;
+  String categoria;
 
   Producto({
     required this.codigo,
     required this.nombre,
     required this.precio,
     required this.cantidad,
+    required this.categoria,
   });
 
   static Producto fromMap(Map<String, dynamic> map) {
@@ -23,6 +25,7 @@ class Producto {
       nombre: map['nombre'] ?? '',
       precio: (map['precio'] ?? 0).toDouble(),
       cantidad: map['general'] ?? map['cantidad'] ?? 0,
+      categoria: map['categoria'] ?? 'Sin categoría',
     );
   }
 
@@ -32,6 +35,7 @@ class Producto {
       'nombre': nombre,
       'precio': precio,
       'cantidad': cantidad,
+      'categoria': categoria,
     };
   }
 }
@@ -46,6 +50,25 @@ class TotalInvScreen extends StatefulWidget {
 class _TotalInvScreenState extends State<TotalInvScreen> {
   final TextEditingController _searchController = TextEditingController();
   String searchQuery = '';
+  final List<String> categorias = [
+    'Todas',
+    'AGRICOLA',
+    'ALCANTARILLADO',
+    'ARAÑAS',
+    'ARTILLEROS',
+    'BOCINES',
+    'DISCOS',
+    'GIMNASIO',
+    'LIVIANOS',
+    'PLANCHAS',
+    'SERVICIOS',
+    'SISTEMAS',
+    'SOPORTERIA',
+    'TAMBORES',
+    'TRANSPORTE',
+  ];
+
+  String categoriaSeleccionada = 'Todas';
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -285,6 +308,54 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                 ],
               ),
             ),
+            Container(
+              height: 45,
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                itemCount: categorias.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final categoria = categorias[index];
+                  final isSelected = categoria == categoriaSeleccionada;
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        categoriaSeleccionada = categoria;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            isSelected
+                                ? const Color(0xFF4682B4)
+                                : Colors.grey[200],
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color:
+                              isSelected
+                                  ? const Color(0xFF4682B4)
+                                  : Colors.grey.shade400,
+                        ),
+                      ),
+                      child: Text(
+                        categoria,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
 
             // Productos en grid
             Expanded(
@@ -302,15 +373,20 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                               doc.data() as Map<String, dynamic>,
                             ),
                           )
-                          .where(
-                            (p) =>
+                          .where((p) {
+                            final coincideBusqueda =
                                 p.nombre.toLowerCase().contains(
                                   searchQuery.toLowerCase(),
                                 ) ||
                                 p.codigo.toLowerCase().contains(
                                   searchQuery.toLowerCase(),
-                                ),
-                          )
+                                );
+                            final coincideCategoria =
+                                categoriaSeleccionada == 'Todas' ||
+                                ((p as dynamic).categoria ==
+                                    categoriaSeleccionada);
+                            return coincideBusqueda && coincideCategoria;
+                          })
                           .toList();
 
                   return Padding(
@@ -320,10 +396,10 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                       itemCount: productos.length,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
+                            crossAxisCount: 2,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            childAspectRatio: 0.7,
+                            childAspectRatio: 0.9,
                           ),
                       itemBuilder: (context, index) {
                         final producto = productos[index];
@@ -349,24 +425,34 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(14),
                                   decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFF2ECC71),
-                                        Color(0xFF2ECC71),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: const Color.fromARGB(
+                                        255,
+                                        255,
+                                        255,
+                                        255,
+                                      ),
                                     ),
                                   ),
-                                  child: const Icon(
-                                    Icons.tire_repair,
-                                    size: 28,
-                                    color: Colors.white,
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: const [
+                                      Icon(
+                                        Icons
+                                            .construction, // o el icono que desees
+                                        size: 40,
+                                        color: Color(0xFF2ECC71),
+                                      ),
+                                      SizedBox(height: 10),
+                                    ],
                                   ),
                                 ),
+
                                 const SizedBox(height: 8),
                                 Text(
                                   producto.nombre,

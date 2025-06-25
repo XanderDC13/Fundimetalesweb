@@ -18,7 +18,7 @@ class _TareasTerminadasScreenState extends State<TareasTerminadasScreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: Column(
         children: [
           SafeArea(child: _buildHeader()),
@@ -65,9 +65,21 @@ class _TareasTerminadasScreenState extends State<TareasTerminadasScreen> {
                                   fecha.day == _fechaSeleccionada!.day;
                             }).toList();
 
+                        // Ordenar por fecha descendente
+                        tareasFiltradas.sort((a, b) {
+                          final fa =
+                              (a['fechaTerminada'] as Timestamp).toDate();
+                          final fb =
+                              (b['fechaTerminada'] as Timestamp).toDate();
+                          return fb.compareTo(fa);
+                        });
+
                         if (tareasFiltradas.isEmpty) {
                           return const Center(
-                            child: Text('No hay tareas completadas'),
+                            child: Text(
+                              'No hay tareas completadas',
+                              style: TextStyle(color: Color(0xFFB0BEC5)),
+                            ),
                           );
                         }
 
@@ -158,7 +170,7 @@ class _TareasTerminadasScreenState extends State<TareasTerminadasScreen> {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+          colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),

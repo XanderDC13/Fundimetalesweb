@@ -16,7 +16,7 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: SafeArea(
         child: Column(
           children: [
@@ -97,7 +97,7 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          elevation: 4,
+                          elevation: 0,
                           margin: const EdgeInsets.only(bottom: 14),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
@@ -114,7 +114,7 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
                                   ),
                                   child: const Icon(
                                     Icons.receipt_long,
-                                    color: Color(0xFF1E40AF),
+                                    color: Color(0xFF2C3E50),
                                   ),
                                 ),
                                 const SizedBox(width: 14),
@@ -134,7 +134,7 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
                                       const SizedBox(height: 4),
                                       Text(
                                         fecha != null
-                                            ? '📅 ${fecha.day}/${fecha.month}/${fecha.year} — ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')}'
+                                            ? '${fecha.day}/${fecha.month}/${fecha.year} — ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')}'
                                             : 'Sin fecha',
                                         style: const TextStyle(
                                           color: Colors.grey,
@@ -149,7 +149,7 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF1E40AF),
+                                    color: Color(0xFF2C3E50),
                                   ),
                                 ),
                               ],
@@ -174,7 +174,7 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+          colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
         ),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(30),
@@ -241,7 +241,7 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
                 : 'Filtrado: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF1E40AF),
+            backgroundColor: const Color(0xFF4682B4),
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),

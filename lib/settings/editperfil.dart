@@ -16,11 +16,10 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
   final _contrasenaController = TextEditingController();
 
   bool _isLoading = true;
+  User? _usuario;
 
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
-
-  User? _usuario;
 
   @override
   void initState() {
@@ -79,12 +78,10 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
       );
     } on FirebaseAuthException catch (e) {
       String mensaje = 'Error al actualizar: ${e.code}';
-
       if (e.code == 'requires-recent-login') {
         mensaje =
             'Por seguridad, vuelve a iniciar sesión para cambiar esta información.';
       }
-
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(mensaje)));
@@ -99,64 +96,47 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
     super.dispose();
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, color: const Color(0xFF1E40AF)),
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
+  Widget _inputCard({
+    required IconData icon,
+    required String label,
+    required TextEditingController controller,
+    TextInputType? keyboardType,
+    bool obscure = false,
+    String? Function(String?)? validator,
+  }) {
+    return Card(
+      color: Colors.white,
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ListTile(
+        leading: Icon(icon, color: const Color(0xFF2C3E50)),
+        title: TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          obscureText: obscure,
+          decoration: InputDecoration(
+            hintText: label,
+            border: InputBorder.none,
+            isDense: true,
+          ),
+          validator: validator,
+        ),
       ),
-      labelStyle: const TextStyle(color: Color(0xFF1E40AF)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: SafeArea(
         child:
             _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: double.infinity,
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
-                        borderRadius: BorderRadius.only(
-                          bottomLeft: Radius.circular(30),
-                          bottomRight: Radius.circular(30),
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 24,
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Editar Perfil',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+                    _buildHeader(),
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -164,25 +144,21 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
                           key: _formKey,
                           child: ListView(
                             children: [
-                              TextFormField(
+                              const SizedBox(height: 20),
+                              _inputCard(
+                                icon: Icons.person,
+                                label: 'Nombre',
                                 controller: _nombreController,
-                                decoration: _inputDecoration(
-                                  'Nombre',
-                                  Icons.person,
-                                ),
                                 validator:
                                     (value) =>
                                         value == null || value.isEmpty
                                             ? 'Campo requerido'
                                             : null,
                               ),
-                              const SizedBox(height: 16),
-                              TextFormField(
+                              _inputCard(
+                                icon: Icons.email,
+                                label: 'Email',
                                 controller: _emailController,
-                                decoration: _inputDecoration(
-                                  'Email',
-                                  Icons.email,
-                                ),
                                 keyboardType: TextInputType.emailAddress,
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
@@ -194,14 +170,11 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
                                   return null;
                                 },
                               ),
-                              const SizedBox(height: 16),
-                              TextFormField(
+                              _inputCard(
+                                icon: Icons.lock,
+                                label: 'Nueva Contraseña (opcional)',
                                 controller: _contrasenaController,
-                                decoration: _inputDecoration(
-                                  'Nueva Contraseña (opcional)',
-                                  Icons.lock,
-                                ),
-                                obscureText: true,
+                                obscure: true,
                                 validator: (value) {
                                   if (value != null &&
                                       value.isNotEmpty &&
@@ -216,20 +189,23 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
                                 onPressed: _guardarCambios,
                                 icon: const Icon(
                                   Icons.save,
-                                  color: Color(0xFF1E40AF),
+                                  color: Color.fromARGB(255, 255, 255, 255),
                                 ),
                                 label: const Text(
                                   'Guardar Cambios',
-                                  style: TextStyle(color: Color(0xFF1E40AF)),
+                                  style: TextStyle(
+                                    color: Color.fromARGB(255, 255, 255, 255),
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  elevation: 2,
+                                  backgroundColor: Color(0xFF4682B4),
+                                  elevation: 0,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 16,
                                   ),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
                                 ),
                               ),
@@ -240,6 +216,34 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
                     ),
                   ],
                 ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: const Center(
+        child: Text(
+          'Editar Perfil',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }

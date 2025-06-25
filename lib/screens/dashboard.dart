@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// imports mantenidos
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -17,27 +19,26 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen>
     with WidgetsBindingObserver {
-  String productosFiltro = 'Diario';
-  List<List<String>> productosMasVendidos = [];
-  List<List<String>> inventarioBajo = [];
   String nombreUsuario = '';
   String rolUsuario = 'Empleado';
   String sedeUsuario = '';
 
-  final ScrollController _scrollController = ScrollController();
+  // Variables para el resumen de hoy
+  int ventasRealizadas = 0;
+  int productosVendidos = 0;
+  double ingresosDia = 0.0;
+  int productosBajoStock = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _cargarNombreYRolUsuario();
-    _cargarInventarioBajo();
-    _cargarProductosMasVendidos();
+    _cargarResumenHoy();
   }
 
   Future<void> _cargarNombreYRolUsuario() async {
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null) return;
 
     final doc =
@@ -45,7 +46,6 @@ class _DashboardScreenState extends State<DashboardScreen>
             .collection('usuarios_activos')
             .doc(user.uid)
             .get();
-
     if (doc.exists) {
       final data = doc.data()!;
       setState(() {
@@ -59,158 +59,102 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
+  Future<void> _cargarResumenHoy() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+      final endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+      // Cargar ventas del día
+      final ventasQuery =
+          await FirebaseFirestore.instance
+              .collection('ventas')
+              .where(
+                'fecha',
+                isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+              )
+              .where('fecha', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+              .get();
+
+      int totalVentas = ventasQuery.docs.length;
+      int totalProductos = 0;
+      double totalIngresos = 0.0;
+
+      for (var doc in ventasQuery.docs) {
+        final data = doc.data();
+        totalIngresos += (data['total'] ?? 0.0).toDouble();
+
+        final productos = data['productos'] as List<dynamic>? ?? [];
+        for (var producto in productos) {
+          totalProductos += (producto['cantidad'] ?? 0) as int;
+        }
+      }
+
+      // Cargar productos bajo stock desde historial_inventario_general
+      // Cargar historial inventario
+      final inventarioSnapshot =
+          await FirebaseFirestore.instance
+              .collection('historial_inventario_general')
+              .orderBy('fecha_actualizacion', descending: true)
+              .get();
+
+      // Cargar ventas
+      final ventasSnapshot =
+          await FirebaseFirestore.instance.collection('ventas').get();
+      final ventasDocs = ventasSnapshot.docs;
+
+      final Map<String, int> ventasPorProducto = {};
+      for (var venta in ventasDocs) {
+        final productos = List<Map<String, dynamic>>.from(venta['productos']);
+        for (var producto in productos) {
+          final codigo = producto['codigo']?.toString() ?? '';
+          final cantidad = (producto['cantidad'] ?? 0) as num;
+          ventasPorProducto[codigo] =
+              (ventasPorProducto[codigo] ?? 0) + cantidad.toInt();
+        }
+      }
+
+      // Procesar inventario agrupado
+      final Map<String, int> stockFinal = {};
+      for (var doc in inventarioSnapshot.docs) {
+        final data = doc.data();
+        final codigo = (data['codigo'] ?? '').toString();
+        final cantidad = (data['cantidad'] ?? 0) as int;
+        final tipo = (data['tipo'] ?? 'entrada').toString();
+
+        final ajuste = tipo == 'salida' ? -cantidad : cantidad;
+        stockFinal[codigo] = (stockFinal[codigo] ?? 0) + ajuste;
+      }
+
+      // Restar ventas al inventario
+      ventasPorProducto.forEach((codigo, cantidadVendida) {
+        if (stockFinal.containsKey(codigo)) {
+          stockFinal[codigo] = stockFinal[codigo]! - cantidadVendida;
+        }
+      });
+
+      // Contar productos con stock bajo (< 10)
+      int bajoStock =
+          stockFinal.values.where((cantidad) => cantidad < 10).length;
+
+      setState(() {
+        ventasRealizadas = totalVentas;
+        productosVendidos = totalProductos;
+        ingresosDia = totalIngresos;
+        productosBajoStock = bajoStock;
+      });
+    } catch (e) {
+      print('Error al cargar resumen del día: $e');
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _scrollController.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _cargarInventarioBajo();
-      _cargarProductosMasVendidos();
-    }
-  }
-
-  Future<void> _cargarInventarioBajo() async {
-    final pinturaSnapshot =
-        await FirebaseFirestore.instance.collection('inventario_pintura').get();
-    final ventasSnapshot =
-        await FirebaseFirestore.instance.collection('ventas').get();
-
-    final Map<String, int> cantidadPintura = {};
-    final Map<String, String> nombresProductos = {};
-
-    for (var doc in pinturaSnapshot.docs) {
-      final data = doc.data();
-      final codigo = data['codigo'] ?? '';
-      final nombre = data['nombre'] ?? 'Sin nombre';
-      final cantidad = data['cantidad'] ?? 0;
-
-      if (codigo.isNotEmpty) {
-        cantidadPintura[codigo] =
-            (cantidadPintura[codigo] ?? 0) + (cantidad as int);
-        nombresProductos[codigo] = nombre;
-      }
-    }
-
-    final Map<String, int> productosVendidos = {};
-    for (var venta in ventasSnapshot.docs) {
-      final productos = List<Map<String, dynamic>>.from(venta['productos']);
-      for (var producto in productos) {
-        final codigo = producto['codigo'];
-        final cantidad = producto['cantidad'];
-        if (codigo != null && cantidad != null) {
-          productosVendidos[codigo] =
-              (productosVendidos[codigo] ?? 0) + (cantidad as int);
-        }
-      }
-    }
-
-    final List<List<String>> inventario = [
-      ['Producto', 'Cant Disponible'],
-    ];
-
-    cantidadPintura.forEach((codigo, cantidadPint) {
-      final cantidadVendida = productosVendidos[codigo] ?? 0;
-      final cantidadDisponible = cantidadPint - cantidadVendida;
-
-      if (cantidadDisponible < 10) {
-        final nombre = nombresProductos[codigo] ?? 'Sin nombre';
-        inventario.add([nombre, cantidadDisponible.toString()]);
-      }
-    });
-
-    inventario.sort((a, b) {
-      if (a == inventario[0]) return -1;
-      if (b == inventario[0]) return 1;
-      return int.parse(a[1]).compareTo(int.parse(b[1]));
-    });
-
-    setState(() {
-      inventarioBajo = inventario;
-    });
-  }
-
-  Future<void> _cargarProductosMasVendidos() async {
-    final now = DateTime.now();
-    late DateTime startDate;
-
-    if (productosFiltro == 'Diario') {
-      startDate = DateTime(now.year, now.month, now.day);
-    } else if (productosFiltro == 'Mensual') {
-      startDate = DateTime(now.year, now.month, 1);
-    } else {
-      startDate = DateTime(now.year, 1, 1);
-    }
-
-    final ventasSnapshot =
-        await FirebaseFirestore.instance
-            .collection('ventas')
-            .where('fecha', isGreaterThanOrEqualTo: startDate)
-            .get();
-
-    final Map<String, int> productosVendidos = {};
-    final Map<String, String> nombresProductos = {};
-
-    for (var venta in ventasSnapshot.docs) {
-      final productos = List<Map<String, dynamic>>.from(venta['productos']);
-      for (var producto in productos) {
-        final codigo = producto['codigo'];
-        final cantidad = producto['cantidad'];
-        final nombre = producto['nombre'];
-
-        if (codigo != null && cantidad != null) {
-          productosVendidos[codigo] =
-              (productosVendidos[codigo] ?? 0) + (cantidad as int);
-          nombresProductos[codigo] = nombre ?? 'Sin nombre';
-        }
-      }
-    }
-
-    final topProductos =
-        productosVendidos.entries.toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
-
-    final List<List<String>> top3 = [
-      ['Producto', 'Cant Vendida'],
-    ];
-
-    for (var i = 0; i < topProductos.length && i < 3; i++) {
-      final codigo = topProductos[i].key;
-      final cantidad = topProductos[i].value;
-      final nombre = nombresProductos[codigo] ?? 'Sin nombre';
-
-      top3.add([nombre, cantidad.toString()]);
-    }
-
-    setState(() {
-      productosMasVendidos = top3;
-    });
-  }
-
-  void _navegarConFade(BuildContext context, Widget pantalla) {
-    Navigator.of(context)
-        .push(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => pantalla,
-            transitionsBuilder: (
-              context,
-              animation,
-              secondaryAnimation,
-              child,
-            ) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: const Duration(milliseconds: 150),
-          ),
-        )
-        .then((_) {
-          _cargarInventarioBajo();
-          _cargarProductosMasVendidos();
-        });
   }
 
   @override
@@ -229,29 +173,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     children: [
                       _buildHeader(),
                       const SizedBox(height: 20),
-                      _buildSectionCard(
-                        title: 'PRODUCTOS MÁS VENDIDOS',
-                        filterValue: productosFiltro,
-                        onFilterChanged: (value) {
-                          setState(() => productosFiltro = value);
-                          _cargarProductosMasVendidos();
-                        },
-                        child:
-                            productosMasVendidos.isEmpty
-                                ? const Text('Sin datos')
-                                : _buildStyledTable(
-                                  productosMasVendidos,
-                                  scrollable: false,
-                                ),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSimpleSectionCard(
-                        title: 'INVENTARIO BAJO',
-                        child:
-                            inventarioBajo.isEmpty
-                                ? const Text('Sin datos')
-                                : _buildStyledTable(inventarioBajo),
-                      ),
+                      _buildResumenHoy(),
                       const SizedBox(height: 20),
                       _buildGridFunctions(),
                       const SizedBox(height: 20),
@@ -310,183 +232,122 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildSectionCard({
-    required String title,
-    required String filterValue,
-    required void Function(String) onFilterChanged,
-    required Widget child,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
+  Widget _buildResumenHoy() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF4682B4), Color(0xFF5a8cc7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E40AF),
-                    ),
-                  ),
-                ),
-                DropdownButton<String>(
-                  value: filterValue,
-                  items:
-                      ['Diario', 'Mensual', 'Anual']
-                          .map(
-                            (e) => DropdownMenuItem(value: e, child: Text(e)),
-                          )
-                          .toList(),
-                  onChanged: (value) => onFilterChanged(value ?? ''),
-                  underline: Container(),
-                  icon: const Icon(Icons.keyboard_arrow_down),
-                  style: const TextStyle(color: Color(0xFF1E40AF)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            child,
-          ],
-        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildSimpleSectionCard({
-    required String title,
-    required Widget child,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Resumen de Hoy',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1E40AF),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _buildResumenItem(
+                  value: ventasRealizadas.toString(),
+                  label: 'Ventas Realizadas',
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            child,
-          ],
-        ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: _buildResumenItem(
+                  value: productosVendidos.toString(),
+                  label: 'Productos Vendidos',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _buildResumenItem(
+                  value: '\$${ingresosDia.toStringAsFixed(0)}',
+                  label: 'Ingresos del Día',
+                ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: _buildResumenItem(
+                  value: productosBajoStock.toString(),
+                  label: 'Productos Bajo Stock',
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildStyledTable(List<List<String>> rows, {bool scrollable = true}) {
-    final header = rows[0];
-    final dataRows = rows.length > 1 ? rows.sublist(1) : [];
-
+  Widget _buildResumenItem({required String value, required String label}) {
     return Column(
       children: [
-        Table(
-          columnWidths: const {0: FlexColumnWidth(2), 1: FlexColumnWidth(1)},
-          border: TableBorder(
-            bottom: BorderSide(color: Colors.grey.shade400, width: 1),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
           ),
-          children: [
-            TableRow(
-              children:
-                  header
-                      .map(
-                        (cell) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
-                            cell,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-            ),
-          ],
         ),
         const SizedBox(height: 4),
-        if (scrollable)
-          SizedBox(
-            height: 100,
-            child: Scrollbar(
-              thumbVisibility: true,
-              controller: _scrollController,
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                child: _buildTableBody(dataRows.cast<List<String>>()),
-              ),
-            ),
-          )
-        else
-          _buildTableBody(dataRows.cast<List<String>>()),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }
 
-  Widget _buildTableBody(List<List<String>> dataRows) {
-    return Table(
-      columnWidths: const {0: FlexColumnWidth(2), 1: FlexColumnWidth(1)},
-      border: TableBorder(
-        horizontalInside: BorderSide(color: Colors.grey.shade300, width: 1),
-      ),
-      children:
-          dataRows
-              .map(
-                (row) => TableRow(
-                  children:
-                      row
-                          .map(
-                            (cell) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Text(
-                                cell,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                ),
-              )
-              .toList(),
-    );
+  void _navegarConFade(BuildContext context, Widget pantalla) {
+    Navigator.of(context)
+        .push(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => pantalla,
+            transitionsBuilder: (
+              context,
+              animation,
+              secondaryAnimation,
+              child,
+            ) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 150),
+          ),
+        )
+        .then((_) {
+          // Recargar datos cuando se regrese al dashboard
+          _cargarResumenHoy();
+        });
   }
 
   Widget _buildGridFunctions() {
@@ -513,7 +374,6 @@ class _DashboardScreenState extends State<DashboardScreen>
               _navegarConFade(context, const ReportesScreen());
             }),
             _gridButton(Icons.calculate, 'Contabilidad', () {}),
-
             _gridButton(Icons.settings, 'Ajustes', () {
               _navegarConFade(context, const SettingsScreen());
             }),
@@ -521,7 +381,6 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
       );
     } else {
-      // Vista para empleados
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: GridView.count(
