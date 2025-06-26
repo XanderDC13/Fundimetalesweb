@@ -20,12 +20,37 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
+  String? sedeSeleccionada;
+  List<String> listaSedes = [];
+  bool _cargandoSedes = true;
 
   @override
   void initState() {
     super.initState();
     _usuario = _auth.currentUser;
-    _cargarDatosUsuario();
+    _cargarDatos();
+  }
+
+  Future<void> _cargarDatos() async {
+    await _cargarSedes();
+    await _cargarDatosUsuario();
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _cargarSedes() async {
+    try {
+      final snapshot = await _firestore.collection('sedes').get();
+      listaSedes =
+          snapshot.docs.map((doc) => doc['nombre'] as String).toList()..sort();
+    } catch (e) {
+      print('Error al cargar sedes: $e');
+    } finally {
+      setState(() {
+        _cargandoSedes = false;
+      });
+    }
   }
 
   Future<void> _cargarDatosUsuario() async {
@@ -41,11 +66,8 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
       final data = doc.data()!;
       _nombreController.text = data['nombre'] ?? '';
       _emailController.text = _usuario!.email ?? '';
+      sedeSeleccionada = data['sede'] ?? null;
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   Future<void> _guardarCambios() async {
@@ -70,6 +92,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
           .update({
             'nombre': nuevoNombre,
             'email': nuevoEmail,
+            'sede': sedeSeleccionada ?? '',
             if (nuevaContrasena.isNotEmpty) 'contrasena': nuevaContrasena,
           });
 
@@ -184,22 +207,75 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
                                   return null;
                                 },
                               ),
+                              _cargandoSedes
+                                  ? const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
+                                  : Card(
+                                    color: Colors.white,
+                                    elevation: 0,
+                                    margin: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                      ),
+                                      child: DropdownButtonFormField<String>(
+                                        value: sedeSeleccionada,
+                                        isExpanded: true,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Sede',
+                                          prefixIcon: Icon(
+                                            Icons.location_city,
+                                            color: Color(0xFF2C3E50),
+                                          ),
+                                          border: InputBorder.none,
+                                        ),
+                                        items:
+                                            listaSedes.map((sede) {
+                                              return DropdownMenuItem(
+                                                value: sede,
+                                                child: Text(
+                                                  sede,
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF2C3E50),
+                                                  ),
+                                                ),
+                                              );
+                                            }).toList(),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            sedeSeleccionada = value;
+                                          });
+                                        },
+                                        validator:
+                                            (value) =>
+                                                value == null || value.isEmpty
+                                                    ? 'Seleccione una sede'
+                                                    : null,
+                                      ),
+                                    ),
+                                  ),
                               const SizedBox(height: 30),
                               ElevatedButton.icon(
                                 onPressed: _guardarCambios,
                                 icon: const Icon(
                                   Icons.save,
-                                  color: Color.fromARGB(255, 255, 255, 255),
+                                  color: Colors.white,
                                 ),
                                 label: const Text(
                                   'Guardar Cambios',
                                   style: TextStyle(
-                                    color: Color.fromARGB(255, 255, 255, 255),
+                                    color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(0xFF4682B4),
+                                  backgroundColor: const Color(0xFF4682B4),
                                   elevation: 0,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 16,

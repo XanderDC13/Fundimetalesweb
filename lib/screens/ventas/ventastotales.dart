@@ -94,6 +94,7 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
                           );
                         },
                         child: Card(
+                          color: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -109,7 +110,12 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFE0E7FF),
+                                    color: const Color.fromARGB(
+                                      255,
+                                      255,
+                                      255,
+                                      255,
+                                    ),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: const Icon(

@@ -274,7 +274,7 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            elevation: 4,
+                            elevation: 0,
                             child: Padding(
                               padding: const EdgeInsets.all(16),
                               child: Column(

@@ -252,6 +252,7 @@ class _ModificarVentasScreenState extends State<ModificarVentasScreen> {
                     : 'Fecha desconocida';
 
             return Card(
+              color: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -313,7 +314,10 @@ class _ModificarVentasScreenState extends State<ModificarVentasScreen> {
                           children: [
                             IconButton(
                               tooltip: 'Editar',
-                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              icon: const Icon(
+                                Icons.edit_outlined,
+                                color: Color(0xFF4682B4),
+                              ),
                               onPressed: () {
                                 Navigator.push(
                                   context,
@@ -329,7 +333,10 @@ class _ModificarVentasScreenState extends State<ModificarVentasScreen> {
                             ),
                             IconButton(
                               tooltip: 'Eliminar',
-                              icon: const Icon(Icons.delete, color: Colors.red),
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.redAccent,
+                              ),
                               onPressed: () => _confirmarEliminacion(venta.id),
                             ),
                           ],

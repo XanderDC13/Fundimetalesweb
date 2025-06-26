@@ -15,7 +15,7 @@ class FacturaDetalleScreen extends StatelessWidget {
     final productos = List<Map<String, dynamic>>.from(venta['productos']);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: Column(
         children: [
           // Encabezado con degradado y SafeArea

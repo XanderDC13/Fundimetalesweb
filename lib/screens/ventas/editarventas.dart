@@ -256,7 +256,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: SafeArea(
         child: Form(
           key: _formKey,
@@ -271,7 +271,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                 ),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+                    colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -389,8 +389,8 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                   ),
                                   IconButton(
                                     icon: const Icon(
-                                      Icons.delete,
-                                      color: Colors.red,
+                                      Icons.delete_outline,
+                                      color: Colors.redAccent,
                                     ),
                                     onPressed: () {
                                       setState(() {
@@ -503,17 +503,17 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                     }),
                     TextButton.icon(
                       onPressed: _agregarProducto,
-                      icon: const Icon(Icons.add, color: Color(0xFF1E40AF)),
+                      icon: const Icon(Icons.add, color: Color(0xFF2C3E50)),
                       label: const Text(
                         'Añadir Producto',
-                        style: TextStyle(color: Color(0xFF1E40AF)),
+                        style: TextStyle(color: Color(0xFF2C3E50)),
                       ),
                     ),
                     const SizedBox(height: 20),
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE0E7FF),
+                        color: const Color.fromARGB(255, 255, 255, 255),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -523,7 +523,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                             'Total:',
                             style: TextStyle(
                               fontSize: 18,
-                              color: Color(0xFF1E3A8A),
+                              color: Color(0xFF2C3E50),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -531,7 +531,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                             '\$${_calcularTotal().toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 18,
-                              color: Color(0xFF1E40AF),
+                              color: Color(0xFF2C3E50),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -543,7 +543,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1E40AF),
+                          backgroundColor: const Color(0xFF4682B4),
                           padding: const EdgeInsets.symmetric(vertical: 20),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),

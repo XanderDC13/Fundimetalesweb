@@ -237,7 +237,7 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        elevation: 4,
+                        elevation: 0,
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(
@@ -258,7 +258,7 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
                                 'Total: \$${total.toStringAsFixed(2)}',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2ECC71),
+                                  color: Color(0xFF4682B4),
                                 ),
                               ),
                               const SizedBox(height: 12),

@@ -19,25 +19,25 @@ class EditarProductoScreen extends StatefulWidget {
 
 class _EditarProductoScreenState extends State<EditarProductoScreen> {
   late TextEditingController nombreController;
-  late TextEditingController precioController;
   late TextEditingController codigoController;
   final TextEditingController nuevaCategoriaController =
       TextEditingController();
 
   String? categoriaSeleccionada;
   List<String> categorias = [];
+  List<TextEditingController> costoControllers = [TextEditingController()];
+  List<TextEditingController> pvpControllers = [TextEditingController()];
 
   @override
   void initState() {
     super.initState();
     nombreController = TextEditingController(text: widget.nombreInicial);
-    precioController = TextEditingController(
-      text:
-          widget.precioInicial == 0
-              ? ''
-              : widget.precioInicial.toStringAsFixed(2),
-    );
     codigoController = TextEditingController(text: widget.codigoBarras);
+
+    // Inicializar el primer PVP con el precio inicial si existe
+    if (widget.precioInicial > 0) {
+      pvpControllers[0].text = widget.precioInicial.toStringAsFixed(2);
+    }
 
     if (widget.codigoBarras.isNotEmpty) {
       _cargarDatosExistentes();
@@ -53,15 +53,10 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
       setState(() {
         categorias =
             snapshot.docs.map((doc) => doc['nombre'] as String).toList();
-        // Ordenar alfabéticamente para mejor UX
         categorias.sort();
       });
     } catch (e) {
       print("Error al cargar categorías: $e");
-      // Si no se pueden cargar, usar categorías por defecto
-      setState(() {
-        categorias = ['GENERAL', 'REPUESTOS', 'HERRAMIENTAS', 'SERVICIOS'];
-      });
     }
   }
 
@@ -76,9 +71,75 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
       if (doc.exists) {
         final data = doc.data()!;
         setState(() {
-          nombreController.text = data['nombre'] ?? '';
-          precioController.text = (data['precio'] ?? 0).toString();
+          if (nombreController.text.isEmpty) {
+            nombreController.text = data['nombre'] ?? '';
+          }
           categoriaSeleccionada = data['categoria'];
+
+          // Cargar costos existentes (nuevo formato de arrays)
+          if (data['costos'] != null && data['costos'] is List) {
+            final costos = List<double>.from(data['costos']);
+            costoControllers.clear();
+            for (int i = 0; i < costos.length; i++) {
+              costoControllers.add(
+                TextEditingController(text: costos[i].toStringAsFixed(2)),
+              );
+            }
+          } else {
+            // Cargar costos individuales (formato legacy: costo1, costo2, etc.)
+            costoControllers.clear();
+            int costoIndex = 1;
+            while (data['costo$costoIndex'] != null) {
+              final costo = data['costo$costoIndex'];
+              if (costo is num) {
+                costoControllers.add(
+                  TextEditingController(text: costo.toStringAsFixed(2)),
+                );
+              }
+              costoIndex++;
+            }
+            // Si no hay costos, mantener al menos uno vacío
+            if (costoControllers.isEmpty) {
+              costoControllers.add(TextEditingController());
+            }
+          }
+
+          // Cargar PVPs existentes (nuevo formato de arrays)
+          if (data['pvps'] != null && data['pvps'] is List) {
+            final pvps = List<double>.from(data['pvps']);
+            pvpControllers.clear();
+            for (int i = 0; i < pvps.length; i++) {
+              pvpControllers.add(
+                TextEditingController(text: pvps[i].toStringAsFixed(2)),
+              );
+            }
+          } else {
+            // Cargar PVPs individuales (formato legacy: pvp1, pvp2, etc.)
+            pvpControllers.clear();
+            int pvpIndex = 1;
+            while (data['pvp$pvpIndex'] != null) {
+              final pvp = data['pvp$pvpIndex'];
+              if (pvp is num) {
+                pvpControllers.add(
+                  TextEditingController(text: pvp.toStringAsFixed(2)),
+                );
+              }
+              pvpIndex++;
+            }
+            // Si no hay PVPs pero hay precio legacy, usarlo
+            if (pvpControllers.isEmpty && data['precio'] != null) {
+              final precio = data['precio'];
+              if (precio is num && precio > 0) {
+                pvpControllers.add(
+                  TextEditingController(text: precio.toStringAsFixed(2)),
+                );
+              }
+            }
+            // Si no hay PVPs, mantener al menos uno vacío
+            if (pvpControllers.isEmpty) {
+              pvpControllers.add(TextEditingController());
+            }
+          }
         });
       }
     } catch (e) {
@@ -86,45 +147,107 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     }
   }
 
+  void agregarCosto() {
+    setState(() {
+      costoControllers.add(TextEditingController());
+    });
+  }
+
+  void eliminarCosto(int index) {
+    if (costoControllers.length > 1) {
+      setState(() {
+        costoControllers[index].dispose();
+        costoControllers.removeAt(index);
+      });
+    }
+  }
+
+  void agregarPVP() {
+    setState(() {
+      pvpControllers.add(TextEditingController());
+    });
+  }
+
+  void eliminarPVP(int index) {
+    if (pvpControllers.length > 1) {
+      setState(() {
+        pvpControllers[index].dispose();
+        pvpControllers.removeAt(index);
+      });
+    }
+  }
+
   void guardarProducto() async {
     final codigo = codigoController.text.trim();
     final nombre = nombreController.text.trim();
-    final precioText = precioController.text.trim();
 
-    if (codigo.isEmpty ||
-        nombre.isEmpty ||
-        precioText.isEmpty ||
-        categoriaSeleccionada == null) {
+    if (codigo.isEmpty || nombre.isEmpty || categoriaSeleccionada == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Todos los campos son obligatorios')),
+        const SnackBar(
+          content: Text('Código, nombre y categoría son obligatorios'),
+        ),
       );
       return;
     }
 
-    final precio = double.tryParse(precioText);
-    if (precio == null || precio < 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Precio inválido')));
-      return;
+    // Procesar costos
+    List<double> costos = [];
+    for (var controller in costoControllers) {
+      if (controller.text.trim().isNotEmpty) {
+        final costo = double.tryParse(controller.text.trim());
+        if (costo != null && costo >= 0) {
+          costos.add(costo);
+        }
+      }
     }
 
-    // Datos del producto SIN cantidad
+    // Procesar PVPs
+    List<double> pvps = [];
+    for (var controller in pvpControllers) {
+      if (controller.text.trim().isNotEmpty) {
+        final pvp = double.tryParse(controller.text.trim());
+        if (pvp != null && pvp >= 0) {
+          pvps.add(pvp);
+        }
+      }
+    }
+
+    // Crear datos individuales para costos y PVPs
+    Map<String, dynamic> costosData = {};
+    Map<String, dynamic> pvpsData = {};
+
+    for (int i = 0; i < costos.length; i++) {
+      costosData['costo${i + 1}'] = costos[i];
+    }
+
+    for (int i = 0; i < pvps.length; i++) {
+      pvpsData['pvp${i + 1}'] = pvps[i];
+    }
+
+    // Datos del producto
     final productoData = {
       'codigo': codigo,
       'nombre': nombre,
-      'precio': precio,
       'categoria': categoriaSeleccionada,
       'fecha': FieldValue.serverTimestamp(),
+      // Mantener compatibilidad con el precio original si existe al menos un PVP
+      if (pvps.isNotEmpty) 'precio': pvps[0],
+      // Agregar arrays para nueva funcionalidad
+      'costos': costos,
+      'pvps': pvps,
+      // Agregar campos individuales para compatibilidad
+      ...costosData,
+      ...pvpsData,
     };
 
     try {
-      // Usar set() sin merge para reemplazar completamente el documento
-      // Esto eliminará cualquier campo 'cantidad' que pueda existir
+      // Debug: mostrar qué se va a guardar
+      print("Guardando producto con datos: $productoData");
+
       await FirebaseFirestore.instance
           .collection('inventario_general')
           .doc(codigo)
-          .set(productoData); // Sin SetOptions(merge: true)
+          .set(productoData);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Producto guardado exitosamente')),
@@ -133,8 +256,9 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
       Navigator.pop(context, {
         'codigo': codigo,
         'nombre': nombre,
-        'precio': precio,
         'categoria': categoriaSeleccionada,
+        'costos': costos,
+        'pvps': pvps,
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -148,62 +272,104 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     showDialog(
       context: context,
       builder:
-          (context) => AlertDialog(
-            title: const Text('Nueva categoría'),
-            content: TextField(
-              controller: nuevaCategoriaController,
-              decoration: const InputDecoration(
-                hintText: 'Nombre de la categoría',
-                border: OutlineInputBorder(),
-              ),
-              textCapitalization: TextCapitalization.characters,
+          (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancelar'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  final nuevaCat =
-                      nuevaCategoriaController.text.trim().toUpperCase();
-                  if (nuevaCat.isNotEmpty && !categorias.contains(nuevaCat)) {
-                    try {
-                      await FirebaseFirestore.instance
-                          .collection('categorias')
-                          .add({'nombre': nuevaCat});
+            backgroundColor: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.category,
+                    color: Color(0xFF4682B4),
+                    size: 40,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Nueva Categoría',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4682B4),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nuevaCategoriaController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre de la categoría',
+                      border: OutlineInputBorder(),
+                    ),
+                    textCapitalization: TextCapitalization.characters,
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancelar'),
+                      ),
+                      FloatingActionButton.extended(
+                        onPressed: () async {
+                          final nuevaCat =
+                              nuevaCategoriaController.text
+                                  .trim()
+                                  .toUpperCase();
+                          if (nuevaCat.isNotEmpty &&
+                              !categorias.contains(nuevaCat)) {
+                            try {
+                              await FirebaseFirestore.instance
+                                  .collection('categorias')
+                                  .add({'nombre': nuevaCat});
 
-                      setState(() {
-                        categorias.add(nuevaCat);
-                        categorias.sort(); // Mantener orden alfabético
-                        categoriaSeleccionada = nuevaCat;
-                      });
+                              setState(() {
+                                categorias.add(nuevaCat);
+                                categorias.sort();
+                                categoriaSeleccionada = nuevaCat;
+                              });
 
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Categoría "$nuevaCat" creada exitosamente',
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Categoría "$nuevaCat" creada'),
+                                ),
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Error al crear la categoría'),
+                                ),
+                              );
+                            }
+                          } else if (categorias.contains(nuevaCat)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Esta categoría ya existe'),
+                              ),
+                            );
+                          }
+
+                          nuevaCategoriaController.clear();
+                          Navigator.pop(context);
+                        },
+                        label: const Text(
+                          'Guardar',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Error al crear la categoría'),
-                        ),
-                      );
-                    }
-                  } else if (categorias.contains(nuevaCat)) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Esta categoría ya existe')),
-                    );
-                  }
-                  nuevaCategoriaController.clear();
-                  Navigator.pop(context);
-                },
-                child: const Text('Guardar'),
+                        icon: const Icon(Icons.save, color: Colors.white),
+                        backgroundColor: const Color(0xFF4682B4),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
     );
   }
@@ -231,7 +397,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         controller: controller,
         keyboardType: inputType,
         style: const TextStyle(
-          color: Color(0xFF1B4F72),
+          color: Color.fromARGB(255, 0, 0, 0),
           fontWeight: FontWeight.normal,
         ),
         decoration: InputDecoration(
@@ -248,6 +414,116 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
           filled: true,
           fillColor: Colors.white,
         ),
+      ),
+    );
+  }
+
+  Widget buildCostoField(int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade300,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: costoControllers[index],
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              style: const TextStyle(
+                color: Color.fromARGB(255, 0, 0, 0),
+                fontWeight: FontWeight.normal,
+              ),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(
+                  Icons.monetization_on,
+                  color: Color(0xFF2C3E50),
+                ),
+                labelText: 'Costo ${index + 1}',
+                labelStyle: const TextStyle(
+                  color: Color(0xFF2C3E50),
+                  fontWeight: FontWeight.normal,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+            ),
+          ),
+          if (costoControllers.length > 1)
+            IconButton(
+              onPressed: () => eliminarCosto(index),
+              icon: const Icon(Icons.remove_circle, color: Colors.red),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildPVPField(int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade300,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: pvpControllers[index],
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              style: const TextStyle(
+                color: Color.fromARGB(255, 0, 0, 0),
+                fontWeight: FontWeight.normal,
+              ),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(
+                  Icons.attach_money,
+                  color: Color(0xFF2C3E50),
+                ),
+                labelText: 'PVP ${index + 1}',
+                labelStyle: const TextStyle(
+                  color: Color(0xFF2C3E50),
+                  fontWeight: FontWeight.normal,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+            ),
+          ),
+          if (pvpControllers.length > 1)
+            IconButton(
+              onPressed: () => eliminarPVP(index),
+              icon: const Icon(Icons.remove_circle, color: Colors.red),
+            ),
+        ],
       ),
     );
   }
@@ -390,15 +666,73 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                     controller: nombreController,
                   ),
 
-                  // Campo precio
-                  buildTextField(
-                    label: 'Precio',
-                    icon: Icons.attach_money,
-                    controller: precioController,
-                    inputType: const TextInputType.numberWithOptions(
-                      decimal: true,
+                  // Sección de Costos
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Costos',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2C3E50),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: agregarCosto,
+                          icon: const Icon(
+                            Icons.add_circle,
+                            color: Color(0xFF4682B4),
+                          ),
+                          tooltip: 'Agregar costo',
+                        ),
+                      ],
                     ),
                   ),
+
+                  // Campos de costos dinámicos
+                  ...costoControllers.asMap().entries.map((entry) {
+                    int index = entry.key;
+                    return buildCostoField(index);
+                  }).toList(),
+
+                  const SizedBox(height: 20),
+
+                  // Sección de PVPs
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Precios de Venta (PVP)',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2C3E50),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: agregarPVP,
+                          icon: const Icon(
+                            Icons.add_circle,
+                            color: Color(0xFF4682B4),
+                          ),
+                          tooltip: 'Agregar PVP',
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Campos de PVPs dinámicos
+                  ...pvpControllers.asMap().entries.map((entry) {
+                    int index = entry.key;
+                    return buildPVPField(index);
+                  }).toList(),
+
+                  const SizedBox(height: 20),
 
                   // Dropdown categoría
                   buildCategoriaDropdown(),
@@ -438,6 +772,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF4682B4),
                         foregroundColor: Colors.white,
+                        shadowColor: Colors.transparent,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
@@ -445,7 +780,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                           horizontal: 32,
                           vertical: 14,
                         ),
-                        elevation: 3,
+                        elevation: 0,
                       ),
                     ),
                   ),
@@ -461,9 +796,16 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   @override
   void dispose() {
     nombreController.dispose();
-    precioController.dispose();
     codigoController.dispose();
     nuevaCategoriaController.dispose();
+
+    for (var controller in costoControllers) {
+      controller.dispose();
+    }
+    for (var controller in pvpControllers) {
+      controller.dispose();
+    }
+
     super.dispose();
   }
 }

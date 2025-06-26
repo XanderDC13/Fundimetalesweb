@@ -21,7 +21,6 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
 
   void _mostrarFormulario(BuildContext context, String tipo) {
     final TextEditingController cantidadController = TextEditingController();
-    TimeOfDay? horaSeleccionada;
     bool puedeGuardar = false;
 
     showModalBottomSheet(
@@ -33,159 +32,158 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
       builder: (_) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                top: 20,
-                left: 20,
-                right: 20,
+            return Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFD6EAF8),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Entrada a $tipo',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                  top: 20,
+                  left: 20,
+                  right: 20,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Entrada a $tipo',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2C3E50),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: cantidadController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Cantidad',
-                      prefixIcon: Icon(Icons.production_quantity_limits),
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (value) {
-                      final parsed = int.tryParse(value);
-                      setModalState(() {
-                        puedeGuardar =
-                            parsed != null &&
-                            parsed > 0 &&
-                            horaSeleccionada != null;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Icon(Icons.access_time),
-                      const SizedBox(width: 8),
-                      const Text('Hora de llegada:'),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () async {
-                          final nuevaHora = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.now(),
-                          );
-                          if (nuevaHora != null) {
-                            setModalState(() {
-                              horaSeleccionada = nuevaHora;
-                              final cantidad = int.tryParse(
-                                cantidadController.text,
-                              );
-                              puedeGuardar = cantidad != null && cantidad > 0;
-                            });
-                          }
-                        },
-                        child: Text(
-                          horaSeleccionada?.format(context) ?? 'Seleccionar',
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: cantidadController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Cantidad',
+                        labelStyle: const TextStyle(
+                          color: Color(0xFF2C3E50),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.production_quantity_limits,
+                          color: Color(0xFF4682B4),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color.fromARGB(255, 255, 255, 255),
+                            width: 1.5,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color.fromARGB(255, 255, 255, 255),
+                            width: 2,
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed:
-                          puedeGuardar
-                              ? () async {
-                                final cantidad =
-                                    int.tryParse(cantidadController.text) ?? 0;
-                                final now = DateTime.now();
-                                final horaExacta = DateTime(
-                                  now.year,
-                                  now.month,
-                                  now.day,
-                                  horaSeleccionada!.hour,
-                                  horaSeleccionada!.minute,
-                                );
-                                final timestamp = Timestamp.fromDate(
-                                  horaExacta,
-                                );
-                                final horaSeleccionadaStr = horaSeleccionada!
-                                    .format(context);
 
-                                if (tipo == 'Fundición') {
-                                  setState(() {
-                                    cantidadFundicion = cantidad;
-                                    horaFundicion = horaSeleccionada;
-                                  });
-                                  await FirebaseFirestore.instance
-                                      .collection('inventario_fundicion')
-                                      .add({
-                                        'codigo': widget.producto.codigo,
-                                        'nombre': widget.producto.nombre,
-                                        'cantidad': cantidad,
-                                        'fecha': timestamp,
-                                        'hora': horaSeleccionadaStr,
-                                      });
-                                } else {
-                                  setState(() {
-                                    cantidadPintura = cantidad;
-                                    horaPintura = horaSeleccionada;
-                                    general = cantidad; // Solo suma pintura
-                                  });
-
-                                  await FirebaseFirestore.instance
-                                      .collection('inventario_pintura')
-                                      .add({
-                                        'codigo': widget.producto.codigo,
-                                        'nombre': widget.producto.nombre,
-                                        'cantidad': cantidad,
-                                        'fecha': timestamp,
-                                        'hora': horaSeleccionadaStr,
-                                      });
-
-                                  await FirebaseFirestore.instance
-                                      .collection(
-                                        'historial_inventario_general',
-                                      )
-                                      .add({
-                                        'codigo': widget.producto.codigo,
-                                        'nombre': widget.producto.nombre,
-                                        'cantidad': general,
-                                        'fecha_actualizacion': timestamp,
-                                      });
-
-                                  await FirebaseFirestore.instance
-                                      .collection('inventario_general')
-                                      .doc(widget.producto.codigo)
-                                      .set({
-                                        'codigo': widget.producto.codigo,
-                                        'nombre': widget.producto.nombre,
-                                        'fundicion': cantidadFundicion ?? 0,
-                                        'pintura': cantidad,
-                                        'general': general,
-                                        'fecha_actualizacion': timestamp,
-                                      }, SetOptions(merge: true));
-                                }
-
-                                Navigator.pop(context);
-                              }
-                              : null,
-                      icon: const Icon(Icons.save),
-                      label: const Text('Guardar'),
+                      onChanged: (value) {
+                        final parsed = int.tryParse(value);
+                        setModalState(() {
+                          puedeGuardar = parsed != null && parsed > 0;
+                        });
+                      },
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed:
+                            puedeGuardar
+                                ? () async {
+                                  final cantidad =
+                                      int.tryParse(cantidadController.text) ??
+                                      0;
+                                  final timestamp = Timestamp.now();
+
+                                  if (tipo == 'Fundición') {
+                                    setState(
+                                      () => cantidadFundicion = cantidad,
+                                    );
+                                    await FirebaseFirestore.instance
+                                        .collection('inventario_fundicion')
+                                        .add({
+                                          'codigo': widget.producto.codigo,
+                                          'nombre': widget.producto.nombre,
+                                          'cantidad': cantidad,
+                                          'fecha': timestamp,
+                                        });
+                                  } else {
+                                    setState(() {
+                                      cantidadPintura = cantidad;
+                                      general = cantidad;
+                                    });
+
+                                    await FirebaseFirestore.instance
+                                        .collection('inventario_pintura')
+                                        .add({
+                                          'codigo': widget.producto.codigo,
+                                          'nombre': widget.producto.nombre,
+                                          'cantidad': cantidad,
+                                          'fecha': timestamp,
+                                        });
+
+                                    await FirebaseFirestore.instance
+                                        .collection(
+                                          'historial_inventario_general',
+                                        )
+                                        .add({
+                                          'codigo': widget.producto.codigo,
+                                          'nombre': widget.producto.nombre,
+                                          'cantidad': general,
+                                          'fecha_actualizacion': timestamp,
+                                        });
+
+                                    await FirebaseFirestore.instance
+                                        .collection('inventario_general')
+                                        .doc(widget.producto.codigo)
+                                        .set({
+                                          'codigo': widget.producto.codigo,
+                                          'nombre': widget.producto.nombre,
+                                          'fundicion': cantidadFundicion ?? 0,
+                                          'pintura': cantidad,
+                                          'general': general,
+                                          'fecha_actualizacion': timestamp,
+                                        }, SetOptions(merge: true));
+                                  }
+
+                                  Navigator.pop(context);
+                                }
+                                : null,
+                        icon: const Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.white,
+                        ),
+                        label: const Text(
+                          'Guardar entrada',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4682B4),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 3,
+                          textStyle: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
               ),
             );
           },
@@ -247,7 +245,7 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: SafeArea(
         child: Column(
           children: [
@@ -255,7 +253,7 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
               width: double.infinity,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+                  colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
@@ -281,64 +279,83 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildBotonEntrada(
-                      titulo: 'Fundición',
-                      cantidad: cantidadFundicion,
-                      hora: horaFundicion,
-                      color: Colors.indigo,
-                      onPressed: () => _mostrarFormulario(context, 'Fundición'),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildBotonEntrada(
-                      titulo: 'Pintura',
-                      cantidad: cantidadPintura,
-                      hora: horaPintura,
-                      color: Colors.deepOrange,
-                      onPressed: () => _mostrarFormulario(context, 'Pintura'),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildBotonEntrada(
+                            titulo: 'Fundición',
+                            cantidad: cantidadFundicion,
+                            hora: null,
+                            color: const Color(0xFF2C3E50),
+                            onPressed:
+                                () => _mostrarFormulario(context, 'Fundición'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildBotonEntrada(
+                            titulo: 'Pintura',
+                            cantidad: cantidadPintura,
+                            hora: null,
+                            color: const Color(0xFF2C3E50),
+                            onPressed:
+                                () => _mostrarFormulario(context, 'Pintura'),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 12,
-                            offset: Offset(0, 6),
-                          ),
-                        ],
-                        border: Border.all(color: Colors.blue.shade100),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: const [
-                              Icon(Icons.inventory_2, color: Color(0xFF1E3A8A)),
-                              SizedBox(width: 8),
-                              Text(
-                                'Inventario General',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: Color(0xFF1E3A8A),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            general.toString(),
-                            style: const TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                    Center(
+                      child: Container(
+                        width: 300,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 12,
+                              offset: Offset(0, 6),
                             ),
-                          ),
-                        ],
+                          ],
+                          border: Border.all(color: Colors.blue.shade100),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min, // <--- ¡IMPORTANTE!
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(
+                                  Icons.inventory_2,
+                                  color: Color(0xFF2C3E50),
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Inventario General',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Color(0xFF2C3E50),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              general.toString(),
+                              style: const TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
+
                     const Spacer(),
                   ],
                 ),

@@ -85,9 +85,7 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
     }
 
     // Retornar solo productos con cantidad > 0
-    return agrupados.values
-        .where((producto) => (producto['cantidad'] ?? 0) > 0)
-        .toList();
+    return agrupados.values.toList();
   }
 
   @override
@@ -254,7 +252,7 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
             const Icon(
               Icons.shopping_bag_rounded,
               size: 40,
-              color: Color(0xFF2ECC71),
+              color: Color(0xFF2C3E50),
             ),
             const SizedBox(height: 10),
             Text(

@@ -1,3 +1,4 @@
+import 'package:basefundi/screens/inventarios/categorias.dart';
 import 'package:basefundi/screens/inventarios/editinvprod.dart';
 import 'package:basefundi/screens/inventarios/editprod.dart';
 import 'package:basefundi/screens/inventarios/scaninv.dart';
@@ -315,115 +316,109 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
 
                     final todasCategorias = ['Todas', ...firestoreCategorias];
 
-                    return ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      itemCount:
-                          todasCategorias.length + 1, // +1 para botón editar
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (context, index) {
-                        if (index == todasCategorias.length) {
-                          return GestureDetector(
-                            onTap: () {
-                              // Acción para editar categorías
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Editar categorías tocado'),
+                    return Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CategoriasScreen(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
+                              ),
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.edit, color: Colors.white, size: 20),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Editar',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: todasCategorias.length,
+                            separatorBuilder:
+                                (_, __) => const SizedBox(width: 8),
+                            itemBuilder: (context, index) {
+                              final categoria = todasCategorias[index];
+                              final isSelected =
+                                  categoria == categoriaSeleccionada;
+
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    categoriaSeleccionada = categoria;
+                                  });
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 250),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        isSelected
+                                            ? const Color(0xFF4682B4)
+                                            : Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color:
+                                          isSelected
+                                              ? const Color(0xFF4682B4)
+                                              : Colors.grey.shade300,
+                                    ),
+                                    boxShadow:
+                                        isSelected
+                                            ? [
+                                              BoxShadow(
+                                                color: Colors.blue.withOpacity(
+                                                  0.3,
+                                                ),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 3),
+                                              ),
+                                            ]
+                                            : [],
+                                  ),
+                                  child: Text(
+                                    categoria,
+                                    style: TextStyle(
+                                      color:
+                                          isSelected
+                                              ? Colors.white
+                                              : Colors.black87,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
                                 ),
                               );
                             },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFFFFA726),
-                                    Color(0xFFFF7043),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.deepOrange.withOpacity(0.4),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                children: const [
-                                  Icon(
-                                    Icons.edit,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'Editar',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-
-                        final categoria = todasCategorias[index];
-                        final isSelected = categoria == categoriaSeleccionada;
-
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              categoriaSeleccionada = categoria;
-                            });
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 250),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color:
-                                  isSelected
-                                      ? const Color(0xFF4682B4)
-                                      : Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color:
-                                    isSelected
-                                        ? const Color(0xFF4682B4)
-                                        : Colors.grey.shade300,
-                              ),
-                              boxShadow:
-                                  isSelected
-                                      ? [
-                                        BoxShadow(
-                                          color: Colors.blue.withOpacity(0.3),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 3),
-                                        ),
-                                      ]
-                                      : [],
-                            ),
-                            child: Text(
-                              categoria,
-                              style: TextStyle(
-                                color:
-                                    isSelected ? Colors.white : Colors.black87,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
                           ),
-                        );
-                      },
+                        ),
+                      ],
                     );
                   } else {
                     return const Center(child: Text('Sin categorías'));
@@ -431,7 +426,6 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                 },
               ),
             ),
-
             // Productos en grid
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
@@ -521,7 +515,7 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                                         Icons
                                             .construction, // o el icono que desees
                                         size: 40,
-                                        color: Color(0xFF2ECC71),
+                                        color: Color(0xFF2C3E50),
                                       ),
                                       SizedBox(height: 10),
                                     ],
@@ -552,23 +546,6 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceAround,
                                   children: [
-                                    Tooltip(
-                                      message: 'Eliminar',
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(12),
-                                        onTap:
-                                            () => eliminarProductoPorNombre(
-                                              producto.nombre,
-                                            ),
-                                        child: const Padding(
-                                          padding: EdgeInsets.all(6),
-                                          child: Icon(
-                                            Icons.delete_outline,
-                                            color: Colors.red,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
                                     Tooltip(
                                       message: 'Editar',
                                       child: InkWell(
@@ -612,7 +589,24 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                                           padding: EdgeInsets.all(6),
                                           child: Icon(
                                             Icons.edit_outlined,
-                                            color: Colors.blue,
+                                            color: Color(0xFF4682B4),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Tooltip(
+                                      message: 'Eliminar',
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(12),
+                                        onTap:
+                                            () => eliminarProductoPorNombre(
+                                              producto.nombre,
+                                            ),
+                                        child: const Padding(
+                                          padding: EdgeInsets.all(6),
+                                          child: Icon(
+                                            Icons.delete_outline,
+                                            color: Colors.redAccent,
                                           ),
                                         ),
                                       ),
