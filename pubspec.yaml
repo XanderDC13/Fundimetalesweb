@@ -45,6 +45,6 @@ flutter:
   uses-material-design: true
 
   assets:
-    - lib/assets/logo.png
+    - lib/assets/logo.png 
     - lib/assets/logoletters.png
     - lib/assets/logoappfm.png

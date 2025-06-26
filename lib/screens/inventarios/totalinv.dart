@@ -50,23 +50,7 @@ class TotalInvScreen extends StatefulWidget {
 class _TotalInvScreenState extends State<TotalInvScreen> {
   final TextEditingController _searchController = TextEditingController();
   String searchQuery = '';
-  final List<String> categorias = [
-    'Todas',
-    'AGRICOLA',
-    'ALCANTARILLADO',
-    'ARAÑAS',
-    'ARTILLEROS',
-    'BOCINES',
-    'DISCOS',
-    'GIMNASIO',
-    'LIVIANOS',
-    'PLANCHAS',
-    'SERVICIOS',
-    'SISTEMAS',
-    'SOPORTERIA',
-    'TAMBORES',
-    'TRANSPORTE',
-  ];
+  List<String> categorias = ['Todas'];
 
   String categoriaSeleccionada = 'Todas';
 
@@ -195,7 +179,7 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
             'codigo': resultado['codigo'],
             'nombre': resultado['nombre'],
             'precio': resultado['precio'],
-            'cantidad': resultado['cantidad'],
+            'categoria': resultado['categoria'],
             'fecha_creacion': Timestamp.now(),
             'estado': 'en_proceso',
           });
@@ -223,7 +207,7 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
             'codigo': resultado['codigo'],
             'nombre': resultado['nombre'],
             'precio': resultado['precio'],
-            'cantidad': resultado['cantidad'],
+            'categoria': resultado['categoria'],
             'fecha_creacion': Timestamp.now(),
             'estado': 'en_proceso',
           });
@@ -309,50 +293,141 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
               ),
             ),
             Container(
-              height: 45,
+              height: 40,
               margin: const EdgeInsets.only(bottom: 8),
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                itemCount: categorias.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final categoria = categorias[index];
-                  final isSelected = categoria == categoriaSeleccionada;
+              child: FutureBuilder<QuerySnapshot>(
+                future:
+                    FirebaseFirestore.instance.collection('categorias').get(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        categoriaSeleccionada = categoria;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color:
-                            isSelected
-                                ? const Color(0xFF4682B4)
-                                : Colors.grey[200],
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color:
-                              isSelected
-                                  ? const Color(0xFF4682B4)
-                                  : Colors.grey.shade400,
-                        ),
-                      ),
-                      child: Text(
-                        categoria,
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black87,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  );
+                  if (snapshot.hasData) {
+                    final firestoreCategorias =
+                        snapshot.data!.docs
+                            .map((doc) => doc['nombre'] as String)
+                            .toList()
+                          ..sort(
+                            (a, b) =>
+                                a.toLowerCase().compareTo(b.toLowerCase()),
+                          );
+
+                    final todasCategorias = ['Todas', ...firestoreCategorias];
+
+                    return ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount:
+                          todasCategorias.length + 1, // +1 para botón editar
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        if (index == todasCategorias.length) {
+                          return GestureDetector(
+                            onTap: () {
+                              // Acción para editar categorías
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Editar categorías tocado'),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFFFFA726),
+                                    Color(0xFFFF7043),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.deepOrange.withOpacity(0.4),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: const [
+                                  Icon(
+                                    Icons.edit,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Editar',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        final categoria = todasCategorias[index];
+                        final isSelected = categoria == categoriaSeleccionada;
+
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              categoriaSeleccionada = categoria;
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  isSelected
+                                      ? const Color(0xFF4682B4)
+                                      : Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color:
+                                    isSelected
+                                        ? const Color(0xFF4682B4)
+                                        : Colors.grey.shade300,
+                              ),
+                              boxShadow:
+                                  isSelected
+                                      ? [
+                                        BoxShadow(
+                                          color: Colors.blue.withOpacity(0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 3),
+                                        ),
+                                      ]
+                                      : [],
+                            ),
+                            child: Text(
+                              categoria,
+                              style: TextStyle(
+                                color:
+                                    isSelected ? Colors.white : Colors.black87,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  } else {
+                    return const Center(child: Text('Sin categorías'));
+                  }
                 },
               ),
             ),

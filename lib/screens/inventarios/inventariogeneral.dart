@@ -39,7 +39,7 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: Column(
         children: [
           SafeArea(
@@ -49,7 +49,7 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+                    colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   ),
@@ -94,7 +94,10 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
           prefixIcon: const Icon(Icons.search),
           filled: true,
           fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          border: OutlineInputBorder(
+            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
     );

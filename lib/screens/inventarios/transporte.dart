@@ -75,6 +75,7 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
             : '--';
 
     return Scaffold(
+      backgroundColor: const Color(0xFFD6EAF8),
       body: SafeArea(
         child: Column(
           children: [

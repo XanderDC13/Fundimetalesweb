@@ -77,7 +77,7 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: SafeArea(
         child: Column(
           children: [
@@ -86,7 +86,7 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
               width: double.infinity,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+                  colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
@@ -156,7 +156,7 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
                     horizontal: 16,
                   ),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
                 ),
@@ -258,7 +258,7 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
                                 'Total: \$${total.toStringAsFixed(2)}',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF10B981),
+                                  color: Color(0xFF2ECC71),
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -269,7 +269,7 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
                                   icon: const Icon(Icons.picture_as_pdf),
                                   label: const Text('Exportar PDF'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF3B82F6),
+                                    backgroundColor: const Color(0xFF4682B4),
                                     foregroundColor: Colors.white,
                                   ),
                                 ),

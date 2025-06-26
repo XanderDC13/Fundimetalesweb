@@ -21,26 +21,11 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   late TextEditingController nombreController;
   late TextEditingController precioController;
   late TextEditingController codigoController;
-  late TextEditingController cantidadController;
-
-  final List<String> categoriasDisponibles = [
-    'AGRICOLA',
-    'ALCANTARILLADO',
-    'ARAÑAS',
-    'ARTILLEROS',
-    'BOCINES',
-    'DISCOS',
-    'GIMNASIO',
-    'LIVIANOS',
-    'PLANCHAS',
-    'SERVICIOS',
-    'SISTEMAS',
-    'SOPORTERIA',
-    'TAMBORES',
-    'TRANSPORTE',
-  ];
+  final TextEditingController nuevaCategoriaController =
+      TextEditingController();
 
   String? categoriaSeleccionada;
+  List<String> categorias = [];
 
   @override
   void initState() {
@@ -53,34 +38,51 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
               : widget.precioInicial.toStringAsFixed(2),
     );
     codigoController = TextEditingController(text: widget.codigoBarras);
-    cantidadController = TextEditingController();
 
     if (widget.codigoBarras.isNotEmpty) {
       _cargarDatosExistentes();
-    } else {
-      categoriaSeleccionada = categoriasDisponibles.first;
+    }
+
+    _cargarCategorias();
+  }
+
+  Future<void> _cargarCategorias() async {
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance.collection('categorias').get();
+      setState(() {
+        categorias =
+            snapshot.docs.map((doc) => doc['nombre'] as String).toList();
+        // Ordenar alfabéticamente para mejor UX
+        categorias.sort();
+      });
+    } catch (e) {
+      print("Error al cargar categorías: $e");
+      // Si no se pueden cargar, usar categorías por defecto
+      setState(() {
+        categorias = ['GENERAL', 'REPUESTOS', 'HERRAMIENTAS', 'SERVICIOS'];
+      });
     }
   }
 
   Future<void> _cargarDatosExistentes() async {
-    final doc =
-        await FirebaseFirestore.instance
-            .collection('inventario_general')
-            .doc(widget.codigoBarras)
-            .get();
+    try {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('inventario_general')
+              .doc(widget.codigoBarras)
+              .get();
 
-    if (doc.exists) {
-      final data = doc.data()!;
-      final cat = data['categoria'];
-      if (cat != null && categoriasDisponibles.contains(cat)) {
+      if (doc.exists) {
+        final data = doc.data()!;
         setState(() {
-          categoriaSeleccionada = cat;
-        });
-      } else {
-        setState(() {
-          categoriaSeleccionada = categoriasDisponibles.first;
+          nombreController.text = data['nombre'] ?? '';
+          precioController.text = (data['precio'] ?? 0).toString();
+          categoriaSeleccionada = data['categoria'];
         });
       }
+    } catch (e) {
+      print("Error al cargar datos existentes: $e");
     }
   }
 
@@ -88,9 +90,11 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     final codigo = codigoController.text.trim();
     final nombre = nombreController.text.trim();
     final precioText = precioController.text.trim();
-    final cantidadText = cantidadController.text.trim();
 
-    if (codigo.isEmpty || nombre.isEmpty || precioText.isEmpty) {
+    if (codigo.isEmpty ||
+        nombre.isEmpty ||
+        precioText.isEmpty ||
+        categoriaSeleccionada == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Todos los campos son obligatorios')),
       );
@@ -105,31 +109,22 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
       return;
     }
 
-    if (categoriaSeleccionada == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Seleccione una categoría')));
-      return;
-    }
-
+    // Datos del producto SIN cantidad
     final productoData = {
       'codigo': codigo,
       'nombre': nombre,
       'precio': precio,
-      'fecha': FieldValue.serverTimestamp(),
       'categoria': categoriaSeleccionada,
+      'fecha': FieldValue.serverTimestamp(),
     };
 
-    if (widget.codigoBarras.isEmpty) {
-      final cantidad = int.tryParse(cantidadText) ?? 0;
-      productoData['cantidad'] = cantidad;
-    }
-
     try {
+      // Usar set() sin merge para reemplazar completamente el documento
+      // Esto eliminará cualquier campo 'cantidad' que pueda existir
       await FirebaseFirestore.instance
           .collection('inventario_general')
           .doc(codigo)
-          .set(productoData, SetOptions(merge: true));
+          .set(productoData); // Sin SetOptions(merge: true)
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Producto guardado exitosamente')),
@@ -149,6 +144,70 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     }
   }
 
+  void mostrarDialogoNuevaCategoria() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Nueva categoría'),
+            content: TextField(
+              controller: nuevaCategoriaController,
+              decoration: const InputDecoration(
+                hintText: 'Nombre de la categoría',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.characters,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final nuevaCat =
+                      nuevaCategoriaController.text.trim().toUpperCase();
+                  if (nuevaCat.isNotEmpty && !categorias.contains(nuevaCat)) {
+                    try {
+                      await FirebaseFirestore.instance
+                          .collection('categorias')
+                          .add({'nombre': nuevaCat});
+
+                      setState(() {
+                        categorias.add(nuevaCat);
+                        categorias.sort(); // Mantener orden alfabético
+                        categoriaSeleccionada = nuevaCat;
+                      });
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Categoría "$nuevaCat" creada exitosamente',
+                          ),
+                        ),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Error al crear la categoría'),
+                        ),
+                      );
+                    }
+                  } else if (categorias.contains(nuevaCat)) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Esta categoría ya existe')),
+                    );
+                  }
+                  nuevaCategoriaController.clear();
+                  Navigator.pop(context);
+                },
+                child: const Text('Guardar'),
+              ),
+            ],
+          ),
+    );
+  }
+
   Widget buildTextField({
     required String label,
     required IconData icon,
@@ -162,7 +221,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         boxShadow: [
           BoxShadow(
             color: Colors.grey.shade300,
-            blurRadius: 0,
+            blurRadius: 6,
             offset: const Offset(0, 3),
           ),
         ],
@@ -171,11 +230,17 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
       child: TextField(
         controller: controller,
         keyboardType: inputType,
-        style: const TextStyle(color: Color(0xFF1B4F72)),
+        style: const TextStyle(
+          color: Color(0xFF1B4F72),
+          fontWeight: FontWeight.normal,
+        ),
         decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: Color(0xFF2C3E50)),
+          prefixIcon: Icon(icon, color: const Color(0xFF2C3E50)),
           labelText: label,
-          labelStyle: const TextStyle(color: Color(0xFF2C3E50)),
+          labelStyle: const TextStyle(
+            color: Color(0xFF2C3E50),
+            fontWeight: FontWeight.normal,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
@@ -203,30 +268,42 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
       ),
       child: DropdownButtonFormField<String>(
         value: categoriaSeleccionada,
-        decoration: InputDecoration(
-          labelText: 'Categoría',
-          filled: true,
-          fillColor: Colors.white,
-          prefixIcon: Icon(Icons.category, color: const Color(0xFF2C3E50)),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-        ),
-        style: TextStyle(fontSize: 16, color: Colors.grey.shade800),
-        dropdownColor: Colors.white,
         items:
-            categoriasDisponibles.map((categoria) {
-              return DropdownMenuItem<String>(
-                value: categoria,
-                child: Text(categoria),
-              );
-            }).toList(),
+            categorias
+                .map(
+                  (cat) => DropdownMenuItem(
+                    value: cat,
+                    child: Text(
+                      cat,
+                      style: const TextStyle(
+                        color: Color(0xFF1B4F72),
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
         onChanged: (value) {
           setState(() {
             categoriaSeleccionada = value;
           });
         },
+        decoration: InputDecoration(
+          labelText: 'Categoría',
+          labelStyle: const TextStyle(
+            color: Color(0xFF2C3E50),
+            fontWeight: FontWeight.normal,
+          ),
+          prefixIcon: const Icon(Icons.category, color: Color(0xFF2C3E50)),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+        ),
+        dropdownColor: Colors.white,
+        style: const TextStyle(color: Color(0xFF1B4F72), fontSize: 16),
       ),
     );
   }
@@ -269,6 +346,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
               padding: const EdgeInsets.all(20.0),
               child: ListView(
                 children: [
+                  // Campo código de barras
                   widget.codigoBarras.isEmpty
                       ? buildTextField(
                         label: 'Código de Barras',
@@ -291,23 +369,28 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.qr_code, color: Color(0xFF2C3E50)),
+                            const Icon(Icons.qr_code, color: Color(0xFF2C3E50)),
                             const SizedBox(width: 12),
                             Text(
                               'Código de Barras: ${widget.codigoBarras}',
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
+                                color: Color(0xFF1B4F72),
                               ),
                             ),
                           ],
                         ),
                       ),
+
+                  // Campo nombre
                   buildTextField(
                     label: 'Nombre del Producto',
                     icon: Icons.inventory_2,
                     controller: nombreController,
                   ),
+
+                  // Campo precio
                   buildTextField(
                     label: 'Precio',
                     icon: Icons.attach_money,
@@ -316,14 +399,42 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                       decimal: true,
                     ),
                   ),
+
+                  // Dropdown categoría
                   buildCategoriaDropdown(),
-                  const SizedBox(height: 10),
+
+                  // Botón crear nueva categoría
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 20),
+                    child: TextButton.icon(
+                      onPressed: mostrarDialogoNuevaCategoria,
+                      icon: const Icon(Icons.add, color: Color(0xFF2C3E50)),
+                      label: const Text(
+                        'Crear nueva categoría',
+                        style: TextStyle(
+                          color: Color(0xFF2C3E50),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+
+                  // Botón guardar
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: ElevatedButton.icon(
                       onPressed: guardarProducto,
                       icon: const Icon(Icons.save, color: Colors.white),
-                      label: const Text('Guardar'),
+                      label: const Text(
+                        'Guardar',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF4682B4),
                         foregroundColor: Colors.white,
@@ -334,6 +445,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                           horizontal: 32,
                           vertical: 14,
                         ),
+                        elevation: 3,
                       ),
                     ),
                   ),
@@ -344,5 +456,14 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    nombreController.dispose();
+    precioController.dispose();
+    codigoController.dispose();
+    nuevaCategoriaController.dispose();
+    super.dispose();
   }
 }

@@ -94,7 +94,7 @@ class _ReporteTransporteScreenState extends State<ReporteTransporteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: SafeArea(
         child: Column(
           children: [
@@ -103,7 +103,7 @@ class _ReporteTransporteScreenState extends State<ReporteTransporteScreen> {
               width: double.infinity,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+                  colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
@@ -191,7 +191,7 @@ class _ReporteTransporteScreenState extends State<ReporteTransporteScreen> {
                                       label: const Text('Exportar PDF'),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: const Color(
-                                          0xFF3B82F6,
+                                          0xFF4682B4,
                                         ),
                                         foregroundColor: Colors.white,
                                       ),
