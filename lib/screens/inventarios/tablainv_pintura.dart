@@ -36,7 +36,7 @@ class _TablaInvPinturaScreenState extends State<TablaInvPinturaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: Column(
         children: [
           SafeArea(
@@ -90,7 +90,7 @@ class _TablaInvPinturaScreenState extends State<TablaInvPinturaScreen> {
                   : 'Filtrar por fecha',
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E40AF),
+              backgroundColor: const Color(0xFF4682B4),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -107,7 +107,7 @@ class _TablaInvPinturaScreenState extends State<TablaInvPinturaScreen> {
               },
               child: const Text(
                 'Limpiar filtro de fecha',
-                style: TextStyle(color: Color(0xFF1E40AF)),
+                style: TextStyle(color: Color(0xFF4682B4)),
               ),
             ),
         ],
@@ -158,7 +158,7 @@ class _TablaInvPinturaScreenState extends State<TablaInvPinturaScreen> {
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
-            headingRowColor: MaterialStateProperty.all(const Color(0xFF1E3A8A)),
+            headingRowColor: MaterialStateProperty.all(const Color(0xFF4682B4)),
             headingTextStyle: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,

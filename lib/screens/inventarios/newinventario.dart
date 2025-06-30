@@ -187,7 +187,9 @@ class _InventarioFundicionScreenState extends State<InventarioFundicionScreen>
                               },
                               child: Text(
                                 data['nombre'],
-                                style: const TextStyle(color: Colors.blue),
+                                style: const TextStyle(
+                                  color: Color(0xFF4682B4),
+                                ),
                               ),
                             ),
                           ),

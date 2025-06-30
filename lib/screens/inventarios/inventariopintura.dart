@@ -159,7 +159,7 @@ class _InventarioPinturaScreenState extends State<InventarioPinturaScreen>
               child: DataTable(
                 columnSpacing: 16,
                 headingRowColor: WidgetStateProperty.all(
-                  const Color(0xFF1E3A8A),
+                  const Color(0xFF4682B4),
                 ),
                 headingTextStyle: const TextStyle(color: Colors.white),
                 columns: const [
@@ -187,7 +187,9 @@ class _InventarioPinturaScreenState extends State<InventarioPinturaScreen>
                               },
                               child: Text(
                                 data['nombre'],
-                                style: const TextStyle(color: Colors.blue),
+                                style: const TextStyle(
+                                  color: Color(0xFF4682B4),
+                                ),
                               ),
                             ),
                           ),

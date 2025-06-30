@@ -32,7 +32,7 @@ class _TablainvScreenState extends State<TablainvScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFD6EAF8),
       body: Column(
         children: [
           SafeArea(
@@ -40,7 +40,7 @@ class _TablainvScreenState extends State<TablainvScreen> {
               width: double.infinity,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
+                  colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
@@ -86,7 +86,7 @@ class _TablainvScreenState extends State<TablainvScreen> {
                   : 'Filtrar por fecha',
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E40AF),
+              backgroundColor: const Color(0xFF4682B4),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -103,7 +103,7 @@ class _TablainvScreenState extends State<TablainvScreen> {
               },
               child: const Text(
                 'Limpiar filtro de fecha',
-                style: TextStyle(color: Color(0xFF1E40AF)),
+                style: TextStyle(color: Color(0xFF4682B4)),
               ),
             ),
         ],
@@ -155,7 +155,7 @@ class _TablainvScreenState extends State<TablainvScreen> {
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
-            headingRowColor: MaterialStateProperty.all(const Color(0xFF1E3A8A)),
+            headingRowColor: MaterialStateProperty.all(const Color(0xFF4682B4)),
             headingTextStyle: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,

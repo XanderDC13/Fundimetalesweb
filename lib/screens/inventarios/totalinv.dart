@@ -2,6 +2,7 @@ import 'package:basefundi/screens/inventarios/categorias.dart';
 import 'package:basefundi/screens/inventarios/editinvprod.dart';
 import 'package:basefundi/screens/inventarios/editprod.dart';
 import 'package:basefundi/screens/inventarios/scaninv.dart';
+import 'package:basefundi/settings/csv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -54,6 +55,8 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
   List<String> categorias = ['Todas'];
 
   String categoriaSeleccionada = 'Todas';
+
+  int totalProductosFiltrados = 0;
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -275,11 +278,9 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  ScanInv(onCodigoEscaneado: agregarProductoDesdeEscaneo),
-                  const SizedBox(width: 4),
                   Material(
                     color: Colors.white,
-                    elevation: 4,
+                    elevation: 0,
                     shape: const CircleBorder(),
                     child: IconButton(
                       icon: const Icon(
@@ -290,6 +291,32 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                       onPressed: agregarProductoManual,
                     ),
                   ),
+                  ScanInv(onCodigoEscaneado: agregarProductoDesdeEscaneo),
+                  const SizedBox(width: 0),
+                  // NUEVO: Botón de importar CSV
+                  Material(
+                    color: const Color.fromARGB(255, 255, 255, 255),
+                    elevation: 0,
+                    shape: const CircleBorder(),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.file_upload,
+                        size: 38,
+                        color: Color.fromARGB(255, 0, 0, 0),
+                      ),
+                      tooltip: 'Importar CSV',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => const ImportarProductosScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                 ],
               ),
             ),
@@ -426,6 +453,7 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                 },
               ),
             ),
+
             // Productos en grid
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
@@ -452,173 +480,197 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                                 );
                             final coincideCategoria =
                                 categoriaSeleccionada == 'Todas' ||
-                                ((p as dynamic).categoria ==
-                                    categoriaSeleccionada);
+                                p.categoria == categoriaSeleccionada;
                             return coincideBusqueda && coincideCategoria;
                           })
                           .toList();
 
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: GridView.builder(
-                      padding: const EdgeInsets.only(bottom: 20),
-                      itemCount: productos.length,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: 0.9,
-                          ),
-                      itemBuilder: (context, index) {
-                        final producto = productos[index];
-                        return GestureDetector(
-                          onTap: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) =>
-                                        EditInvProdScreen(producto: producto),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
+                  final total = productos.length;
 
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              'Total: $total productos en "${categoriaSeleccionada == 'Todas' ? 'Todas las categorías' : categoriaSeleccionada}"',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: GridView.builder(
+                            padding: const EdgeInsets.only(bottom: 20),
+                            itemCount: productos.length,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 12,
+                                  childAspectRatio: 0.9,
+                                ),
+                            itemBuilder: (context, index) {
+                              final producto = productos[index];
+                              return GestureDetector(
+                                onTap: () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => EditInvProdScreen(
+                                            producto: producto,
+                                          ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: const Color.fromARGB(
-                                        255,
-                                        255,
-                                        255,
-                                        255,
-                                      ),
-                                    ),
                                   ),
                                   padding: const EdgeInsets.all(12),
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: const [
-                                      Icon(
-                                        Icons
-                                            .construction, // o el icono que desees
-                                        size: 40,
-                                        color: Color(0xFF2C3E50),
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.all(12),
+                                        child: const Icon(
+                                          Icons.construction,
+                                          size: 40,
+                                          color: Color(0xFF2C3E50),
+                                        ),
                                       ),
-                                      SizedBox(height: 10),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        producto.nombre,
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                          color: Color(0xFF2C3E50),
+                                        ),
+                                      ),
+                                      Text(
+                                        'Stock: ${producto.cantidad}',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFFB0BEC5),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceAround,
+                                        children: [
+                                          Tooltip(
+                                            message: 'Editar',
+                                            child: InkWell(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              onTap: () async {
+                                                final resultado =
+                                                    await Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder:
+                                                            (
+                                                              context,
+                                                            ) => EditarProductoScreen(
+                                                              codigoBarras:
+                                                                  producto
+                                                                      .codigo,
+                                                              nombreInicial:
+                                                                  producto
+                                                                      .nombre,
+                                                              precioInicial:
+                                                                  producto
+                                                                      .precio,
+                                                            ),
+                                                      ),
+                                                    );
+                                                if (resultado != null) {
+                                                  await _firestore
+                                                      .collection(
+                                                        'inventario_general',
+                                                      )
+                                                      .doc(resultado['codigo'])
+                                                      .set({
+                                                        'codigo':
+                                                            resultado['codigo'],
+                                                        'nombre':
+                                                            resultado['nombre'],
+                                                        'precio':
+                                                            resultado['precio'],
+                                                        'categoria':
+                                                            resultado['categoria'],
+                                                        'fecha_creacion':
+                                                            Timestamp.now(),
+                                                        'estado': 'en_proceso',
+                                                      });
+                                                }
+                                              },
+                                              child: const Padding(
+                                                padding: EdgeInsets.all(6),
+                                                child: Icon(
+                                                  Icons.edit_outlined,
+                                                  color: Color(0xFF4682B4),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          Tooltip(
+                                            message: 'Eliminar',
+                                            child: InkWell(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              onTap:
+                                                  () =>
+                                                      eliminarProductoPorNombre(
+                                                        producto.nombre,
+                                                      ),
+                                              child: const Padding(
+                                                padding: EdgeInsets.all(6),
+                                                child: Icon(
+                                                  Icons.delete_outline,
+                                                  color: Colors.redAccent,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ],
                                   ),
                                 ),
-
-                                const SizedBox(height: 8),
-                                Text(
-                                  producto.nombre,
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: Color(0xFF2C3E50),
-                                  ),
-                                ),
-                                Text(
-                                  'Stock: ${producto.cantidad}',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFFB0BEC5),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceAround,
-                                  children: [
-                                    Tooltip(
-                                      message: 'Editar',
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(12),
-                                        onTap: () async {
-                                          final resultado =
-                                              await Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder:
-                                                      (context) =>
-                                                          EditarProductoScreen(
-                                                            codigoBarras:
-                                                                producto.codigo,
-                                                            nombreInicial:
-                                                                producto.nombre,
-                                                            precioInicial:
-                                                                producto.precio,
-                                                          ),
-                                                ),
-                                              );
-                                          if (resultado != null) {
-                                            await _firestore
-                                                .collection(
-                                                  'inventario_general',
-                                                )
-                                                .doc(resultado['codigo'])
-                                                .set({
-                                                  'codigo': resultado['codigo'],
-                                                  'nombre': resultado['nombre'],
-                                                  'precio': resultado['precio'],
-                                                  'cantidad':
-                                                      resultado['cantidad'],
-                                                  'fecha_creacion':
-                                                      Timestamp.now(),
-                                                  'estado': 'en_proceso',
-                                                });
-                                          }
-                                        },
-                                        child: const Padding(
-                                          padding: EdgeInsets.all(6),
-                                          child: Icon(
-                                            Icons.edit_outlined,
-                                            color: Color(0xFF4682B4),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Tooltip(
-                                      message: 'Eliminar',
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(12),
-                                        onTap:
-                                            () => eliminarProductoPorNombre(
-                                              producto.nombre,
-                                            ),
-                                        child: const Padding(
-                                          padding: EdgeInsets.all(6),
-                                          child: Icon(
-                                            Icons.delete_outline,
-                                            color: Colors.redAccent,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),

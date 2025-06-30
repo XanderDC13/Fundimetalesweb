@@ -23,7 +23,7 @@ class ScanInv extends StatelessWidget {
         }
       },
       backgroundColor: Colors.white,
-      elevation: 6,
+      elevation: 0,
       shape: const CircleBorder(),
       child: const Icon(Icons.qr_code_scanner, color: Colors.black87, size: 30),
     );
