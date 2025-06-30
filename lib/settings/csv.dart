@@ -25,7 +25,6 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
     });
 
     try {
-      // Elegir archivo CSV
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['csv'],
@@ -84,7 +83,7 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
               'nombre': nombre,
               'precio': precio,
               'categoria': categoria,
-              'fecha': DateTime.now(), // usa local para evitar error
+              'fecha': DateTime.now(),
             }, SetOptions(merge: true));
 
             print('✅ Guardado: $codigo | $nombre | $precio | $categoria');
@@ -124,7 +123,6 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // ✅ Encabezado degradado y curvo
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -151,7 +149,6 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
               ),
             ),
 
-            // ✅ Contenido (cargando o botón)
             Expanded(
               child: Center(
                 child:
