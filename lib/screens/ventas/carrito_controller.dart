@@ -13,11 +13,7 @@ class ProductoEnCarrito {
     required this.precio,
     required this.disponibles,
     this.cantidad = 1,
-  }) {
-    if (cantidad > disponibles) {
-      throw Exception('No puedes agregar más unidades de las disponibles');
-    }
-  }
+  });
 
   double get subtotal => precio * cantidad;
 }
@@ -56,7 +52,7 @@ class CarritoController extends ChangeNotifier {
       if (nuevaCantidad <= _items[index].disponibles) {
         _items[index].cantidad = nuevaCantidad;
       } else {
-        throw Exception('No puedes agregar más unidades de las disponibles');
+        throw Exception('No tienes unidades disponibles');
       }
       notifyListeners();
     }
@@ -72,9 +68,6 @@ class CarritoController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Verifica si se puede agregar un producto al carrito, ya sea nuevo o existente.
-  /// - Si ya está en el carrito, revisa la cantidad total deseada contra los disponibles.
-  /// - Si no está en el carrito, compara directamente contra los disponibles del inventario.
   bool puedeAgregar(
     String codigo,
     int cantidadDeseada, {
@@ -90,7 +83,6 @@ class CarritoController extends ChangeNotifier {
     }
   }
 
-  /// Retorna la cantidad actual en el carrito para un producto dado.
   int cantidadEnCarrito(String codigo) {
     final producto = _items.firstWhere(
       (p) => p.codigo == codigo,

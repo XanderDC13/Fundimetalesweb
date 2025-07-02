@@ -126,7 +126,6 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
         final ventasDocs = ventasSnapshot.data?.docs ?? [];
         final ventasPorProducto = <String, int>{};
 
-        // Acumular productos vendidos por código
         for (var venta in ventasDocs) {
           final productos = List<Map<String, dynamic>>.from(venta['productos']);
           for (var producto in productos) {
@@ -167,7 +166,6 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
               }
             }
 
-            // Restar lo vendido
             ventasPorProducto.forEach((codigo, cantidadVendida) {
               if (grouped.containsKey(codigo)) {
                 grouped[codigo]!['cantidad'] -= cantidadVendida;
@@ -207,6 +205,7 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
                       DataColumn(label: Text('Nombre')),
                       DataColumn(label: Text('Código')),
                       DataColumn(label: Text('Cantidad')),
+                      DataColumn(label: Text('Acciones')),
                     ],
                     rows:
                         filtered.map((data) {
@@ -236,6 +235,79 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
                               ),
                               DataCell(Text(data['codigo'])),
                               DataCell(Text(data['cantidad'].toString())),
+                              DataCell(
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.redAccent,
+                                  ),
+                                  tooltip: 'Eliminar',
+                                  onPressed: () async {
+                                    final confirmar =
+                                        await showDialog<bool>(
+                                          context: context,
+                                          builder:
+                                              (_) => AlertDialog(
+                                                title: const Text(
+                                                  'Confirmar eliminación',
+                                                ),
+                                                content: Text(
+                                                  '¿Estás seguro de eliminar todos los registros del producto "${data['nombre']}"?',
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed:
+                                                        () => Navigator.pop(
+                                                          context,
+                                                          false,
+                                                        ),
+                                                    child: const Text(
+                                                      'Cancelar',
+                                                    ),
+                                                  ),
+                                                  ElevatedButton(
+                                                    style:
+                                                        ElevatedButton.styleFrom(
+                                                          backgroundColor:
+                                                              Colors.red,
+                                                        ),
+                                                    onPressed:
+                                                        () => Navigator.pop(
+                                                          context,
+                                                          true,
+                                                        ),
+                                                    child: const Text(
+                                                      'Eliminar',
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                        ) ??
+                                        false;
+
+                                    if (confirmar) {
+                                      final docsToDelete = snapshot.data!.docs
+                                          .where(
+                                            (doc) =>
+                                                doc['codigo'].toString() ==
+                                                data['codigo'],
+                                          );
+                                      for (var doc in docsToDelete) {
+                                        await doc.reference.delete();
+                                      }
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Registros eliminados correctamente',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
                             ],
                           );
                         }).toList(),

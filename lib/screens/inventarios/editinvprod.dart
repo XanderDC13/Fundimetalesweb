@@ -151,9 +151,7 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                         .set({
                                           'codigo': widget.producto.codigo,
                                           'nombre': widget.producto.nombre,
-                                          'fundicion': cantidadFundicion ?? 0,
-                                          'pintura': cantidad,
-                                          'general': general,
+
                                           'fecha_actualizacion': timestamp,
                                         }, SetOptions(merge: true));
                                   }

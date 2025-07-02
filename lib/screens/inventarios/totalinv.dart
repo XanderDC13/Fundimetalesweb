@@ -12,6 +12,7 @@ class Producto {
   double precio;
   num cantidad;
   String categoria;
+  int stockDisponible; // Nuevo campo para el stock calculado
 
   Producto({
     required this.codigo,
@@ -19,6 +20,7 @@ class Producto {
     required this.precio,
     required this.cantidad,
     required this.categoria,
+    this.stockDisponible = 0, // Valor por defecto
   });
 
   static Producto fromMap(Map<String, dynamic> map) {
@@ -28,6 +30,7 @@ class Producto {
       precio: (map['precio'] ?? 0).toDouble(),
       cantidad: map['general'] ?? map['cantidad'] ?? 0,
       categoria: map['categoria'] ?? 'Sin categoría',
+      stockDisponible: 0, // Se calculará después
     );
   }
 
@@ -53,12 +56,66 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
   final TextEditingController _searchController = TextEditingController();
   String searchQuery = '';
   List<String> categorias = ['Todas'];
-
   String categoriaSeleccionada = 'Todas';
-
   int totalProductosFiltrados = 0;
-
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // 🔵 Nueva función para calcular stock disponible
+
+  // 🔵 Nueva función para calcular stock de múltiples productos
+  Future<Map<String, int>> _cargarStockMultiplesProductos(
+    List<String> codigos,
+  ) async {
+    Map<String, int> stockMap = {};
+
+    // Inicializar todos los stocks en 0
+    for (String codigo in codigos) {
+      stockMap[codigo] = 0;
+    }
+
+    // Cargar historial para todos los códigos
+    final historialSnapshot =
+        await FirebaseFirestore.instance
+            .collection('historial_inventario_general')
+            .where(
+              'codigo',
+              whereIn: codigos.take(10).toList(),
+            ) // Firestore limit
+            .get();
+
+    for (var doc in historialSnapshot.docs) {
+      final data = doc.data();
+      final codigo = data['codigo']?.toString() ?? '';
+      final tipo = (data['tipo'] ?? 'entrada').toString();
+      final cantidad = (data['cantidad'] ?? 0) as int;
+
+      if (stockMap.containsKey(codigo)) {
+        if (tipo == 'salida') {
+          stockMap[codigo] = stockMap[codigo]! - cantidad;
+        } else {
+          stockMap[codigo] = stockMap[codigo]! + cantidad;
+        }
+      }
+    }
+
+    // Cargar ventas para todos los códigos
+    final ventasSnapshot =
+        await FirebaseFirestore.instance.collection('ventas').get();
+
+    for (var venta in ventasSnapshot.docs) {
+      final productos = List<Map<String, dynamic>>.from(venta['productos']);
+      for (var producto in productos) {
+        final codigo = producto['codigo']?.toString() ?? '';
+        final cantidadVendida = (producto['cantidad'] ?? 0) as int;
+
+        if (stockMap.containsKey(codigo)) {
+          stockMap[codigo] = stockMap[codigo]! - cantidadVendida;
+        }
+      }
+    }
+
+    return stockMap;
+  }
 
   Future<void> eliminarProductoPorNombre(String nombre) async {
     bool confirmar =
@@ -293,7 +350,7 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                   ),
                   ScanInv(onCodigoEscaneado: agregarProductoDesdeEscaneo),
                   const SizedBox(width: 0),
-                  // NUEVO: Botón de importar CSV
+                  // Botón de importar CSV
                   Material(
                     color: const Color.fromARGB(255, 255, 255, 255),
                     elevation: 0,
@@ -320,6 +377,8 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                 ],
               ),
             ),
+
+            // Filtros de categorías
             Container(
               height: 40,
               margin: const EdgeInsets.only(bottom: 8),
@@ -454,7 +513,7 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
               ),
             ),
 
-            // Productos en grid
+            // Productos en grid con stock calculado
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: _firestore.collection('inventario_general').snapshots(),
@@ -510,161 +569,230 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: GridView.builder(
-                            padding: const EdgeInsets.only(bottom: 20),
-                            itemCount: productos.length,
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 12,
-                                  childAspectRatio: 0.9,
-                                ),
-                            itemBuilder: (context, index) {
-                              final producto = productos[index];
-                              return GestureDetector(
-                                onTap: () async {
-                                  await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) => EditInvProdScreen(
-                                            producto: producto,
-                                          ),
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  padding: const EdgeInsets.all(12),
+                          child: FutureBuilder<Map<String, int>>(
+                            // 🔵 Cargar stocks de todos los productos
+                            future: _cargarStockMultiplesProductos(
+                              productos.map((p) => p.codigo).toList(),
+                            ),
+                            builder: (context, stockSnapshot) {
+                              if (stockSnapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Center(
                                   child: Column(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                          border: Border.all(
-                                            color: Colors.white,
-                                          ),
+                                      CircularProgressIndicator(),
+                                      SizedBox(height: 16),
+                                      Text('Calculando stocks disponibles...'),
+                                    ],
+                                  ),
+                                );
+                              }
+
+                              final stockMap = stockSnapshot.data ?? {};
+
+                              return GridView.builder(
+                                padding: const EdgeInsets.only(bottom: 20),
+                                itemCount: productos.length,
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      crossAxisSpacing: 12,
+                                      mainAxisSpacing: 12,
+                                      childAspectRatio:
+                                          0.70, // Ajustado para más contenido
+                                    ),
+                                itemBuilder: (context, index) {
+                                  final producto = productos[index];
+                                  final stockDisponible =
+                                      stockMap[producto.codigo] ?? 0;
+
+                                  return GestureDetector(
+                                    onTap: () async {
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) => EditInvProdScreen(
+                                                producto: producto,
+                                              ),
                                         ),
-                                        padding: const EdgeInsets.all(12),
-                                        child: const Icon(
-                                          Icons.construction,
-                                          size: 40,
-                                          color: Color(0xFF2C3E50),
+                                      );
+                                    },
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        // 🔵 Borde de color según stock
+                                        border: Border.all(
+                                          color:
+                                              stockDisponible <= 0
+                                                  ? Colors.red.shade300
+                                                  : stockDisponible < 5
+                                                  ? Colors.orange.shade300
+                                                  : Colors.green.shade300,
+                                          width: 2,
                                         ),
                                       ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        producto.nombre,
-                                        textAlign: TextAlign.center,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                          color: Color(0xFF2C3E50),
-                                        ),
-                                      ),
-                                      Text(
-                                        'Stock: ${producto.cantidad}',
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          color: Color(0xFFB0BEC5),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Row(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Column(
                                         mainAxisAlignment:
-                                            MainAxisAlignment.spaceAround,
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Tooltip(
-                                            message: 'Editar',
-                                            child: InkWell(
+                                          // Ícono del producto
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              border: Border.all(
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            padding: const EdgeInsets.all(8),
+                                            child: const Icon(
+                                              Icons.construction,
+                                              size: 32,
+                                              color: Color(0xFF2C3E50),
+                                            ),
+                                          ),
+
+                                          // Nombre del producto
+                                          Text(
+                                            producto.nombre,
+                                            textAlign: TextAlign.center,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 10,
+                                              color: Color(0xFF2C3E50),
+                                            ),
+                                          ),
+
+                                          // 🔵 Stock disponible con colores
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  stockDisponible <= 0
+                                                      ? Colors.red.shade100
+                                                      : stockDisponible < 5
+                                                      ? Colors.orange.shade100
+                                                      : Colors.green.shade100,
                                               borderRadius:
                                                   BorderRadius.circular(12),
-                                              onTap: () async {
-                                                final resultado =
-                                                    await Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder:
-                                                            (
-                                                              context,
-                                                            ) => EditarProductoScreen(
-                                                              codigoBarras:
-                                                                  producto
-                                                                      .codigo,
-                                                              nombreInicial:
-                                                                  producto
-                                                                      .nombre,
-                                                              precioInicial:
-                                                                  producto
-                                                                      .precio,
-                                                            ),
-                                                      ),
-                                                    );
-                                                if (resultado != null) {
-                                                  await _firestore
-                                                      .collection(
-                                                        'inventario_general',
-                                                      )
-                                                      .doc(resultado['codigo'])
-                                                      .set({
-                                                        'codigo':
-                                                            resultado['codigo'],
-                                                        'nombre':
-                                                            resultado['nombre'],
-                                                        'precio':
-                                                            resultado['precio'],
-                                                        'categoria':
-                                                            resultado['categoria'],
-                                                        'fecha_creacion':
-                                                            Timestamp.now(),
-                                                        'estado': 'en_proceso',
-                                                      });
-                                                }
-                                              },
-                                              child: const Padding(
-                                                padding: EdgeInsets.all(6),
-                                                child: Icon(
-                                                  Icons.edit_outlined,
-                                                  color: Color(0xFF4682B4),
-                                                ),
+                                            ),
+                                            child: Text(
+                                              'Disponible: $stockDisponible',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color:
+                                                    stockDisponible <= 0
+                                                        ? Colors.red.shade700
+                                                        : stockDisponible < 5
+                                                        ? Colors.orange.shade700
+                                                        : Colors.green.shade700,
                                               ),
                                             ),
                                           ),
-                                          Tooltip(
-                                            message: 'Eliminar',
-                                            child: InkWell(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              onTap:
-                                                  () =>
-                                                      eliminarProductoPorNombre(
-                                                        producto.nombre,
-                                                      ),
-                                              child: const Padding(
-                                                padding: EdgeInsets.all(6),
-                                                child: Icon(
-                                                  Icons.delete_outline,
-                                                  color: Colors.redAccent,
+
+                                          // Botones de acción
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceAround,
+                                            children: [
+                                              Tooltip(
+                                                message: 'Editar',
+                                                child: InkWell(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  onTap: () async {
+                                                    final resultado =
+                                                        await Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder:
+                                                                (
+                                                                  context,
+                                                                ) => EditarProductoScreen(
+                                                                  codigoBarras:
+                                                                      producto
+                                                                          .codigo,
+                                                                  nombreInicial:
+                                                                      producto
+                                                                          .nombre,
+                                                                  precioInicial:
+                                                                      producto
+                                                                          .precio,
+                                                                ),
+                                                          ),
+                                                        );
+                                                    if (resultado != null) {
+                                                      await _firestore
+                                                          .collection(
+                                                            'inventario_general',
+                                                          )
+                                                          .doc(
+                                                            resultado['codigo'],
+                                                          )
+                                                          .set({
+                                                            'codigo':
+                                                                resultado['codigo'],
+                                                            'nombre':
+                                                                resultado['nombre'],
+                                                            'precio':
+                                                                resultado['precio'],
+                                                            'categoria':
+                                                                resultado['categoria'],
+                                                            'fecha_creacion':
+                                                                Timestamp.now(),
+                                                            'estado':
+                                                                'en_proceso',
+                                                          });
+                                                    }
+                                                  },
+                                                  child: const Padding(
+                                                    padding: EdgeInsets.all(6),
+                                                    child: Icon(
+                                                      Icons.edit_outlined,
+                                                      color: Color(0xFF4682B4),
+                                                      size: 20,
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
-                                            ),
+                                              Tooltip(
+                                                message: 'Eliminar',
+                                                child: InkWell(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  onTap:
+                                                      () =>
+                                                          eliminarProductoPorNombre(
+                                                            producto.nombre,
+                                                          ),
+                                                  child: const Padding(
+                                                    padding: EdgeInsets.all(6),
+                                                    child: Icon(
+                                                      Icons.delete_outline,
+                                                      color: Colors.redAccent,
+                                                      size: 20,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ),
-                                    ],
-                                  ),
-                                ),
+                                    ),
+                                  );
+                                },
                               );
                             },
                           ),

@@ -166,6 +166,7 @@ class _InventarioPinturaScreenState extends State<InventarioPinturaScreen>
                   DataColumn(label: Text('Nombre')),
                   DataColumn(label: Text('Código')),
                   DataColumn(label: Text('Cantidad')),
+                  DataColumn(label: Text('Acciones')),
                 ],
                 rows:
                     filtered.map((data) {
@@ -195,6 +196,71 @@ class _InventarioPinturaScreenState extends State<InventarioPinturaScreen>
                           ),
                           DataCell(Text(data['codigo'])),
                           DataCell(Text(data['cantidad'].toString())),
+                          DataCell(
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.redAccent,
+                              ),
+                              tooltip: 'Eliminar',
+                              onPressed: () async {
+                                final confirmar =
+                                    await showDialog<bool>(
+                                      context: context,
+                                      builder:
+                                          (_) => AlertDialog(
+                                            title: const Text(
+                                              'Confirmar eliminación',
+                                            ),
+                                            content: Text(
+                                              '¿Eliminar todos los registros de "${data['nombre']}" en Pintura?',
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed:
+                                                    () => Navigator.pop(
+                                                      context,
+                                                      false,
+                                                    ),
+                                                child: const Text('Cancelar'),
+                                              ),
+                                              ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                                onPressed:
+                                                    () => Navigator.pop(
+                                                      context,
+                                                      true,
+                                                    ),
+                                                child: const Text('Eliminar'),
+                                              ),
+                                            ],
+                                          ),
+                                    ) ??
+                                    false;
+
+                                if (confirmar) {
+                                  final docsToDelete = snapshot.data!.docs
+                                      .where(
+                                        (doc) =>
+                                            doc['nombre'].toString() ==
+                                            data['nombre'],
+                                      );
+                                  for (var doc in docsToDelete) {
+                                    await doc.reference.delete();
+                                  }
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Registros eliminados correctamente',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          ),
                         ],
                       );
                     }).toList(),

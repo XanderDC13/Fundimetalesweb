@@ -43,49 +43,55 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
     final ventasSnapshot =
         await FirebaseFirestore.instance.collection('ventas').get();
 
-    final Map<String, double> preciosPorCodigo = {};
+    // 1️⃣ Mapea precios y nombres base desde inventario_general
+    final Map<String, Map<String, dynamic>> baseProductos = {};
     for (var doc in inventarioSnapshot.docs) {
       final data = doc.data();
       final codigo = (data['codigo'] ?? '').toString();
-      final precio = (data['precio'] ?? 0).toDouble();
-      preciosPorCodigo[codigo] = precio;
+      baseProductos[codigo] = {
+        'codigo': codigo,
+        'nombre': data['nombre'] ?? '',
+        'precio': (data['precio'] ?? 0).toDouble(),
+        'cantidad': 0, // Inicialmente 0
+      };
     }
 
-    final Map<String, Map<String, dynamic>> agrupados = {};
+    // 2️⃣ Aplica historial de entradas/salidas
     for (var doc in historialSnapshot.docs) {
       final data = doc.data();
       final codigo = (data['codigo'] ?? '').toString();
-      final nombre = (data['nombre'] ?? '').toString();
       final cantidad = (data['cantidad'] ?? 0) as int;
       final tipo = (data['tipo'] ?? 'entrada').toString();
 
-      final ajusteCantidad = tipo == 'salida' ? -cantidad : cantidad;
+      final ajuste = tipo == 'salida' ? -cantidad : cantidad;
 
-      if (!agrupados.containsKey(codigo)) {
-        agrupados[codigo] = {
-          'codigo': codigo,
-          'nombre': nombre,
-          'cantidad': ajusteCantidad,
-          'precio': preciosPorCodigo[codigo] ?? 0.0,
-        };
+      if (baseProductos.containsKey(codigo)) {
+        baseProductos[codigo]!['cantidad'] += ajuste;
       } else {
-        agrupados[codigo]!['cantidad'] += ajusteCantidad;
+        // Si el código no existe en inventario_general, créalo
+        baseProductos[codigo] = {
+          'codigo': codigo,
+          'nombre': data['nombre'] ?? '',
+          'precio': 0.0,
+          'cantidad': ajuste,
+        };
       }
     }
 
+    // 3️⃣ Resta ventas
     for (var venta in ventasSnapshot.docs) {
       final productos = List<Map<String, dynamic>>.from(venta['productos']);
       for (var producto in productos) {
         final codigo = producto['codigo']?.toString() ?? '';
         final cantidad = (producto['cantidad'] ?? 0) as num;
-        if (agrupados.containsKey(codigo)) {
-          agrupados[codigo]!['cantidad'] -= cantidad.toInt();
+
+        if (baseProductos.containsKey(codigo)) {
+          baseProductos[codigo]!['cantidad'] -= cantidad.toInt();
         }
       }
     }
 
-    // Retornar solo productos con cantidad > 0
-    return agrupados.values.toList();
+    return baseProductos.values.toList();
   }
 
   @override
@@ -230,15 +236,24 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
           disponibles: data['cantidad'],
         );
 
-        Provider.of<CarritoController>(
-          context,
-          listen: false,
-        ).agregarProducto(producto);
+        try {
+          Provider.of<CarritoController>(
+            context,
+            listen: false,
+          ).agregarProducto(producto);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${data['nombre']} agregado al carrito')),
-        );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${data['nombre']} agregado al carrito')),
+          );
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No se puede agregar más unidades disponibles'),
+            ),
+          );
+        }
       },
+
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -255,15 +270,17 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
               color: Color(0xFF2C3E50),
             ),
             const SizedBox(height: 10),
-            Text(
-              data['nombre'],
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: Color(0xFF2C3E50),
+            Expanded(
+              child: Text(
+                data['nombre'],
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                  color: Color(0xFF2C3E50),
+                ),
               ),
             ),
             const SizedBox(height: 6),
@@ -280,47 +297,58 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
               '${data['cantidad']} disponibles',
               style: const TextStyle(fontSize: 13, color: Color(0xFFB0BEC5)),
             ),
-            const Spacer(),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4682B4),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                elevation: 0,
-              ),
-              icon: const Icon(
-                Icons.add_shopping_cart,
-                color: Colors.white,
-                size: 18,
-              ),
-              label: const Text(
-                'Agregar',
-                style: TextStyle(color: Colors.white, fontSize: 13),
-              ),
-              onPressed: () {
-                final producto = ProductoEnCarrito(
-                  codigo: data['codigo'],
-                  nombre: data['nombre'],
-                  precio: data['precio'],
-                  disponibles: data['cantidad'],
-                );
-
-                Provider.of<CarritoController>(
-                  context,
-                  listen: false,
-                ).agregarProducto(producto);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${data['nombre']} agregado al carrito'),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4682B4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
                   ),
-                );
-              },
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
+                icon: const Icon(
+                  Icons.add_shopping_cart,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                label: const Text(
+                  'Agregar',
+                  style: TextStyle(color: Colors.white, fontSize: 13),
+                ),
+                onPressed: () {
+                  final producto = ProductoEnCarrito(
+                    codigo: data['codigo'],
+                    nombre: data['nombre'],
+                    precio: data['precio'],
+                    disponibles: data['cantidad'],
+                  );
+
+                  try {
+                    Provider.of<CarritoController>(
+                      context,
+                      listen: false,
+                    ).agregarProducto(producto);
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${data['nombre']} agregado al carrito'),
+                      ),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('No tienes unidades disponibles'),
+                      ),
+                    );
+                  }
+                },
+              ),
             ),
           ],
         ),
