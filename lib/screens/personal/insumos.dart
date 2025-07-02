@@ -1,6 +1,6 @@
-import 'package:basefundi/insumos/historialinsumos.dart';
-import 'package:basefundi/insumos/inventarioinsumos.dart';
-import 'package:basefundi/insumos/solicitud.dart';
+import 'package:basefundi/screens/insumos/historialinsumos.dart';
+import 'package:basefundi/screens/insumos/inventarioinsumos.dart';
+import 'package:basefundi/screens/insumos/solicitud.dart';
 import 'package:flutter/material.dart';
 
 class InsumosScreen extends StatefulWidget {

@@ -279,10 +279,11 @@ class _HistorialInsumosWidgetState extends State<HistorialInsumosWidget> {
                       final nombreEmpleado = snapshotNombres.data!['empleado']!;
 
                       return Card(
+                        color: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        elevation: 1,
+                        elevation: 0,
                         margin: const EdgeInsets.symmetric(vertical: 8),
                         child: ListTile(
                           leading: const Icon(

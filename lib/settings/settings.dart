@@ -1,4 +1,5 @@
 import 'package:basefundi/settings/editperfil.dart';
+import 'package:basefundi/settings/feedback.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -50,7 +51,14 @@ class SettingsScreen extends StatelessWidget {
                     icon: Icons.feedback,
                     titulo: 'Enviar feedback',
                     subtitulo: 'Opinión o sugerencias',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FeedbackScreen(),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
                   _buildBoton(

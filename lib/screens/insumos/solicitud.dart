@@ -37,12 +37,13 @@ class _SolicitudInsumosWidgetState extends State<SolicitudInsumosWidget> {
           ),
           const SizedBox(height: 8),
           Card(
+            color: Colors.white,
+            elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            elevation: 0,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.all(8),
               child: _buildDropdownEmpleados(),
             ),
           ),
@@ -53,12 +54,13 @@ class _SolicitudInsumosWidgetState extends State<SolicitudInsumosWidget> {
           ),
           const SizedBox(height: 8),
           Card(
+            color: Colors.white,
+            elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            elevation: 0,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.all(8),
               child: _buildDropdownInsumos(),
             ),
           ),
@@ -68,89 +70,79 @@ class _SolicitudInsumosWidgetState extends State<SolicitudInsumosWidget> {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              // Botón -
-              IconButton(
-                icon: const Icon(Icons.remove),
-                onPressed:
-                    cantidad > 0
-                        ? () {
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFD6EAF8)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                _buildRoundButton(
+                  icon: Icons.remove,
+                  onPressed:
+                      cantidad > 0
+                          ? () {
+                            setState(() {
+                              cantidad--;
+                              _cantidadController.text = cantidad.toString();
+                            });
+                          }
+                          : null,
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _cantidadController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onChanged: (value) {
+                      if (value.isEmpty) {
+                        setState(() => cantidad = 0);
+                      } else {
+                        final parsed = int.tryParse(value);
+                        if (parsed != null &&
+                            parsed >= 0 &&
+                            parsed <= maxCantidad) {
+                          setState(() => cantidad = parsed);
+                        } else {
                           setState(() {
-                            cantidad--;
-                            _cantidadController.text = cantidad.toString();
+                            cantidad = maxCantidad;
+                            _cantidadController.text = maxCantidad.toString();
                           });
                         }
-                        : null,
-              ),
-
-              // Campo texto cantidad con validación
-              SizedBox(
-                width: 60,
-                child: TextField(
-                  controller: _cantidadController,
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    isDense: true,
-                    errorText:
-                        (cantidad > maxCantidad) ? 'Máximo $maxCantidad' : null,
-                  ),
-                  onChanged: (value) {
-                    if (value.isEmpty) {
-                      setState(() {
-                        cantidad = 0;
-                      });
-                    } else {
-                      final parsed = int.tryParse(value);
-                      if (parsed != null &&
-                          parsed >= 0 &&
-                          parsed <= maxCantidad) {
+                      }
+                    },
+                    onEditingComplete: () {
+                      if (_cantidadController.text.isEmpty) {
                         setState(() {
-                          cantidad = parsed;
-                        });
-                      } else {
-                        // Si intenta poner más que maxCantidad, ajusta al máximo permitido
-                        setState(() {
-                          cantidad = maxCantidad;
-                          _cantidadController.text = maxCantidad.toString();
+                          cantidad = 0;
+                          _cantidadController.text = '0';
                         });
                       }
-                    }
-                  },
-                  onEditingComplete: () {
-                    if (_cantidadController.text.isEmpty) {
-                      setState(() {
-                        cantidad = 0;
-                        _cantidadController.text = '0';
-                      });
-                    }
-                  },
+                    },
+                  ),
                 ),
-              ),
-
-              // Botón +
-              IconButton(
-                icon: const Icon(Icons.add),
-                onPressed:
-                    cantidad < maxCantidad
-                        ? () {
-                          setState(() {
-                            cantidad++;
-                            _cantidadController.text = cantidad.toString();
-                          });
-                        }
-                        : null,
-              ),
-            ],
+                _buildRoundButton(
+                  icon: Icons.add,
+                  onPressed:
+                      cantidad < maxCantidad
+                          ? () {
+                            setState(() {
+                              cantidad++;
+                              _cantidadController.text = cantidad.toString();
+                            });
+                          }
+                          : null,
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 40),
-          Center(
+          SizedBox(
+            width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: guardando ? null : _guardarSolicitud,
               icon: const Icon(Icons.save),
@@ -161,18 +153,32 @@ class _SolicitudInsumosWidgetState extends State<SolicitudInsumosWidget> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF4682B4),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 14,
-                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(30),
                 ),
                 elevation: 0,
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRoundButton({required IconData icon, VoidCallback? onPressed}) {
+    return Container(
+      width: 40,
+      height: 40,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color:
+            onPressed != null ? const Color(0xFF4682B4) : Colors.grey.shade300,
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: Colors.white),
+        onPressed: onPressed,
       ),
     );
   }
@@ -189,25 +195,49 @@ class _SolicitudInsumosWidgetState extends State<SolicitudInsumosWidget> {
           );
         }
         final empleados = snapshot.data!.docs;
+
         return DropdownButtonFormField<String>(
           value: empleadoSeleccionado,
-          decoration: const InputDecoration(
-            border: InputBorder.none,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white,
             hintText: 'Selecciona un empleado',
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
           ),
           items:
-              empleados
-                  .map(
-                    (doc) => DropdownMenuItem(
-                      value: doc.id,
-                      child: Text(doc['nombre']),
+              empleados.map((doc) {
+                return DropdownMenuItem(
+                  value: doc.id,
+                  child: SizedBox(
+                    width: 250,
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.person,
+                          size: 20,
+                          color: Color(0xFF4682B4),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            doc['nombre'],
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
-                  )
-                  .toList(),
+                  ),
+                );
+              }).toList(),
           onChanged: (value) {
-            setState(() {
-              empleadoSeleccionado = value;
-            });
+            setState(() => empleadoSeleccionado = value);
           },
         );
       },
@@ -228,27 +258,53 @@ class _SolicitudInsumosWidgetState extends State<SolicitudInsumosWidget> {
           );
         }
         final insumos = snapshot.data!.docs;
+
         return DropdownButtonFormField<String>(
           value: insumoSeleccionado,
-          decoration: const InputDecoration(
-            border: InputBorder.none,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white,
             hintText: 'Selecciona un insumo',
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
           ),
           items:
-              insumos
-                  .map(
-                    (doc) => DropdownMenuItem(
-                      value: doc.id,
-                      child: Text(doc['nombre']),
+              insumos.map((doc) {
+                return DropdownMenuItem(
+                  value: doc.id,
+                  child: SizedBox(
+                    width: 250,
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.inventory_2,
+                          size: 20,
+                          color: Color(0xFF4682B4),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            doc['nombre'],
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
-                  )
-                  .toList(),
+                  ),
+                );
+              }).toList(),
           onChanged: (value) async {
             setState(() {
               insumoSeleccionado = value;
               cantidad = 0;
               _cantidadController.text = '0';
-              maxCantidad = 0; // reiniciar mientras carga
+              maxCantidad = 0;
             });
 
             if (value != null) {
@@ -281,9 +337,7 @@ class _SolicitudInsumosWidgetState extends State<SolicitudInsumosWidget> {
       return;
     }
 
-    setState(() {
-      guardando = true;
-    });
+    setState(() => guardando = true);
 
     final docInsumoRef = FirebaseFirestore.instance
         .collection('inventario_insumos')
@@ -293,25 +347,20 @@ class _SolicitudInsumosWidgetState extends State<SolicitudInsumosWidget> {
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         final snapshot = await transaction.get(docInsumoRef);
 
-        if (!snapshot.exists) {
+        if (!snapshot.exists)
           throw Exception('El insumo seleccionado no existe');
-        }
 
         final stockActual = (snapshot['cantidad'] ?? 0) as int;
-
         if (stockActual < cantidad) {
           throw Exception(
             'Stock insuficiente. Solo quedan $stockActual unidades.',
           );
         }
 
-        // Resta la cantidad solicitada al stock
         transaction.update(docInsumoRef, {'cantidad': stockActual - cantidad});
 
-        // Crea la solicitud
         final solicitudRef =
             FirebaseFirestore.instance.collection('solicitudes_insumos').doc();
-
         transaction.set(solicitudRef, {
           'empleado_id': empleadoSeleccionado,
           'insumo_id': insumoSeleccionado,
@@ -332,9 +381,7 @@ class _SolicitudInsumosWidgetState extends State<SolicitudInsumosWidget> {
         const SnackBar(content: Text('Solicitud guardada correctamente')),
       );
     } catch (e) {
-      setState(() {
-        guardando = false;
-      });
+      setState(() => guardando = false);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
