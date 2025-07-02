@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
@@ -54,37 +55,90 @@ class _ReporteTransporteScreenState extends State<ReporteTransporteScreen> {
     return DateFormat('dd/MM/yyyy hh:mm a').format(fecha);
   }
 
+  // 👉 TU PLANTILLA REUTILIZABLE
+  pw.MultiPage buildReportePDF({
+    required String titulo,
+    required List<String> headers,
+    required List<List<String>> dataRows,
+    String? footerText,
+  }) {
+    return pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(32),
+      build:
+          (context) => [
+            pw.Header(
+              level: 0,
+              child: pw.Text(
+                titulo,
+                style: pw.TextStyle(
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.blue900,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Table.fromTextArray(
+              border: null,
+              cellAlignment: pw.Alignment.centerLeft,
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.white,
+              ),
+              headerDecoration: const pw.BoxDecoration(
+                color: PdfColors.blue800,
+              ),
+              rowDecoration: const pw.BoxDecoration(
+                border: pw.Border(
+                  bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+                ),
+              ),
+              cellPadding: const pw.EdgeInsets.symmetric(
+                vertical: 6,
+                horizontal: 4,
+              ),
+              headers: headers,
+              data: dataRows,
+            ),
+            pw.SizedBox(height: 20),
+            if (footerText != null)
+              pw.Align(
+                alignment: pw.Alignment.centerRight,
+                child: pw.Text(
+                  footerText,
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.blueGrey800,
+                  ),
+                ),
+              ),
+          ],
+    );
+  }
+
   Future<void> _generarPDF(
     List<Map<String, dynamic>> data, {
     bool unoSolo = false,
   }) async {
     final pdf = pw.Document();
 
+    final lista =
+        data.map((item) {
+          return [
+            _formatearFecha(item['fecha']),
+            (item['hora_salida'] ?? '—').toString(),
+            (item['hora_llegada'] ?? '—').toString(),
+            (item['tiempo_demora'] ?? '—').toString(),
+          ];
+        }).toList();
+
     pdf.addPage(
-      pw.Page(
-        build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                'Reporte de Transporte',
-                style: pw.TextStyle(
-                  fontSize: 22,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-              pw.SizedBox(height: 16),
-              for (var item in data) ...[
-                pw.Text('Transporte', style: pw.TextStyle(fontSize: 16)),
-                pw.Text('Fecha registro: ${_formatearFecha(item['fecha'])}'),
-                pw.Text('Salida: ${item['hora_salida'] ?? '—'}'),
-                pw.Text('Llegada: ${item['hora_llegada'] ?? '—'}'),
-                pw.Text('Demora: ${item['tiempo_demora'] ?? '—'}'),
-                pw.Divider(),
-              ],
-            ],
-          );
-        },
+      buildReportePDF(
+        titulo: 'Reporte de Transporte',
+        headers: ['Fecha Registro', 'Hora Salida', 'Hora Llegada', 'Demora'],
+        dataRows: lista,
+        footerText: unoSolo ? null : 'Total registros: ${lista.length}',
       ),
     );
 
@@ -98,7 +152,7 @@ class _ReporteTransporteScreenState extends State<ReporteTransporteScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // AppBar con degradado
+            // ✅ AppBar con degradado
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -149,17 +203,17 @@ class _ReporteTransporteScreenState extends State<ReporteTransporteScreen> {
                         itemBuilder: (context, index) {
                           final item = _reporte[index];
                           return Card(
+                            color: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            elevation: 3,
+                            elevation: 0,
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             child: Padding(
                               padding: const EdgeInsets.all(16),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const SizedBox(height: 8),
                                   Text(
                                     '📅 Fecha registro: ${_formatearFecha(item['fecha'])}',
                                   ),

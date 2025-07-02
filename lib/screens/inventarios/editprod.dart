@@ -20,6 +20,7 @@ class EditarProductoScreen extends StatefulWidget {
 class _EditarProductoScreenState extends State<EditarProductoScreen> {
   late TextEditingController nombreController;
   late TextEditingController precioController;
+  late TextEditingController costoController;
   late TextEditingController codigoController;
   final TextEditingController nuevaCategoriaController =
       TextEditingController();
@@ -33,6 +34,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     super.initState();
     nombreController = TextEditingController();
     precioController = TextEditingController();
+    costoController = TextEditingController();
     codigoController = TextEditingController(text: widget.codigoBarras);
 
     _inicializarDatos();
@@ -49,6 +51,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
             widget.precioInicial == 0
                 ? ''
                 : widget.precioInicial.toStringAsFixed(2);
+        costoController.text = '';
         if (categorias.isNotEmpty) {
           categoriaSeleccionada = categorias.first;
         }
@@ -84,7 +87,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         final categoriaEnDB = data['categoria'];
 
         print(
-          "Cargando datos -> Nombre: ${data['nombre']}, Precio: ${data['precio']}, Categoría: $categoriaEnDB",
+          "Cargando datos -> Nombre: ${data['nombre']}, Precio: ${data['precio']}, Costo: ${data['costo']}, Categoría: $categoriaEnDB",
         );
 
         if (categoriaEnDB != null && !categorias.contains(categoriaEnDB)) {
@@ -96,6 +99,8 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
           nombreController.text = data['nombre'] ?? widget.nombreInicial;
           precioController.text =
               data['precio'] != null ? data['precio'].toString() : '';
+          costoController.text =
+              data['costo'] != null ? data['costo'].toString() : '';
           categoriaSeleccionada =
               categoriaEnDB ??
               (categorias.isNotEmpty ? categorias.first : null);
@@ -107,6 +112,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
               widget.precioInicial == 0
                   ? ''
                   : widget.precioInicial.toStringAsFixed(2);
+          costoController.text = '';
           categoriaSeleccionada =
               categorias.isNotEmpty ? categorias.first : null;
         });
@@ -120,8 +126,12 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     final codigo = codigoController.text.trim();
     final nombre = nombreController.text.trim();
     final precioText = precioController.text.trim();
+    final costoText = costoController.text.trim();
 
-    if (codigo.isEmpty || nombre.isEmpty || precioText.isEmpty) {
+    if (codigo.isEmpty ||
+        nombre.isEmpty ||
+        precioText.isEmpty ||
+        costoText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Todos los campos son obligatorios')),
       );
@@ -129,10 +139,19 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     }
 
     final precio = double.tryParse(precioText);
+    final costo = double.tryParse(costoText);
+
     if (precio == null || precio < 0) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Precio inválido')));
+      return;
+    }
+
+    if (costo == null || costo < 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Costo inválido')));
       return;
     }
 
@@ -146,10 +165,10 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         'codigo': codigo,
         'nombre': nombre,
         'precio': precio,
+        'costo': costo,
         'fecha': FieldValue.serverTimestamp(),
       };
 
-      // ✅ Solo actualiza la categoría si realmente hay un valor nuevo
       if (categoriaSeleccionada != null) {
         datosAGuardar['categoria'] = categoriaSeleccionada;
       }
@@ -158,7 +177,6 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         await docRef.update(datosAGuardar);
         print("Producto actualizado: $datosAGuardar");
       } else {
-        // Para uno nuevo, la categoría debe existir
         if (categoriaSeleccionada == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Selecciona una categoría')),
@@ -177,6 +195,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         'codigo': codigo,
         'nombre': nombre,
         'precio': precio,
+        'costo': costo,
         'categoria': categoriaSeleccionada,
       });
     } catch (e) {
@@ -399,6 +418,14 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                             controller: nombreController,
                           ),
                           buildTextField(
+                            label: 'Costo',
+                            icon: Icons.attach_money,
+                            controller: costoController,
+                            inputType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                          ),
+                          buildTextField(
                             label: 'Precio',
                             icon: Icons.attach_money,
                             controller: precioController,
@@ -452,6 +479,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   void dispose() {
     nombreController.dispose();
     precioController.dispose();
+    costoController.dispose();
     codigoController.dispose();
     nuevaCategoriaController.dispose();
     super.dispose();

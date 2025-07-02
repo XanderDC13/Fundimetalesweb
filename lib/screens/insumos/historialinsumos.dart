@@ -192,7 +192,24 @@ class _HistorialInsumosWidgetState extends State<HistorialInsumosWidget> {
         final stockActual = (insumoSnapshot['cantidad'] ?? 0) as int;
 
         transaction.update(insumoRef, {'cantidad': stockActual + cantidad});
+        final auditor = 'Administrador';
 
+        final insumoDoc = await insumoRef.get();
+        final nombreInsumo =
+            insumoDoc.exists ? (insumoDoc['nombre'] ?? insumoId) : insumoId;
+
+        // Guardar auditoría
+        final auditoriaRef =
+            FirebaseFirestore.instance.collection('auditoria_general').doc();
+
+        transaction.set(auditoriaRef, {
+          'fecha': FieldValue.serverTimestamp(),
+          'usuario_nombre': auditor,
+          'accion': 'Eliminación de Solicitud de Insumos',
+          'detalle': 'Insumo: $nombreInsumo, Cantidad devuelta: $cantidad',
+        });
+
+        // Eliminar solicitud
         transaction.delete(
           FirebaseFirestore.instance
               .collection('solicitudes_insumos')
@@ -202,7 +219,7 @@ class _HistorialInsumosWidgetState extends State<HistorialInsumosWidget> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Solicitud eliminada y stock devuelto')),
+          const SnackBar(content: Text('Solicitud eliminada, stock devuelto')),
         );
       }
     }

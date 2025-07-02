@@ -1,3 +1,4 @@
+import 'package:basefundi/screens/reportes/auditoria.dart';
 import 'package:basefundi/screens/reportes/reporteinv.dart';
 import 'package:basefundi/screens/reportes/reportetransporte.dart';
 import 'package:basefundi/screens/reportes/reporteventas.dart';
@@ -90,6 +91,20 @@ class _ReportesScreenState extends State<ReportesScreen>
                         context,
                         MaterialPageRoute(
                           builder: (context) => const ReporteTransporteScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildBoton(
+                    icon: LucideIcons.shieldCheck,
+                    titulo: 'Auditoría',
+                    subtitulo: 'Ediciones y cambios en el sistema',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AuditoriaScreen(),
                         ),
                       );
                     },

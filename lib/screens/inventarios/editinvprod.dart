@@ -156,6 +156,7 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                         }, SetOptions(merge: true));
                                   }
 
+                                  // ignore: use_build_context_synchronously
                                   Navigator.pop(context);
                                 }
                                 : null,

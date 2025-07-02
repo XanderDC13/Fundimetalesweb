@@ -32,15 +32,23 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
         horaLlegada!.hour,
         horaLlegada!.minute,
       );
-      final salida = DateTime(
+      DateTime salida = DateTime(
         ahora.year,
         ahora.month,
         ahora.day,
         horaSalida!.hour,
         horaSalida!.minute,
       );
+
+      // Si la salida es antes que llegada, asumimos que es al día siguiente
+      if (salida.isBefore(llegada)) {
+        salida = salida.add(const Duration(days: 1));
+      }
+
+      final duracion = salida.difference(llegada);
+
       setState(() {
-        diferencia = salida.difference(llegada);
+        diferencia = duracion.isNegative ? duracion.abs() : duracion;
       });
     }
   }
@@ -70,7 +78,7 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
   @override
   Widget build(BuildContext context) {
     final tiempoDemora =
-        diferencia != null
+        (diferencia != null)
             ? '${diferencia!.inHours}h ${diferencia!.inMinutes.remainder(60)}min'
             : '--';
 

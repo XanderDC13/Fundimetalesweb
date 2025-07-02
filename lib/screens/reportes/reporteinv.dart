@@ -37,7 +37,6 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen> {
       final codigo = data['codigo'];
       final nombre = data['nombre'] ?? 'Desconocido';
       final cantidad = data['cantidad'] ?? 0;
-      final fecha = data['hora_llegada']?.toDate();
 
       if (_datosFundicion.containsKey(codigo)) {
         _datosFundicion[codigo]!['cantidad'] += cantidad;
@@ -46,7 +45,6 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen> {
           'codigo': codigo,
           'nombre': nombre,
           'cantidad': cantidad,
-          'fecha': fecha,
         };
       }
     }
@@ -56,7 +54,6 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen> {
       final codigo = data['codigo'];
       final nombre = data['nombre'] ?? 'Desconocido';
       final cantidad = data['cantidad'] ?? 0;
-      final fecha = data['hora_llegada']?.toDate();
 
       if (_datosPintura.containsKey(codigo)) {
         _datosPintura[codigo]!['cantidad'] += cantidad;
@@ -65,7 +62,6 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen> {
           'codigo': codigo,
           'nombre': nombre,
           'cantidad': cantidad,
-          'fecha': fecha,
         };
       }
     }
@@ -106,57 +102,101 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen> {
     });
   }
 
-  Future<void> _generarPdf(List<Map<String, dynamic>> datos) async {
-    final pdf = pw.Document();
-
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        build:
-            (context) => [
-              pw.Center(
+  // 👉 PLANTILLA PDF REUTILIZABLE
+  pw.MultiPage buildReportePDF({
+    required String titulo,
+    required List<String> headers,
+    required List<List<String>> dataRows,
+    String? footerText,
+  }) {
+    return pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(32),
+      build:
+          (context) => [
+            pw.Header(
+              level: 0,
+              child: pw.Text(
+                titulo,
+                style: pw.TextStyle(
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.blue900,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Table.fromTextArray(
+              border: null,
+              cellAlignment: pw.Alignment.centerLeft,
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.white,
+              ),
+              headerDecoration: const pw.BoxDecoration(
+                color: PdfColors.blue800,
+              ),
+              rowDecoration: const pw.BoxDecoration(
+                border: pw.Border(
+                  bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+                ),
+              ),
+              cellPadding: const pw.EdgeInsets.symmetric(
+                vertical: 6,
+                horizontal: 4,
+              ),
+              headers: headers,
+              data: dataRows,
+            ),
+            pw.SizedBox(height: 20),
+            if (footerText != null)
+              pw.Align(
+                alignment: pw.Alignment.centerRight,
                 child: pw.Text(
-                  '📦 Reporte de Inventario 📦',
+                  footerText,
                   style: pw.TextStyle(
-                    fontSize: 20,
                     fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.blueGrey800,
                   ),
                 ),
               ),
-              pw.SizedBox(height: 20),
-              pw.Table.fromTextArray(
-                border: pw.TableBorder.all(color: PdfColor.fromInt(0xFF2196F3)),
-                headerStyle: pw.TextStyle(
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColor.fromInt(0xFFFFFFFF),
-                ),
-                headerDecoration: pw.BoxDecoration(
-                  color: PdfColor.fromInt(0xFF2196F3),
-                ),
-                cellAlignment: pw.Alignment.centerLeft,
-                headers: [
-                  'Cod',
-                  'Nombre',
-                  'Fundición',
-                  'Pintura',
-                  'Dañados',
-                  '% Dañado',
-                  'Total',
-                ],
-                data:
-                    datos.map((item) {
-                      return [
-                        item['codigo'],
-                        item['nombre'],
-                        item['fundicion'].toString(),
-                        item['pintura'].toString(),
-                        item['danados'].toString(),
-                        '${item['promedioDanado'].toStringAsFixed(2)}%',
-                        item['totalAcumulado'].toString(),
-                      ];
-                    }).toList(),
-              ),
-            ],
+          ],
+    );
+  }
+
+  Future<void> _generarPdf(
+    List<Map<String, dynamic>> datos, {
+    bool unoSolo = false,
+  }) async {
+    final pdf = pw.Document();
+
+    final dataRows =
+        datos.map((item) {
+          return [
+            item['codigo'].toString(),
+            item['nombre'].toString(),
+            item['fundicion'].toString(),
+            item['pintura'].toString(),
+            item['danados'].toString(),
+            '${item['promedioDanado'].toStringAsFixed(2)}%',
+            item['totalAcumulado'].toString(),
+          ];
+        }).toList();
+
+    pdf.addPage(
+      buildReportePDF(
+        titulo: 'Reporte de Inventario',
+        headers: [
+          'Código',
+          'Nombre',
+          'Fundición',
+          'Pintura',
+          'Dañados',
+          '% Dañado',
+          'Total',
+        ],
+        dataRows: dataRows,
+        footerText: unoSolo ? null : 'Total productos: ${dataRows.length}',
       ),
     );
 
@@ -193,7 +233,7 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // AppBar
+            // ✅ AppBar
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -221,7 +261,7 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
-                    tooltip: 'Descargar todo en PDF',
+                    tooltip: 'Descargar PDF',
                     onPressed: () => _generarPdf(reporteFiltrado),
                   ),
                 ],
@@ -270,6 +310,7 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen> {
                         itemBuilder: (context, index) {
                           final item = reporteFiltrado[index];
                           return Card(
+                            color: Colors.white,
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
@@ -326,7 +367,10 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen> {
                                   Align(
                                     alignment: Alignment.centerRight,
                                     child: ElevatedButton.icon(
-                                      onPressed: () => _generarPdf([item]),
+                                      onPressed:
+                                          () => _generarPdf([
+                                            item,
+                                          ], unoSolo: true),
                                       icon: const Icon(Icons.picture_as_pdf),
                                       label: const Text('Exportar PDF'),
                                       style: ElevatedButton.styleFrom(

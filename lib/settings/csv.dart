@@ -34,7 +34,6 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
         final file = File(result.files.single.path!);
         final contenido = await file.readAsString();
 
-        // Parsear CSV con ; como delimitador
         final rowsAsListOfValues = const CsvToListConverter(
           fieldDelimiter: ';',
           eol: '\n',
@@ -55,7 +54,7 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
         for (int i = 1; i < rowsAsListOfValues.length; i++) {
           final fila = rowsAsListOfValues[i];
 
-          if (fila.length < 4) {
+          if (fila.length < 5) {
             print('⚠️ Fila $i incompleta, saltada: $fila');
             continue;
           }
@@ -65,8 +64,9 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
               rawCodigo.startsWith("'") ? rawCodigo.substring(1) : rawCodigo;
 
           final nombre = fila[1].toString().trim();
-          final precio = double.tryParse(fila[2].toString().trim()) ?? 0.0;
-          final categoria = fila[3].toString().trim();
+          final costo = double.tryParse(fila[2].toString().trim()) ?? 0.0;
+          final precio = double.tryParse(fila[3].toString().trim()) ?? 0.0;
+          final categoria = fila[4].toString().trim();
 
           if (codigo.isEmpty || nombre.isEmpty) {
             print('⚠️ Fila $i sin código o nombre, saltada.');
@@ -81,12 +81,15 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
             await docRef.set({
               'codigo': codigo,
               'nombre': nombre,
+              'costo': costo,
               'precio': precio,
               'categoria': categoria,
               'fecha': DateTime.now(),
             }, SetOptions(merge: true));
 
-            print('✅ Guardado: $codigo | $nombre | $precio | $categoria');
+            print(
+              '✅ Guardado: $codigo | $nombre | Costo: $costo | Precio: $precio | $categoria',
+            );
           } catch (e) {
             print('❌ Error al guardar fila $i: $e');
           }
@@ -95,11 +98,12 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
             filasProcesadas = i;
           });
         }
-
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Productos importados correctamente')),
         );
       } else {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No se seleccionó ningún archivo')),
         );
@@ -107,6 +111,7 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
     } catch (e) {
       print('❌ ERROR GENERAL: $e');
       ScaffoldMessenger.of(
+        // ignore: use_build_context_synchronously
         context,
       ).showSnackBar(const SnackBar(content: Text('Error al importar CSV')));
     } finally {
@@ -148,7 +153,6 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
                 ),
               ),
             ),
-
             Expanded(
               child: Center(
                 child:

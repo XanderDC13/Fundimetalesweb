@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
@@ -16,37 +19,85 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
 
   Future<void> _generarPdf(List<Map<String, dynamic>> ventas) async {
     final pdf = pw.Document();
-    final dateFormat = DateFormat('dd/MM/yyyy – HH:mm');
+    final dateFormat = DateFormat('dd/MM/yyyy - HH:mm');
+
+    // 👇 Carga el logo desde assets
+    final Uint8List logoBytes = await rootBundle
+        .load('lib/assets/logo.png')
+        .then((value) => value.buffer.asUint8List());
+    final logoImage = pw.MemoryImage(logoBytes);
 
     for (var venta in ventas) {
+      final productos = (venta['productos'] ?? []) as List;
+      final total = productos.fold<double>(0, (sum, item) {
+        final p = item as Map<String, dynamic>;
+        final subtotal = p['subtotal'];
+        return sum +
+            (subtotal is num
+                ? subtotal.toDouble()
+                : double.tryParse(subtotal.toString()) ?? 0);
+      });
+
       pdf.addPage(
         pw.Page(
+          pageFormat: PdfPageFormat.a4,
           build:
               (context) => pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text(
-                    '🧾 Detalle de Venta',
-                    style: pw.TextStyle(
-                      fontSize: 20,
+                  // 🔵 Encabezado con logo
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            'Factura de Venta',
+                            style: pw.TextStyle(
+                              fontSize: 22,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColor.fromInt(0xFF4682B4),
+                            ),
+                          ),
+                          pw.SizedBox(height: 5),
+                          pw.Text('Cliente: ${venta['cliente']}'),
+                          pw.Text(
+                            'Fecha: ${venta['fecha'] != null ? dateFormat.format(venta['fecha']) : 'Sin fecha'}',
+                          ),
+                          pw.Text('Método de Pago: ${venta['metodoPago']}'),
+                        ],
+                      ),
+                      pw.Container(
+                        height: 60,
+                        width: 60,
+                        child: pw.Image(logoImage),
+                      ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 20),
+
+                  // 🔵 Tabla de productos
+                  pw.Table.fromTextArray(
+                    headerDecoration: pw.BoxDecoration(
+                      color: PdfColor.fromInt(0xFF4682B4),
+                    ),
+                    headerStyle: pw.TextStyle(
+                      color: PdfColor.fromInt(0xFFFFFFFF),
                       fontWeight: pw.FontWeight.bold,
                     ),
-                  ),
-                  pw.SizedBox(height: 10),
-                  pw.Text('Cliente: ${venta['cliente']}'),
-                  pw.Text(
-                    'Fecha: ${venta['fecha'] != null ? dateFormat.format(venta['fecha']) : 'Sin fecha'}',
-                  ),
-                  pw.Text('Método de Pago: ${venta['metodoPago']}'),
-                  pw.SizedBox(height: 10),
-                  pw.Text(
-                    'Productos:',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  ),
-                  pw.Table.fromTextArray(
-                    headers: ['Cod', 'Nombre', 'Cant', 'Precio', 'Total'],
+                    border: pw.TableBorder.all(
+                      color: PdfColor.fromInt(0xFF4682B4),
+                    ),
+                    headers: [
+                      'Código',
+                      'Nombre',
+                      'Cant.',
+                      'Precio',
+                      'Subtotal',
+                    ],
                     data:
-                        (venta['productos'] as List).map<List<String>>((p) {
+                        productos.map<List<String>>((p) {
                           final producto = p as Map<String, dynamic>;
                           return [
                             producto['codigo'] ?? '',
@@ -57,13 +108,28 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
                           ];
                         }).toList(),
                   ),
-                  pw.SizedBox(height: 10),
-                  pw.Text(
-                    'Total: \$${(venta['productos'] as List).fold<double>(0, (sum, item) {
-                      final p = item as Map<String, dynamic>;
-                      return sum + (p['subtotal'] ?? 0);
-                    }).toStringAsFixed(2)}',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  pw.SizedBox(height: 20),
+
+                  // 🔵 Total destacado
+                  pw.Align(
+                    alignment: pw.Alignment.centerRight,
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.all(10),
+                      decoration: pw.BoxDecoration(
+                        border: pw.Border.all(
+                          color: PdfColor.fromInt(0xFF4682B4),
+                        ),
+                        borderRadius: pw.BorderRadius.circular(8),
+                      ),
+                      child: pw.Text(
+                        'TOTAL: \$${total.toStringAsFixed(2)}',
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 16,
+                          color: PdfColor.fromInt(0xFF4682B4),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -81,7 +147,7 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // AppBar
+            // AppBar con color azul
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -168,7 +234,7 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
               ),
             ),
 
-            // Lista de Ventas con StreamBuilder
+            // Lista de ventas
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream:
@@ -233,6 +299,7 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
                       );
 
                       return Card(
+                        color: Colors.white,
                         margin: const EdgeInsets.symmetric(vertical: 8),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),

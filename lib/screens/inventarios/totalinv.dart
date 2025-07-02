@@ -12,7 +12,7 @@ class Producto {
   double precio;
   num cantidad;
   String categoria;
-  int stockDisponible; // Nuevo campo para el stock calculado
+  int stockDisponible;
 
   Producto({
     required this.codigo,
@@ -20,7 +20,7 @@ class Producto {
     required this.precio,
     required this.cantidad,
     required this.categoria,
-    this.stockDisponible = 0, // Valor por defecto
+    this.stockDisponible = 0,
   });
 
   static Producto fromMap(Map<String, dynamic> map) {
@@ -30,7 +30,7 @@ class Producto {
       precio: (map['precio'] ?? 0).toDouble(),
       cantidad: map['general'] ?? map['cantidad'] ?? 0,
       categoria: map['categoria'] ?? 'Sin categoría',
-      stockDisponible: 0, // Se calculará después
+      stockDisponible: 0,
     );
   }
 
@@ -60,27 +60,19 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
   int totalProductosFiltrados = 0;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // 🔵 Nueva función para calcular stock disponible
-
-  // 🔵 Nueva función para calcular stock de múltiples productos
   Future<Map<String, int>> _cargarStockMultiplesProductos(
     List<String> codigos,
   ) async {
     Map<String, int> stockMap = {};
 
-    // Inicializar todos los stocks en 0
     for (String codigo in codigos) {
       stockMap[codigo] = 0;
     }
 
-    // Cargar historial para todos los códigos
     final historialSnapshot =
         await FirebaseFirestore.instance
             .collection('historial_inventario_general')
-            .where(
-              'codigo',
-              whereIn: codigos.take(10).toList(),
-            ) // Firestore limit
+            .where('codigo', whereIn: codigos.take(10).toList())
             .get();
 
     for (var doc in historialSnapshot.docs) {
@@ -98,7 +90,6 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
       }
     }
 
-    // Cargar ventas para todos los códigos
     final ventasSnapshot =
         await FirebaseFirestore.instance.collection('ventas').get();
 
@@ -745,6 +736,8 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                                                                 resultado['codigo'],
                                                             'nombre':
                                                                 resultado['nombre'],
+                                                            'costo':
+                                                                resultado['costo'],
                                                             'precio':
                                                                 resultado['precio'],
                                                             'categoria':

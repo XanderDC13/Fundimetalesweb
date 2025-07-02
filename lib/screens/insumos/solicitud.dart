@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SolicitudInsumosWidget extends StatefulWidget {
@@ -168,8 +169,8 @@ class _SolicitudInsumosWidgetState extends State<SolicitudInsumosWidget> {
 
   Widget _buildRoundButton({required IconData icon, VoidCallback? onPressed}) {
     return Container(
-      width: 40,
-      height: 40,
+      width: 50,
+      height: 50,
       margin: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
         color:
@@ -339,6 +340,43 @@ class _SolicitudInsumosWidgetState extends State<SolicitudInsumosWidget> {
 
     setState(() => guardando = true);
 
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) {
+      setState(() => guardando = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Usuario no autenticado')));
+      return;
+    }
+
+    // Traer nombre real del usuario logueado
+    final userDoc =
+        await FirebaseFirestore.instance
+            .collection('usuarios_activos')
+            .doc(currentUser.uid)
+            .get();
+
+    final nombreUsuario =
+        userDoc.data()?['nombre'] ?? currentUser.email ?? '---';
+
+    // Traer nombre del empleado seleccionado
+    final empleadoDoc =
+        await FirebaseFirestore.instance
+            .collection('usuarios_activos')
+            .doc(empleadoSeleccionado)
+            .get();
+    final nombreEmpleado =
+        empleadoDoc.data()?['nombre'] ?? empleadoSeleccionado;
+
+    // Traer nombre del insumo seleccionado
+    final insumoDoc =
+        await FirebaseFirestore.instance
+            .collection('inventario_insumos')
+            .doc(insumoSeleccionado)
+            .get();
+    final nombreInsumo = insumoDoc.data()?['nombre'] ?? insumoSeleccionado;
+
     final docInsumoRef = FirebaseFirestore.instance
         .collection('inventario_insumos')
         .doc(insumoSeleccionado);
@@ -347,8 +385,9 @@ class _SolicitudInsumosWidgetState extends State<SolicitudInsumosWidget> {
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         final snapshot = await transaction.get(docInsumoRef);
 
-        if (!snapshot.exists)
+        if (!snapshot.exists) {
           throw Exception('El insumo seleccionado no existe');
+        }
 
         final stockActual = (snapshot['cantidad'] ?? 0) as int;
         if (stockActual < cantidad) {
@@ -361,11 +400,26 @@ class _SolicitudInsumosWidgetState extends State<SolicitudInsumosWidget> {
 
         final solicitudRef =
             FirebaseFirestore.instance.collection('solicitudes_insumos').doc();
+
         transaction.set(solicitudRef, {
           'empleado_id': empleadoSeleccionado,
           'insumo_id': insumoSeleccionado,
           'cantidad': cantidad,
           'fecha': FieldValue.serverTimestamp(),
+          'solicitado_por_uid': currentUser.uid,
+          'solicitado_por_nombre': nombreUsuario,
+        });
+
+        // Auditoría: ahora guarda los nombres legibles
+        final auditoriaRef =
+            FirebaseFirestore.instance.collection('auditoria_general').doc();
+
+        transaction.set(auditoriaRef, {
+          'fecha': FieldValue.serverTimestamp(),
+          'usuario_nombre': nombreUsuario,
+          'accion': 'Solicitud de Insumos',
+          'detalle':
+              'Empleado: $nombreEmpleado, Insumo: $nombreInsumo, Cantidad: $cantidad',
         });
       });
 
