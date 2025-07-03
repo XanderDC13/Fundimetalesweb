@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HistorialInsumosWidget extends StatefulWidget {
   const HistorialInsumosWidget({super.key});
@@ -190,9 +191,24 @@ class _HistorialInsumosWidgetState extends State<HistorialInsumosWidget> {
         }
 
         final stockActual = (insumoSnapshot['cantidad'] ?? 0) as int;
-
         transaction.update(insumoRef, {'cantidad': stockActual + cantidad});
-        final auditor = 'Administrador';
+
+        // ✅ Traer usuario actual
+        final user = FirebaseAuth.instance.currentUser;
+        String auditor = 'Administrador';
+
+        if (user != null) {
+          // Buscar su nombre REAL en usuarios_activos
+          final userDoc =
+              await FirebaseFirestore.instance
+                  .collection('usuarios_activos')
+                  .doc(user.uid)
+                  .get();
+
+          if (userDoc.exists) {
+            auditor = userDoc['nombre'] ?? auditor;
+          }
+        }
 
         final insumoDoc = await insumoRef.get();
         final nombreInsumo =

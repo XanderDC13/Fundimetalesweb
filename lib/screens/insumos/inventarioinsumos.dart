@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Si tienes auth
 
 class InventarioInsumosWidget extends StatefulWidget {
-  // Puedes pasar el color de fondo de los productos (cards)
   final Color colorTarjeta;
   const InventarioInsumosWidget({
     super.key,
     this.colorTarjeta = const Color(0xFFE3F2FD),
-  }); // azul claro por defecto
+  });
 
   @override
   State<InventarioInsumosWidget> createState() =>
@@ -21,7 +21,6 @@ class _InventarioInsumosWidgetState extends State<InventarioInsumosWidget> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Barra de búsqueda
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: TextField(
@@ -51,7 +50,6 @@ class _InventarioInsumosWidgetState extends State<InventarioInsumosWidget> {
             },
           ),
         ),
-
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
             stream:
@@ -107,7 +105,6 @@ class _InventarioInsumosWidgetState extends State<InventarioInsumosWidget> {
                       trailing: Wrap(
                         spacing: 8,
                         children: [
-                          // Botón para eliminar insumo
                           IconButton(
                             icon: const Icon(
                               Icons.delete_outline,
@@ -120,7 +117,6 @@ class _InventarioInsumosWidgetState extends State<InventarioInsumosWidget> {
                                   insumo['nombre'] ?? '',
                                 ),
                           ),
-                          // Botón para agregar más stock
                           IconButton(
                             icon: const Icon(
                               Icons.add_circle_outline,
@@ -143,7 +139,6 @@ class _InventarioInsumosWidgetState extends State<InventarioInsumosWidget> {
             },
           ),
         ),
-
         Padding(
           padding: const EdgeInsets.all(16),
           child: ElevatedButton.icon(
@@ -180,7 +175,7 @@ class _InventarioInsumosWidgetState extends State<InventarioInsumosWidget> {
             left: 16,
             right: 16,
           ),
-          child: const _AgregarInsumoForm(),
+          child: _AgregarInsumoForm(onGuardado: _registrarAuditoriaNuevo),
         );
       },
     );
@@ -210,6 +205,12 @@ class _InventarioInsumosWidgetState extends State<InventarioInsumosWidget> {
                       .collection('inventario_insumos')
                       .doc(insumoId)
                       .delete();
+
+                  await _registrarAuditoria(
+                    accion: 'Eliminar Insumo',
+                    detalle: 'Insumo eliminado: $nombreInsumo',
+                  );
+
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Insumo "$nombreInsumo" eliminado')),
@@ -229,7 +230,6 @@ class _InventarioInsumosWidgetState extends State<InventarioInsumosWidget> {
     );
   }
 
-  // Nuevo: diálogo para agregar stock a un insumo existente
   void _mostrarDialogoAgregarStock(
     String insumoId,
     int stockActual,
@@ -284,6 +284,12 @@ class _InventarioInsumosWidgetState extends State<InventarioInsumosWidget> {
                     });
                   });
 
+                  await _registrarAuditoria(
+                    accion: 'Agregar Stock',
+                    detalle:
+                        'Insumo: $nombreInsumo, Cantidad agregada: $cantidadAgregar',
+                  );
+
                   Navigator.of(context).pop();
 
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -307,10 +313,46 @@ class _InventarioInsumosWidgetState extends State<InventarioInsumosWidget> {
       },
     );
   }
+
+  Future<void> _registrarAuditoriaNuevo(String nombreInsumo) async {
+    await _registrarAuditoria(
+      accion: 'Agregar Nuevo Insumo',
+      detalle: 'Nuevo insumo: $nombreInsumo',
+    );
+  }
+
+  Future<void> _registrarAuditoria({
+    required String accion,
+    required String detalle,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    String nombreUsuario = 'Administrador';
+
+    if (user != null) {
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('usuarios_activos')
+              .doc(user.uid)
+              .get();
+
+      if (userDoc.exists) {
+        nombreUsuario = userDoc['nombre'] ?? nombreUsuario;
+      }
+    }
+
+    await FirebaseFirestore.instance.collection('auditoria_general').add({
+      'fecha': FieldValue.serverTimestamp(),
+      'usuario_nombre': nombreUsuario,
+      'accion': accion,
+      'detalle': detalle,
+    });
+  }
 }
 
 class _AgregarInsumoForm extends StatefulWidget {
-  const _AgregarInsumoForm();
+  final void Function(String nombreInsumo) onGuardado;
+
+  const _AgregarInsumoForm({required this.onGuardado});
 
   @override
   State<_AgregarInsumoForm> createState() => _AgregarInsumoFormState();
@@ -415,12 +457,16 @@ class _AgregarInsumoFormState extends State<_AgregarInsumoForm> {
       guardando = true;
     });
 
+    final nombreInsumo = _nombreController.text.trim();
+
     await FirebaseFirestore.instance.collection('inventario_insumos').add({
-      'nombre': _nombreController.text.trim(),
+      'nombre': nombreInsumo,
       'descripcion': _descripcionController.text.trim(),
       'cantidad': int.tryParse(_cantidadController.text.trim()) ?? 0,
       'fecha': FieldValue.serverTimestamp(),
     });
+
+    widget.onGuardado(nombreInsumo);
 
     setState(() {
       guardando = false;
