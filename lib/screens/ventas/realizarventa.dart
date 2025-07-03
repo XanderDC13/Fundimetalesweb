@@ -43,7 +43,6 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
     final ventasSnapshot =
         await FirebaseFirestore.instance.collection('ventas').get();
 
-    // 1️⃣ Mapea precios y nombres base desde inventario_general
     final Map<String, Map<String, dynamic>> baseProductos = {};
     for (var doc in inventarioSnapshot.docs) {
       final data = doc.data();
@@ -51,34 +50,36 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
       baseProductos[codigo] = {
         'codigo': codigo,
         'nombre': data['nombre'] ?? '',
-        'precio': (data['precio'] ?? 0).toDouble(),
-        'cantidad': 0, // Inicialmente 0
+        'precios': (data['precios'] ?? []),
+        'cantidad': 0,
       };
     }
 
-    // 2️⃣ Aplica historial de entradas/salidas
     for (var doc in historialSnapshot.docs) {
       final data = doc.data();
       final codigo = (data['codigo'] ?? '').toString();
       final cantidad = (data['cantidad'] ?? 0) as int;
       final tipo = (data['tipo'] ?? 'entrada').toString();
-
       final ajuste = tipo == 'salida' ? -cantidad : cantidad;
 
       if (baseProductos.containsKey(codigo)) {
         baseProductos[codigo]!['cantidad'] += ajuste;
       } else {
-        // Si el código no existe en inventario_general, créalo
         baseProductos[codigo] = {
           'codigo': codigo,
           'nombre': data['nombre'] ?? '',
           'precio': 0.0,
+          'PVP1': 0.0,
+          'PVP2': 0.0,
+          'PVP3': 0.0,
+          'PVP4': 0.0,
+          'PVP5': 0.0,
+          'PVP6': 0.0,
           'cantidad': ajuste,
         };
       }
     }
 
-    // 3️⃣ Resta ventas
     for (var venta in ventasSnapshot.docs) {
       final productos = List<Map<String, dynamic>>.from(venta['productos']);
       for (var producto in productos) {
@@ -92,6 +93,77 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
     }
 
     return baseProductos.values.toList();
+  }
+
+  Future<void> _seleccionarPrecioYAgregar(
+    Map<String, dynamic> data,
+    BuildContext context,
+  ) async {
+    final List<dynamic> precios = data['precios'] ?? [];
+
+    if (precios.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay precios configurados')),
+      );
+      return;
+    }
+
+    final precioSeleccionado = await showModalBottomSheet<double>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Selecciona un precio',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              ...precios.asMap().entries.map((entry) {
+                final index = entry.key + 1;
+                final precio = (entry.value as num).toDouble();
+                return ListTile(
+                  leading: const Icon(Icons.attach_money),
+                  title: Text('PVP$index: \$ ${precio.toStringAsFixed(2)}'),
+                  onTap: () {
+                    Navigator.pop(context, precio);
+                  },
+                );
+              }).toList(),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (precioSeleccionado != null) {
+      final producto = ProductoEnCarrito(
+        codigo: data['codigo'],
+        nombre: data['nombre'],
+        precio: precioSeleccionado,
+        disponibles: data['cantidad'],
+      );
+
+      try {
+        Provider.of<CarritoController>(
+          context,
+          listen: false,
+        ).agregarProducto(producto);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${data['nombre']} agregado al carrito')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No tienes unidades disponibles')),
+        );
+      }
+    }
   }
 
   @override
@@ -131,7 +203,7 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
                 child: Text(
                   'Realizar Venta',
                   style: TextStyle(
-                    color: Color.fromARGB(255, 255, 255, 255),
+                    color: Colors.white,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
@@ -229,31 +301,8 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
   Widget _buildProductoCard(Map<String, dynamic> data, BuildContext context) {
     return GestureDetector(
       onTap: () {
-        final producto = ProductoEnCarrito(
-          codigo: data['codigo'],
-          nombre: data['nombre'],
-          precio: data['precio'],
-          disponibles: data['cantidad'],
-        );
-
-        try {
-          Provider.of<CarritoController>(
-            context,
-            listen: false,
-          ).agregarProducto(producto);
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${data['nombre']} agregado al carrito')),
-          );
-        } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No se puede agregar más unidades disponibles'),
-            ),
-          );
-        }
+        _seleccionarPrecioYAgregar(data, context);
       },
-
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -281,15 +330,6 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
                   fontSize: 10,
                   color: Color(0xFF2C3E50),
                 ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '\$ ${data['precio'].toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF2C3E50),
               ),
             ),
             const SizedBox(height: 6),
@@ -322,31 +362,7 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
                   style: TextStyle(color: Colors.white, fontSize: 13),
                 ),
                 onPressed: () {
-                  final producto = ProductoEnCarrito(
-                    codigo: data['codigo'],
-                    nombre: data['nombre'],
-                    precio: data['precio'],
-                    disponibles: data['cantidad'],
-                  );
-
-                  try {
-                    Provider.of<CarritoController>(
-                      context,
-                      listen: false,
-                    ).agregarProducto(producto);
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${data['nombre']} agregado al carrito'),
-                      ),
-                    );
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('No tienes unidades disponibles'),
-                      ),
-                    );
-                  }
+                  _seleccionarPrecioYAgregar(data, context);
                 },
               ),
             ),

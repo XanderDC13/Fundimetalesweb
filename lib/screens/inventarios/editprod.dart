@@ -19,9 +19,17 @@ class EditarProductoScreen extends StatefulWidget {
 
 class _EditarProductoScreenState extends State<EditarProductoScreen> {
   late TextEditingController nombreController;
-  late TextEditingController precioController;
   late TextEditingController costoController;
   late TextEditingController codigoController;
+
+  // 6 controladores para los precios - inicializados directamente
+  final TextEditingController precio1Controller = TextEditingController();
+  final TextEditingController precio2Controller = TextEditingController();
+  final TextEditingController precio3Controller = TextEditingController();
+  final TextEditingController precio4Controller = TextEditingController();
+  final TextEditingController precio5Controller = TextEditingController();
+  final TextEditingController precio6Controller = TextEditingController();
+
   final TextEditingController nuevaCategoriaController =
       TextEditingController();
 
@@ -33,9 +41,10 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   void initState() {
     super.initState();
     nombreController = TextEditingController();
-    precioController = TextEditingController();
     costoController = TextEditingController();
     codigoController = TextEditingController(text: widget.codigoBarras);
+
+    // Los controladores de precios ya están inicializados arriba
 
     _inicializarDatos();
   }
@@ -47,7 +56,8 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     } else {
       setState(() {
         nombreController.text = widget.nombreInicial;
-        precioController.text =
+        // Establecer el precio inicial en el primer campo
+        precio1Controller.text =
             widget.precioInicial == 0
                 ? ''
                 : widget.precioInicial.toStringAsFixed(2);
@@ -87,7 +97,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         final categoriaEnDB = data['categoria'];
 
         print(
-          "Cargando datos -> Nombre: ${data['nombre']}, Precio: ${data['precio']}, Costo: ${data['costo']}, Categoría: $categoriaEnDB",
+          "Cargando datos -> Nombre: ${data['nombre']}, Precios: ${data['precios']}, Costo: ${data['costo']}, Categoría: $categoriaEnDB",
         );
 
         if (categoriaEnDB != null && !categorias.contains(categoriaEnDB)) {
@@ -97,18 +107,39 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
 
         setState(() {
           nombreController.text = data['nombre'] ?? widget.nombreInicial;
-          precioController.text =
-              data['precio'] != null ? data['precio'].toString() : '';
           costoController.text =
               data['costo'] != null ? data['costo'].toString() : '';
           categoriaSeleccionada =
               categoriaEnDB ??
               (categorias.isNotEmpty ? categorias.first : null);
+
+          // Cargar los 6 precios
+          final precios = data['precios'] as List<dynamic>?;
+          if (precios != null && precios.isNotEmpty) {
+            precio1Controller.text =
+                precios.length > 0 ? precios[0].toString() : '';
+            precio2Controller.text =
+                precios.length > 1 ? precios[1].toString() : '';
+            precio3Controller.text =
+                precios.length > 2 ? precios[2].toString() : '';
+            precio4Controller.text =
+                precios.length > 3 ? precios[3].toString() : '';
+            precio5Controller.text =
+                precios.length > 4 ? precios[4].toString() : '';
+            precio6Controller.text =
+                precios.length > 5 ? precios[5].toString() : '';
+          } else {
+            // Si no hay precios guardados, usar el precio inicial
+            precio1Controller.text =
+                widget.precioInicial == 0
+                    ? ''
+                    : widget.precioInicial.toStringAsFixed(2);
+          }
         });
       } else {
         setState(() {
           nombreController.text = widget.nombreInicial;
-          precioController.text =
+          precio1Controller.text =
               widget.precioInicial == 0
                   ? ''
                   : widget.precioInicial.toStringAsFixed(2);
@@ -125,33 +156,54 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   Future<void> guardarProducto() async {
     final codigo = codigoController.text.trim();
     final nombre = nombreController.text.trim();
-    final precioText = precioController.text.trim();
     final costoText = costoController.text.trim();
 
-    if (codigo.isEmpty ||
-        nombre.isEmpty ||
-        precioText.isEmpty ||
-        costoText.isEmpty) {
+    if (codigo.isEmpty || nombre.isEmpty || costoText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Todos los campos son obligatorios')),
+        const SnackBar(
+          content: Text('Código, nombre y costo son obligatorios'),
+        ),
       );
       return;
     }
 
-    final precio = double.tryParse(precioText);
     final costo = double.tryParse(costoText);
-
-    if (precio == null || precio < 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Precio inválido')));
-      return;
-    }
-
     if (costo == null || costo < 0) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Costo inválido')));
+      return;
+    }
+
+    // Recopilar todos los precios
+    List<double> precios = [];
+    final preciosTexto = [
+      precio1Controller.text.trim(),
+      precio2Controller.text.trim(),
+      precio3Controller.text.trim(),
+      precio4Controller.text.trim(),
+      precio5Controller.text.trim(),
+      precio6Controller.text.trim(),
+    ];
+
+    for (String precioTexto in preciosTexto) {
+      if (precioTexto.isNotEmpty) {
+        final precio = double.tryParse(precioTexto);
+        if (precio != null && precio >= 0) {
+          precios.add(precio);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Hay precios inválidos')),
+          );
+          return;
+        }
+      }
+    }
+
+    if (precios.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debe ingresar al menos un precio')),
+      );
       return;
     }
 
@@ -164,7 +216,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
       final Map<String, dynamic> datosAGuardar = {
         'codigo': codigo,
         'nombre': nombre,
-        'precio': precio,
+        'precios': precios,
         'costo': costo,
         'fecha': FieldValue.serverTimestamp(),
       };
@@ -194,7 +246,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
       Navigator.pop(context, {
         'codigo': codigo,
         'nombre': nombre,
-        'precio': precio,
+        'precios': precios,
         'costo': costo,
         'categoria': categoriaSeleccionada,
       });
@@ -330,6 +382,110 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     );
   }
 
+  Widget buildPrecioField({
+    required String label,
+    required TextEditingController controller,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade300,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.attach_money, color: Color(0xFF2C3E50)),
+          labelText: label,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget buildPreciosGrid() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Precios',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color.fromARGB(255, 80, 49, 44),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Primera fila - 3 precios
+          Row(
+            children: [
+              Expanded(
+                child: buildPrecioField(
+                  label: 'PVP1',
+                  controller: precio1Controller,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: buildPrecioField(
+                  label: 'PVP2',
+                  controller: precio2Controller,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: buildPrecioField(
+                  label: 'PVP3',
+                  controller: precio3Controller,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Segunda fila - 3 precios
+          Row(
+            children: [
+              Expanded(
+                child: buildPrecioField(
+                  label: 'PVP4',
+                  controller: precio4Controller,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: buildPrecioField(
+                  label: 'PVP5',
+                  controller: precio5Controller,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: buildPrecioField(
+                  label: 'PVP6',
+                  controller: precio6Controller,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget buildCategoriaDropdown() {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -425,14 +581,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                               decimal: true,
                             ),
                           ),
-                          buildTextField(
-                            label: 'Precio',
-                            icon: Icons.attach_money,
-                            controller: precioController,
-                            inputType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                          ),
+                          buildPreciosGrid(),
                           buildCategoriaDropdown(),
                           TextButton.icon(
                             onPressed: mostrarDialogoNuevaCategoria,
@@ -478,9 +627,14 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   @override
   void dispose() {
     nombreController.dispose();
-    precioController.dispose();
     costoController.dispose();
     codigoController.dispose();
+    precio1Controller.dispose();
+    precio2Controller.dispose();
+    precio3Controller.dispose();
+    precio4Controller.dispose();
+    precio5Controller.dispose();
+    precio6Controller.dispose();
     nuevaCategoriaController.dispose();
     super.dispose();
   }

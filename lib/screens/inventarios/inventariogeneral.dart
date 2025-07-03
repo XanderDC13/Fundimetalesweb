@@ -1,6 +1,7 @@
 import 'package:basefundi/screens/inventarios/tablasinv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class InventarioGeneralScreen extends StatefulWidget {
   const InventarioGeneralScreen({super.key});
@@ -286,21 +287,66 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
                                         false;
 
                                     if (confirmar) {
+                                      // ✅ OBTENER usuario logueado
+                                      final currentUser =
+                                          FirebaseAuth.instance.currentUser;
+                                      if (currentUser == null) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Usuario no autenticado',
+                                            ),
+                                          ),
+                                        );
+                                        return;
+                                      }
+
+                                      // ✅ TRAER nombre real del usuario logueado
+                                      final userDoc =
+                                          await FirebaseFirestore.instance
+                                              .collection('usuarios_activos')
+                                              .doc(currentUser.uid)
+                                              .get();
+
+                                      final nombreUsuario =
+                                          userDoc.data()?['nombre'] ??
+                                          currentUser.email ??
+                                          '---';
+
+                                      // ✅ BORRAR registros
                                       final docsToDelete = snapshot.data!.docs
                                           .where(
                                             (doc) =>
                                                 doc['codigo'].toString() ==
                                                 data['codigo'],
                                           );
+
                                       for (var doc in docsToDelete) {
                                         await doc.reference.delete();
                                       }
+
+                                      // ✅ AUDITORÍA detallada
+                                      await FirebaseFirestore.instance
+                                          .collection('auditoria_general')
+                                          .add({
+                                            'accion':
+                                                'Eliminación de Inventario General',
+                                            'detalle':
+                                                'Producto: ${data['nombre']}, '
+                                                'Cantidad eliminada: ${data['cantidad']}',
+                                            'fecha': DateTime.now(),
+                                            'usuario_uid': currentUser.uid,
+                                            'usuario_nombre': nombreUsuario,
+                                          });
+
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
                                         const SnackBar(
                                           content: Text(
-                                            'Registros eliminados correctamente',
+                                            'Registros eliminados correctamente.',
                                           ),
                                         ),
                                       );

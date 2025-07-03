@@ -12,14 +12,14 @@ class VerCarritoScreen extends StatefulWidget {
 
 class _VerCarritoScreenState extends State<VerCarritoScreen> {
   final TextEditingController _clienteController = TextEditingController();
+  String metodoSeleccionado = 'Efectivo';
+  bool _conIva = false; // ✅ NUEVO: IVA activado/desactivado
 
   @override
   void dispose() {
     _clienteController.dispose();
     super.dispose();
   }
-
-  String metodoSeleccionado = 'Efectivo';
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +61,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                 builder: (context, carrito, _) {
                   final items = carrito.items;
                   final total = carrito.total;
+                  final totalConIva = _conIva ? total * 1.15 : total;
 
                   return Column(
                     children: [
@@ -80,12 +81,13 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                                         vertical: 6,
                                       ),
                                       child: Card(
+                                        color: Colors.white,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(
                                             12,
                                           ),
                                         ),
-                                        elevation: 2,
+                                        elevation: 0,
                                         child: Padding(
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 12,
@@ -189,7 +191,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                                 ),
                       ),
 
-                      // CAMPO PARA CLIENTE Y TOTAL
+                      // CAMPO CLIENTE Y TOTAL + IVA
                       Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -199,7 +201,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                           children: [
                             TextField(
                               controller: _clienteController,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Color(0xFF2C3E50),
                                 fontWeight: FontWeight.w500,
                               ),
@@ -210,7 +212,6 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                                   Icons.person,
                                   color: Color(0xFF2C3E50),
                                 ),
-
                                 labelText: 'Nombre del cliente (opcional)',
                                 labelStyle: TextStyle(color: Color(0xFF2C3E50)),
                                 border: OutlineInputBorder(
@@ -221,24 +222,66 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                                 ),
                               ),
                             ),
-
                             const SizedBox(height: 16),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
-                                  'Total:',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'Total:',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _conIva = !_conIva;
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              _conIva
+                                                  ? const Color(0xFF4682B4)
+                                                  : Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(0xFF4682B4),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'IVA',
+                                          style: TextStyle(
+                                            color:
+                                                _conIva
+                                                    ? Colors.white
+                                                    : const Color(0xFF4682B4),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 Text(
-                                  '\$${total.toStringAsFixed(2)}',
+                                  '\$${totalConIva.toStringAsFixed(2)}',
                                   style: const TextStyle(fontSize: 18),
                                 ),
                               ],
                             ),
+
                             const SizedBox(height: 20),
                           ],
                         ),
@@ -269,7 +312,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                               ),
                             ),
                             onPressed: () {
-                              _mostrarSeleccionMetodoPago(context);
+                              _mostrarSeleccionMetodoPago(context, totalConIva);
                             },
                           ),
                         ),
@@ -285,10 +328,9 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
     );
   }
 
-  void _mostrarSeleccionMetodoPago(BuildContext context) {
+  void _mostrarSeleccionMetodoPago(BuildContext context, double totalConIva) {
     final carrito = Provider.of<CarritoController>(context, listen: false);
     final cliente = _clienteController.text.trim();
-    final total = carrito.total;
     final productos = carrito.items;
 
     showModalBottomSheet(
@@ -332,7 +374,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4682B4), // Azul
+                        backgroundColor: const Color(0xFF4682B4),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -344,13 +386,14 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                               : () async {
                                 await _guardarVentaEnFirebase(
                                   productos,
-                                  total,
+                                  totalConIva,
                                   cliente,
                                   metodoSeleccionado,
+                                  _conIva ? 'Factura' : 'Nota de Venta',
                                 );
                                 carrito.limpiarCarrito();
-                                Navigator.pop(context); // Cierra modal
-                                Navigator.pop(context); // Vuelve atrás
+                                Navigator.pop(context);
+                                Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text('Venta registrada con éxito'),
@@ -414,11 +457,13 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
     double total,
     String cliente,
     String metodoPago,
+    String tipoComprobante,
   ) async {
     final venta = {
       'cliente': cliente.isNotEmpty ? cliente : null,
       'total': total,
       'metodoPago': metodoPago,
+      'tipoComprobante': tipoComprobante,
       'fecha': Timestamp.now(),
       'productos':
           productos

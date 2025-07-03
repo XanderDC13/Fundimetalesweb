@@ -54,7 +54,7 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
         for (int i = 1; i < rowsAsListOfValues.length; i++) {
           final fila = rowsAsListOfValues[i];
 
-          if (fila.length < 5) {
+          if (fila.length < 10) {
             print('⚠️ Fila $i incompleta, saltada: $fila');
             continue;
           }
@@ -65,8 +65,17 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
 
           final nombre = fila[1].toString().trim();
           final costo = double.tryParse(fila[2].toString().trim()) ?? 0.0;
-          final precio = double.tryParse(fila[3].toString().trim()) ?? 0.0;
-          final categoria = fila[4].toString().trim();
+
+          // Leer los 6 precios
+          List<double> precios = [];
+          for (int j = 3; j <= 8; j++) {
+            final precio = double.tryParse(fila[j].toString().trim()) ?? 0.0;
+            if (precio > 0) {
+              precios.add(precio);
+            }
+          }
+
+          final categoria = fila[9].toString().trim();
 
           if (codigo.isEmpty || nombre.isEmpty) {
             print('⚠️ Fila $i sin código o nombre, saltada.');
@@ -82,13 +91,13 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
               'codigo': codigo,
               'nombre': nombre,
               'costo': costo,
-              'precio': precio,
+              'precios': precios,
               'categoria': categoria,
-              'fecha': DateTime.now(),
+              'fecha': FieldValue.serverTimestamp(),
             }, SetOptions(merge: true));
 
             print(
-              '✅ Guardado: $codigo | $nombre | Costo: $costo | Precio: $precio | $categoria',
+              '✅ Guardado: $codigo | $nombre | Costo: $costo | Precios: $precios | $categoria',
             );
           } catch (e) {
             print('❌ Error al guardar fila $i: $e');
@@ -98,26 +107,29 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
             filasProcesadas = i;
           });
         }
-        // ignore: use_build_context_synchronously
+
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Productos importados correctamente')),
         );
       } else {
-        // ignore: use_build_context_synchronously
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No se seleccionó ningún archivo')),
         );
       }
     } catch (e) {
       print('❌ ERROR GENERAL: $e');
+      if (!mounted) return;
       ScaffoldMessenger.of(
-        // ignore: use_build_context_synchronously
         context,
       ).showSnackBar(const SnackBar(content: Text('Error al importar CSV')));
     } finally {
-      setState(() {
-        cargando = false;
-      });
+      if (mounted) {
+        setState(() {
+          cargando = false;
+        });
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 import 'package:basefundi/screens/inventarios/tablainv_fundicion.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class InventarioFundicionScreen extends StatefulWidget {
@@ -114,7 +115,6 @@ class _InventarioFundicionScreenState extends State<InventarioFundicionScreen>
 
         final allDocs = snapshot.data!.docs;
 
-        // Agrupar por nombre y sumar cantidades
         final Map<String, Map<String, dynamic>> grouped = {};
 
         for (var doc in allDocs) {
@@ -241,15 +241,52 @@ class _InventarioFundicionScreenState extends State<InventarioFundicionScreen>
                                     false;
 
                                 if (confirmar) {
+                                  final currentUser =
+                                      FirebaseAuth.instance.currentUser;
+                                  if (currentUser == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Usuario no autenticado'),
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  final userDoc =
+                                      await FirebaseFirestore.instance
+                                          .collection('usuarios_activos')
+                                          .doc(currentUser.uid)
+                                          .get();
+
+                                  final nombreUsuario =
+                                      userDoc.data()?['nombre'] ??
+                                      currentUser.email ??
+                                      '---';
+
                                   final docsToDelete = snapshot.data!.docs
                                       .where(
                                         (doc) =>
                                             doc['nombre'].toString() ==
                                             data['nombre'],
                                       );
+
                                   for (var doc in docsToDelete) {
                                     await doc.reference.delete();
                                   }
+
+                                  await FirebaseFirestore.instance
+                                      .collection('auditoria_general')
+                                      .add({
+                                        'accion':
+                                            'Eliminación de Inventario Fundición',
+                                        'detalle':
+                                            'Producto: ${data['nombre']}, '
+                                            'Cantidad eliminada: ${data['cantidad']}',
+                                        'fecha': DateTime.now(),
+                                        'usuario_uid': currentUser.uid,
+                                        'usuario_nombre': nombreUsuario,
+                                      });
+
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
