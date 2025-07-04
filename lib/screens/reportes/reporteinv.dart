@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class ReporteInventarioScreen extends StatefulWidget {
   const ReporteInventarioScreen({super.key});
@@ -26,98 +29,249 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
     super.dispose();
   }
 
-  Widget _buildListaEntradas(String coleccion) {
-    return StreamBuilder<QuerySnapshot>(
-      stream:
-          FirebaseFirestore.instance
-              .collection(coleccion)
-              .orderBy('fecha', descending: true)
-              .snapshots(),
+  pw.MultiPage buildReporteInventarioPDF({
+    required String titulo,
+    required List<String> headers,
+    required List<List<String>> dataRows,
+    String? footerText,
+  }) {
+    return pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(32),
+      build:
+          (context) => [
+            pw.Header(
+              level: 0,
+              child: pw.Text(
+                titulo,
+                style: pw.TextStyle(
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.blue900,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Table.fromTextArray(
+              border: null,
+              cellAlignment: pw.Alignment.centerLeft,
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.white,
+              ),
+              headerDecoration: const pw.BoxDecoration(
+                color: PdfColors.blue800,
+              ),
+              rowDecoration: const pw.BoxDecoration(
+                border: pw.Border(
+                  bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+                ),
+              ),
+              cellPadding: const pw.EdgeInsets.symmetric(
+                vertical: 6,
+                horizontal: 4,
+              ),
+              headers: headers,
+              data: dataRows,
+            ),
+            pw.SizedBox(height: 20),
+            if (footerText != null)
+              pw.Align(
+                alignment: pw.Alignment.centerRight,
+                child: pw.Text(
+                  footerText,
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.blueGrey800,
+                  ),
+                ),
+              ),
+          ],
+    );
+  }
+
+  Stream<List<Map<String, dynamic>>> _getEntradas(String coleccion) {
+    final ordenCampo =
+        coleccion == 'historial_inventario_general'
+            ? 'fecha_actualizacion'
+            : 'fecha';
+
+    return FirebaseFirestore.instance
+        .collection(coleccion)
+        .orderBy('codigo')
+        .orderBy(ordenCampo, descending: true)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => doc.data())
+                  .where(
+                    (e) => (e['nombre'] ?? '')
+                        .toString()
+                        .toLowerCase()
+                        .contains(_filtroNombre.toLowerCase()),
+                  )
+                  .toList(),
+        );
+  }
+
+  Widget _buildTabla(String coleccion) {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _getEntradas(coleccion),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
-
-        final docs = snapshot.data!.docs;
-        final entradas =
-            docs
-                .map((doc) => doc.data() as Map<String, dynamic>)
-                .where(
-                  (e) => (e['nombre'] ?? '').toString().toLowerCase().contains(
-                    _filtroNombre.toLowerCase(),
-                  ),
-                )
-                .toList();
-
+        final entradas = snapshot.data!;
         if (entradas.isEmpty) {
-          return const Center(child: Text('No hay entradas registradas.'));
+          return const Center(child: Text('No hay registros.'));
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          itemCount: entradas.length,
-          itemBuilder: (context, index) {
-            final entrada = entradas[index];
-            final fecha =
-                entrada['fecha'] != null
-                    ? (entrada['fecha'] as Timestamp).toDate()
-                    : null;
+        return SingleChildScrollView(
+          child: DataTable(
+            headingRowColor: MaterialStateColor.resolveWith(
+              (states) => Colors.blue.shade100,
+            ),
+            columnSpacing: 0,
+            columns: const [
+              DataColumn(label: Text('Fecha')),
+              DataColumn(label: Text('Código')),
+              DataColumn(label: Text('Nombre')),
+              DataColumn(label: Text('Cant')),
+            ],
+            rows:
+                entradas.map((entrada) {
+                  final fechaCampo =
+                      coleccion == 'historial_inventario_general'
+                          ? entrada['fecha_actualizacion']
+                          : entrada['fecha'];
+                  final fecha =
+                      fechaCampo != null
+                          ? (fechaCampo as Timestamp).toDate()
+                          : null;
 
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 0,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${entrada['codigo'] ?? '-'} - ${entrada['nombre'] ?? '-'}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                  return DataRow(
+                    cells: [
+                      DataCell(
+                        SizedBox(
+                          width: 55,
+                          child: Text(
+                            fecha != null
+                                ? fecha.toLocal().toString().split(' ')[0]
+                                : '-',
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Cantidad: +${entrada['cantidad'] ?? 0}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF4682B4),
-                        fontSize: 16,
+                      DataCell(
+                        SizedBox(
+                          width: 71,
+                          child: Text(
+                            '${entrada['codigo'] ?? '-'}',
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Fecha: ${fecha != null ? fecha.toLocal().toString().split(' ')[0] : '-'}',
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                    if (entrada['hora'] != null)
-                      Text(
-                        'Hora: ${entrada['hora']}',
-                        style: const TextStyle(color: Colors.grey),
+                      DataCell(
+                        SizedBox(
+                          width: 150,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Text(
+                              '${entrada['nombre'] ?? '-'}',
+                              style: const TextStyle(fontSize: 10),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
                       ),
-                  ],
-                ),
-              ),
-            );
-          },
+                      DataCell(
+                        SizedBox(
+                          width: 18,
+                          child: Text(
+                            '${entrada['cantidad'] ?? 0}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+          ),
         );
       },
     );
   }
 
+  Future<void> _exportarPDF(String coleccion) async {
+    final pdf = pw.Document();
+
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection(coleccion)
+            .orderBy('codigo')
+            .orderBy(
+              coleccion == 'historial_inventario_general'
+                  ? 'fecha_actualizacion'
+                  : 'fecha',
+              descending: true,
+            )
+            .get();
+
+    final entradas = snapshot.docs.map((doc) => doc.data()).toList();
+
+    final lista =
+        entradas.map((entrada) {
+          final fechaCampo =
+              coleccion == 'historial_inventario_general'
+                  ? entrada['fecha_actualizacion']
+                  : entrada['fecha'];
+          final fecha =
+              fechaCampo != null
+                  ? (fechaCampo as Timestamp)
+                      .toDate()
+                      .toLocal()
+                      .toString()
+                      .split(' ')[0]
+                  : '-';
+
+          return [
+            fecha,
+            '${entrada['codigo'] ?? '-'}',
+            '${entrada['nombre'] ?? '-'}',
+            '${entrada['cantidad'] ?? 0}',
+          ];
+        }).toList();
+
+    pdf.addPage(
+      buildReporteInventarioPDF(
+        titulo: 'Reporte de ${coleccion.replaceAll('_', ' ').toUpperCase()}',
+        headers: ['Fecha', 'Código', 'Nombre', 'Cant'],
+        dataRows: lista,
+        footerText: 'Total registros: ${lista.length}',
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colecciones = [
+      'inventario_fundicion',
+      'inventario_pintura',
+      'historial_inventario_general',
+    ];
+
     return Scaffold(
       backgroundColor: const Color(0xFFD6EAF8),
       body: SafeArea(
         child: Column(
           children: [
-            // AppBar con diseño original (sin usar AppBar widget para personalizar)
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -142,8 +296,6 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
                 ),
               ),
             ),
-
-            // Barra de búsqueda
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: TextField(
@@ -168,8 +320,6 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
                 },
               ),
             ),
-
-            // Pestañas debajo de la barra de búsqueda
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
@@ -205,16 +355,36 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
                 ),
               ),
             ),
-
-            // Contenido pestañas
             Expanded(
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildListaEntradas('inventario_fundicion'),
-                  _buildListaEntradas('inventario_pintura'),
-                  _buildListaEntradas('historial_inventario_general'),
+                  _buildTabla('inventario_fundicion'),
+                  _buildTabla('inventario_pintura'),
+                  _buildTabla('historial_inventario_general'),
                 ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  final coleccion = colecciones[_tabController.index];
+                  _exportarPDF(coleccion);
+                },
+                icon: const Icon(Icons.picture_as_pdf),
+                label: const Text('Exportar a PDF'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4682B4),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 20,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
               ),
             ),
           ],

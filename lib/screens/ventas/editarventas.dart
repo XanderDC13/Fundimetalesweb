@@ -115,7 +115,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
           return {
             'id': doc.id,
             'nombre': data['nombre'],
-            'precio': data['precio'],
+            'precios': data['precios'],
             'codigo': data['codigo'],
           };
         }).toList();
@@ -233,53 +233,6 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                 ),
                                 onChanged:
                                     (v) => setState(() => searchTerm = v),
-                              ),
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            // Switch de IVA con diseño elegante
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8F9FA),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: const Color(0xFFE9ECEF),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.calculate,
-                                        color: Colors.grey[700],
-                                        size: 20,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      const Text(
-                                        'Aplicar IVA 15%',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Switch(
-                                    value: _usarIva,
-                                    onChanged: (v) {
-                                      setState(() {
-                                        _usarIva = v;
-                                      });
-                                    },
-                                    activeColor: const Color(0xFF4682B4),
-                                  ),
-                                ],
                               ),
                             ),
 
@@ -499,19 +452,89 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                               onTap:
                                                   yaExiste || disponibles <= 0
                                                       ? null
-                                                      : () {
-                                                        setState(() {
-                                                          _productos.add({
-                                                            'nombre':
-                                                                producto['nombre'],
-                                                            'precio':
-                                                                precioFinal,
-                                                            'cantidad': 1,
-                                                            'codigo': codigo,
+                                                      : () async {
+                                                        final precios = List<
+                                                          double
+                                                        >.from(
+                                                          producto['precios'] ??
+                                                              [],
+                                                        );
+                                                        if (precios.isEmpty) {
+                                                          ScaffoldMessenger.of(
+                                                            context,
+                                                          ).showSnackBar(
+                                                            const SnackBar(
+                                                              content: Text(
+                                                                'Este producto no tiene precios registrados',
+                                                              ),
+                                                            ),
+                                                          );
+                                                          return;
+                                                        }
+
+                                                        final precioSeleccionado = await showDialog<
+                                                          double
+                                                        >(
+                                                          context: context,
+                                                          builder: (context) {
+                                                            return AlertDialog(
+                                                              title: const Text(
+                                                                'Selecciona el PVP',
+                                                              ),
+                                                              content: Column(
+                                                                mainAxisSize:
+                                                                    MainAxisSize
+                                                                        .min,
+                                                                children: List.generate(
+                                                                  precios
+                                                                      .length,
+                                                                  (index) {
+                                                                    final precioPvp =
+                                                                        precios[index];
+                                                                    final precioFinal =
+                                                                        _usarIva
+                                                                            ? precioPvp *
+                                                                                1.15
+                                                                            : precioPvp;
+                                                                    return ListTile(
+                                                                      title: Text(
+                                                                        'PVP ${index + 1}',
+                                                                      ),
+                                                                      subtitle:
+                                                                          Text(
+                                                                            '\$${precioFinal.toStringAsFixed(2)}',
+                                                                          ),
+                                                                      onTap: () {
+                                                                        Navigator.pop(
+                                                                          context,
+                                                                          precioFinal,
+                                                                        );
+                                                                      },
+                                                                    );
+                                                                  },
+                                                                ),
+                                                              ),
+                                                            );
+                                                          },
+                                                        );
+
+                                                        if (precioSeleccionado !=
+                                                            null) {
+                                                          setState(() {
+                                                            _productos.add({
+                                                              'nombre':
+                                                                  producto['nombre'],
+                                                              'precio':
+                                                                  precioSeleccionado,
+                                                              'cantidad': 1,
+                                                              'codigo': codigo,
+                                                            });
                                                           });
-                                                        });
-                                                        Navigator.pop(context);
-                                                        _cargarDisponibles();
+                                                          Navigator.pop(
+                                                            context,
+                                                          ); // cerrar modal principal
+                                                          _cargarDisponibles();
+                                                        }
                                                       },
                                             ),
                                           );
@@ -658,7 +681,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                     const SizedBox(height: 16),
                     ..._buildProductos(),
                     const SizedBox(height: 20),
-                    _buildTotal(),
+                    _buildTotalConIva(),
                     const SizedBox(height: 20),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -843,7 +866,17 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
     ];
   }
 
-  Widget _buildTotal() {
+  // ✅ Widget del total con switch de IVA integrado
+  Widget _buildTotalConIva() {
+    double subtotal = _productos.fold(0.0, (suma, prod) {
+      final precio = prod['precio'] ?? 0.0;
+      final cantidad = prod['cantidad'] ?? 0;
+      return suma + (precio * cantidad);
+    });
+
+    double iva = _usarIva ? subtotal * 0.15 : 0.0;
+    double total = subtotal + iva;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -857,20 +890,82 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Total:',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          // Switch de IVA
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.calculate, color: Colors.grey[700], size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Aplicar IVA 15%',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+              Switch(
+                value: _usarIva,
+                onChanged: (value) {
+                  setState(() {
+                    _usarIva = value;
+                  });
+                },
+                activeColor: const Color(0xFF4682B4),
+              ),
+            ],
           ),
-          Text(
-            '\$${_calcularTotal().toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF4682B4),
+
+          const SizedBox(height: 16),
+
+          // Desglose de totales
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Subtotal:', style: TextStyle(fontSize: 16)),
+              Text(
+                '\$${subtotal.toStringAsFixed(2)}',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
+
+          if (_usarIva) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('IVA (15%):', style: TextStyle(fontSize: 16)),
+                Text(
+                  '\$${iva.toStringAsFixed(2)}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
             ),
+          ],
+
+          const Divider(thickness: 1),
+
+          // Total final
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Total:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '\$${total.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4682B4),
+                ),
+              ),
+            ],
           ),
         ],
       ),
