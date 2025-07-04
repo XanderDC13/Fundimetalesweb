@@ -68,13 +68,10 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
     for (String codigo in codigos) {
       stockMap[codigo] = 0;
     }
-    if (codigos.isEmpty) {
-      // Opcional: mostrar mensaje de "No se encontraron resultados"
-      return {};
-    }
+
     final historialSnapshot =
         await FirebaseFirestore.instance
-            .collection('inventario_general')
+            .collection('historial_inventario_general')
             .where('codigo', whereIn: codigos.take(10).toList())
             .get();
 
@@ -741,8 +738,8 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                                                                 resultado['nombre'],
                                                             'costo':
                                                                 resultado['costo'],
-                                                            'precios':
-                                                                resultado['precios'],
+                                                            'precio':
+                                                                resultado['precio'],
                                                             'categoria':
                                                                 resultado['categoria'],
                                                             'fecha_creacion':

@@ -13,11 +13,7 @@ class EditInvProdScreen extends StatefulWidget {
 class _EditInvProdScreenState extends State<EditInvProdScreen> {
   int? cantidadFundicion;
   int? cantidadPintura;
-  TimeOfDay? horaFundicion;
-  TimeOfDay? horaPintura;
-  int general = 0;
-
-  // ... (todo tu import original permanece intacto)
+  int? cantidadGeneral;
 
   void _mostrarFormulario(BuildContext context, String tipo) {
     final TextEditingController cantidadController = TextEditingController();
@@ -75,19 +71,18 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: const BorderSide(
-                            color: Color.fromARGB(255, 255, 255, 255),
+                            color: Colors.white,
                             width: 1.5,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: const BorderSide(
-                            color: Color.fromARGB(255, 255, 255, 255),
+                            color: Colors.white,
                             width: 2,
                           ),
                         ),
                       ),
-
                       onChanged: (value) {
                         final parsed = int.tryParse(value);
                         setModalState(() {
@@ -108,9 +103,9 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                   final timestamp = Timestamp.now();
 
                                   if (tipo == 'Fundición') {
-                                    setState(
-                                      () => cantidadFundicion = cantidad,
-                                    );
+                                    setState(() {
+                                      cantidadFundicion = cantidad;
+                                    });
                                     await FirebaseFirestore.instance
                                         .collection('inventario_fundicion')
                                         .add({
@@ -119,12 +114,10 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                           'cantidad': cantidad,
                                           'fecha': timestamp,
                                         });
-                                  } else {
+                                  } else if (tipo == 'Pintura') {
                                     setState(() {
                                       cantidadPintura = cantidad;
-                                      general = cantidad;
                                     });
-
                                     await FirebaseFirestore.instance
                                         .collection('inventario_pintura')
                                         .add({
@@ -133,7 +126,10 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                           'cantidad': cantidad,
                                           'fecha': timestamp,
                                         });
-
+                                  } else if (tipo == 'Inventario General') {
+                                    setState(() {
+                                      cantidadGeneral = cantidad;
+                                    });
                                     await FirebaseFirestore.instance
                                         .collection(
                                           'historial_inventario_general',
@@ -141,17 +137,16 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                         .add({
                                           'codigo': widget.producto.codigo,
                                           'nombre': widget.producto.nombre,
-                                          'cantidad': general,
+                                          'cantidad': cantidad,
                                           'fecha_actualizacion': timestamp,
                                         });
-
                                     await FirebaseFirestore.instance
                                         .collection('inventario_general')
                                         .doc(widget.producto.codigo)
                                         .set({
                                           'codigo': widget.producto.codigo,
                                           'nombre': widget.producto.nombre,
-
+                                          'cantidad': cantidad,
                                           'fecha_actualizacion': timestamp,
                                         }, SetOptions(merge: true));
                                   }
@@ -194,7 +189,6 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
   Widget _buildBotonEntrada({
     required String titulo,
     required int? cantidad,
-    required TimeOfDay? hora,
     required Color color,
     required VoidCallback onPressed,
   }) {
@@ -219,22 +213,9 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
               ),
             ],
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                cantidad?.toString() ?? '--',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (hora != null)
-                Text(
-                  hora.format(context),
-                  style: const TextStyle(color: Colors.grey),
-                ),
-            ],
+          Text(
+            cantidad?.toString() ?? '--',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -284,7 +265,6 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                           child: _buildBotonEntrada(
                             titulo: 'Fundición',
                             cantidad: cantidadFundicion,
-                            hora: null,
                             color: const Color(0xFF2C3E50),
                             onPressed:
                                 () => _mostrarFormulario(context, 'Fundición'),
@@ -295,7 +275,6 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                           child: _buildBotonEntrada(
                             titulo: 'Pintura',
                             cantidad: cantidadPintura,
-                            hora: null,
                             color: const Color(0xFF2C3E50),
                             onPressed:
                                 () => _mostrarFormulario(context, 'Pintura'),
@@ -303,59 +282,15 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    Center(
-                      child: Container(
-                        width: 300,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 12,
-                              offset: Offset(0, 6),
-                            ),
-                          ],
-                          border: Border.all(color: Colors.blue.shade100),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min, // <--- ¡IMPORTANTE!
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Icon(
-                                  Icons.inventory_2,
-                                  color: Color(0xFF2C3E50),
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Inventario General',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: Color(0xFF2C3E50),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              general.toString(),
-                              style: const TextStyle(
-                                fontSize: 36,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    const SizedBox(height: 12),
+                    _buildBotonEntrada(
+                      titulo: 'Inventario General',
+                      cantidad: cantidadGeneral,
+                      color: const Color(0xFF2C3E50),
+                      onPressed:
+                          () =>
+                              _mostrarFormulario(context, 'Inventario General'),
                     ),
-
-                    const Spacer(),
                   ],
                 ),
               ),

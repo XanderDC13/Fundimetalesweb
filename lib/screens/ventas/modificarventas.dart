@@ -369,10 +369,69 @@ class _ModificarVentasScreenState extends State<ModificarVentasScreen> {
               ),
               TextButton(
                 onPressed: () async {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Error: usuario no autenticado.'),
+                      ),
+                    );
+                    return;
+                  }
+
+                  // Obtener datos del usuario actual
+                  final userDoc =
+                      await FirebaseFirestore.instance
+                          .collection('usuarios_activos')
+                          .doc(user.uid)
+                          .get();
+
+                  final usuarioNombre =
+                      userDoc.data()?['nombre'] ?? 'Desconocido';
+
+                  // Obtener datos de la venta eliminada
+                  final ventaDoc =
+                      await FirebaseFirestore.instance
+                          .collection('ventas')
+                          .doc(idVenta)
+                          .get();
+
+                  final ventaData = ventaDoc.data();
+
+                  if (ventaData != null && ventaData['productos'] != null) {
+                    final productos = List<Map<String, dynamic>>.from(
+                      ventaData['productos'],
+                    );
+
+                    // Extraer cliente y total de ventaData
+                    final cliente = ventaData['cliente'] ?? 'Sin nombre';
+                    final total = ventaData['total'] ?? 0.0;
+
+                    // ignore: unused_local_variable
+                    for (final producto in productos) {
+                      final tipoVenta =
+                          ventaData['tipo'] ??
+                          'Venta'; // Por ejemplo: 'Factura' o 'Nota de Venta'
+
+                      await FirebaseFirestore.instance
+                          .collection('auditoria_general')
+                          .add({
+                            'accion': 'Eliminación de $tipoVenta',
+                            'detalle':
+                                'Se eliminó una $tipoVenta del cliente: $cliente, Total: \$${(total as num).toStringAsFixed(2)}',
+                            'fecha': Timestamp.now(),
+                            'usuario_nombre': usuarioNombre,
+                            'usuario_uid': user.uid,
+                          });
+                    }
+                  }
+
+                  // Eliminar la venta
                   await FirebaseFirestore.instance
                       .collection('ventas')
                       .doc(idVenta)
                       .delete();
+
                   Navigator.pop(context);
                 },
                 child: const Text(

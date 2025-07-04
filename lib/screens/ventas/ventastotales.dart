@@ -82,6 +82,8 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
                       final cliente = venta['cliente'] ?? 'Desconocido';
                       final fecha = venta['fecha']?.toDate();
                       final total = venta['total'] ?? 0;
+                      final tipoComprobante =
+                          venta['tipoComprobante'] ?? 'Desconocido';
 
                       return GestureDetector(
                         onTap: () {
@@ -110,12 +112,7 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: const Color.fromARGB(
-                                      255,
-                                      255,
-                                      255,
-                                      255,
-                                    ),
+                                    color: Colors.white,
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: const Icon(
@@ -145,6 +142,18 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
                                         style: const TextStyle(
                                           color: Colors.grey,
                                           fontSize: 13,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        tipoComprobante,
+                                        style: TextStyle(
+                                          color:
+                                              tipoComprobante == 'Factura'
+                                                  ? Colors.green
+                                                  : Colors.orange,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
                                         ),
                                       ),
                                     ],

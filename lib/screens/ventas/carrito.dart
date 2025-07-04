@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,7 +14,7 @@ class VerCarritoScreen extends StatefulWidget {
 class _VerCarritoScreenState extends State<VerCarritoScreen> {
   final TextEditingController _clienteController = TextEditingController();
   String metodoSeleccionado = 'Efectivo';
-  bool _conIva = false; // ✅ NUEVO: IVA activado/desactivado
+  bool _conIva = false;
 
   @override
   void dispose() {
@@ -28,7 +29,6 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // ENCABEZADO
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -54,8 +54,6 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                 ),
               ),
             ),
-
-            // CONTENIDO PRINCIPAL
             Expanded(
               child: Consumer<CarritoController>(
                 builder: (context, carrito, _) {
@@ -75,6 +73,11 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                                   itemCount: items.length,
                                   itemBuilder: (context, index) {
                                     final producto = items[index];
+                                    final TextEditingController
+                                    cantidadController = TextEditingController(
+                                      text: producto.cantidad.toString(),
+                                    );
+
                                     return Padding(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 12,
@@ -135,26 +138,71 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                                                           Icons
                                                               .remove_circle_outline,
                                                         ),
-                                                        onPressed: () {
-                                                          if (producto
-                                                                  .cantidad >
-                                                              1) {
-                                                            carrito.actualizarCantidad(
-                                                              producto.codigo,
-                                                              producto.cantidad -
-                                                                  1,
-                                                            );
-                                                          } else {
-                                                            carrito
-                                                                .eliminarProducto(
-                                                                  producto
-                                                                      .codigo,
-                                                                );
-                                                          }
-                                                        },
+                                                        onPressed:
+                                                            producto.cantidad >
+                                                                    1
+                                                                ? () {
+                                                                  carrito.actualizarCantidad(
+                                                                    producto
+                                                                        .codigo,
+                                                                    producto.cantidad -
+                                                                        1,
+                                                                  );
+                                                                }
+                                                                : () {
+                                                                  carrito.eliminarProducto(
+                                                                    producto
+                                                                        .codigo,
+                                                                  );
+                                                                },
                                                       ),
-                                                      Text(
-                                                        '${producto.cantidad}',
+                                                      SizedBox(
+                                                        width: 45,
+                                                        child: TextField(
+                                                          controller:
+                                                              cantidadController,
+                                                          keyboardType:
+                                                              TextInputType
+                                                                  .number,
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                          onSubmitted: (value) {
+                                                            final parsed =
+                                                                int.tryParse(
+                                                                  value,
+                                                                );
+                                                            if (parsed !=
+                                                                    null &&
+                                                                parsed >= 1 &&
+                                                                parsed <=
+                                                                    producto
+                                                                        .disponibles) {
+                                                              carrito
+                                                                  .actualizarCantidad(
+                                                                    producto
+                                                                        .codigo,
+                                                                    parsed,
+                                                                  );
+                                                            } else if (parsed !=
+                                                                    null &&
+                                                                parsed >
+                                                                    producto
+                                                                        .disponibles) {
+                                                              carrito.actualizarCantidad(
+                                                                producto.codigo,
+                                                                producto
+                                                                    .disponibles,
+                                                              );
+                                                            } else {
+                                                              carrito
+                                                                  .actualizarCantidad(
+                                                                    producto
+                                                                        .codigo,
+                                                                    1,
+                                                                  );
+                                                            }
+                                                          },
+                                                        ),
                                                       ),
                                                       IconButton(
                                                         icon: const Icon(
@@ -190,8 +238,6 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                                   },
                                 ),
                       ),
-
-                      // CAMPO CLIENTE Y TOTAL + IVA
                       Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -281,13 +327,10 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                                 ),
                               ],
                             ),
-
                             const SizedBox(height: 20),
                           ],
                         ),
                       ),
-
-                      // BOTÓN CONFIRMAR VENTA
                       Padding(
                         padding: const EdgeInsets.all(16),
                         child: SizedBox(
@@ -389,7 +432,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                                   totalConIva,
                                   cliente,
                                   metodoSeleccionado,
-                                  _conIva ? 'Factura' : 'Nota de Venta',
+                                  _conIva,
                                 );
                                 carrito.limpiarCarrito();
                                 Navigator.pop(context);
@@ -457,14 +500,34 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
     double total,
     String cliente,
     String metodoPago,
-    String tipoComprobante,
+    bool conIva, // ⚡️ Ahora se pasa como parámetro
   ) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) {
+      throw Exception('No hay usuario autenticado');
+    }
+
+    final userDoc =
+        await FirebaseFirestore.instance
+            .collection('usuarios_activos')
+            .doc(currentUser.uid)
+            .get();
+
+    final nombreUsuario =
+        userDoc.data()?['nombre'] ?? currentUser.email ?? '---';
+
+    final tipoComprobante = conIva ? 'Factura' : 'Nota de Venta';
+
     final venta = {
       'cliente': cliente.isNotEmpty ? cliente : null,
       'total': total,
       'metodoPago': metodoPago,
       'tipoComprobante': tipoComprobante,
+      'conIva': conIva,
       'fecha': Timestamp.now(),
+      'usuario_uid': currentUser.uid,
+      'usuario_nombre': nombreUsuario,
       'productos':
           productos
               .map(
@@ -479,6 +542,18 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
               .toList(),
     };
 
-    await FirebaseFirestore.instance.collection('ventas').add(venta);
+    final ventaRef = await FirebaseFirestore.instance
+        .collection('ventas')
+        .add(venta);
+
+    await FirebaseFirestore.instance.collection('auditoria_general').add({
+      'accion': 'Registro de Venta',
+      'detalle':
+          'Total: \$${total.toStringAsFixed(2)} | Método: $metodoPago | IVA: ${conIva ? 'Sí' : 'No'} | Comprobante: $tipoComprobante',
+      'fecha': DateTime.now(),
+      'referencia_venta': ventaRef.id,
+      'usuario_uid': currentUser.uid,
+      'usuario_nombre': nombreUsuario,
+    });
   }
 }
