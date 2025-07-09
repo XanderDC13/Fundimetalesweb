@@ -25,17 +25,17 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
     final docFundicion =
         await FirebaseFirestore.instance
             .collection('stock_fundicion')
-            .doc(widget.producto.codigo)
+            .doc(widget.producto.referencia)
             .get();
     final docPintura =
         await FirebaseFirestore.instance
             .collection('stock_pintura')
-            .doc(widget.producto.codigo)
+            .doc(widget.producto.referencia)
             .get();
     final docGeneral =
         await FirebaseFirestore.instance
             .collection('stock_general')
-            .doc(widget.producto.codigo)
+            .doc(widget.producto.referencia)
             .get();
 
     setState(() {

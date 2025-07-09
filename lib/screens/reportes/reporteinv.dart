@@ -98,7 +98,7 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
 
     return FirebaseFirestore.instance
         .collection(coleccion)
-        .orderBy('codigo')
+        .orderBy('referencia')
         .orderBy(ordenCampo, descending: true)
         .snapshots()
         .map(
@@ -137,7 +137,7 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
               DataColumn(label: Text('Fecha')),
               DataColumn(label: Text('Ref')),
               DataColumn(label: Text('Nombre')),
-              DataColumn(label: Text('Cant')),
+              DataColumn(label: Text('Cantidad')),
             ],
             rows:
                 entradas.map((entrada) {
@@ -165,7 +165,7 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
                       ),
                       DataCell(
                         SizedBox(
-                          width: 71,
+                          width: 50,
                           child: Text(
                             '${entrada['referencia'] ?? '-'}',
                             style: const TextStyle(fontSize: 10),
@@ -189,11 +189,13 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
                       DataCell(
                         SizedBox(
                           width: 18,
-                          child: Text(
-                            '${entrada['cantidad'] ?? 0}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10,
+                          child: Center(
+                            child: Text(
+                              '${entrada['cantidad'] ?? 0}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                              ),
                             ),
                           ),
                         ),
@@ -213,7 +215,7 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
     final snapshot =
         await FirebaseFirestore.instance
             .collection(coleccion)
-            .orderBy('codigo')
+            .orderBy('referencia')
             .orderBy(
               coleccion == 'historial_inventario_general'
                   ? 'fecha_actualizacion'
@@ -250,7 +252,7 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
     pdf.addPage(
       buildReporteInventarioPDF(
         titulo: 'Reporte de ${coleccion.replaceAll('_', ' ').toUpperCase()}',
-        headers: ['Fecha', 'Ref', 'Nombre', 'Cant'],
+        headers: ['Fecha', 'Ref', 'Nombre', 'Cantidad'],
         dataRows: lista,
         footerText: 'Total registros: ${lista.length}',
       ),

@@ -65,36 +65,36 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<Map<String, int>> _cargarStockMultiplesProductos(
-    List<String> codigos,
+    List<String> referencias,
   ) async {
     Map<String, int> stockMap = {};
 
-    for (String codigo in codigos) {
-      stockMap[codigo] = 0;
+    for (String referencia in referencias) {
+      stockMap[referencia] = 0;
     }
-    final listaCodigos = codigos.take(10).toList();
+    final listaReferencias = referencias.take(10).toList();
 
-    if (listaCodigos.isEmpty) {
+    if (listaReferencias.isEmpty) {
       // Maneja caso vacío
       return {};
     }
     final historialSnapshot =
         await FirebaseFirestore.instance
             .collection('historial_inventario_general')
-            .where('codigo', whereIn: codigos.take(10).toList())
+            .where('referencia', whereIn: referencias.take(10).toList())
             .get();
 
     for (var doc in historialSnapshot.docs) {
       final data = doc.data();
-      final codigo = data['codigo']?.toString() ?? '';
+      final referencia = data['referencia']?.toString() ?? '';
       final tipo = (data['tipo'] ?? 'entrada').toString();
       final cantidad = (data['cantidad'] ?? 0) as int;
 
-      if (stockMap.containsKey(codigo)) {
+      if (stockMap.containsKey(referencia)) {
         if (tipo == 'salida') {
-          stockMap[codigo] = stockMap[codigo]! - cantidad;
+          stockMap[referencia] = stockMap[referencia]! - cantidad;
         } else {
-          stockMap[codigo] = stockMap[codigo]! + cantidad;
+          stockMap[referencia] = stockMap[referencia]! + cantidad;
         }
       }
     }
@@ -105,11 +105,11 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
     for (var venta in ventasSnapshot.docs) {
       final productos = List<Map<String, dynamic>>.from(venta['productos']);
       for (var producto in productos) {
-        final codigo = producto['codigo']?.toString() ?? '';
+        final referencia = producto['referencia']?.toString() ?? '';
         final cantidadVendida = (producto['cantidad'] ?? 0) as int;
 
-        if (stockMap.containsKey(codigo)) {
-          stockMap[codigo] = stockMap[codigo]! - cantidadVendida;
+        if (stockMap.containsKey(referencia)) {
+          stockMap[referencia] = stockMap[referencia]! - cantidadVendida;
         }
       }
     }
@@ -574,9 +574,9 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: FutureBuilder<Map<String, int>>(
-                            // 🔵 Cargar stocks de todos los productos
+                            // 🔵 CAMBIO: Ahora carga stocks por referencia
                             future: _cargarStockMultiplesProductos(
-                              productos.map((p) => p.codigo).toList(),
+                              productos.map((p) => p.referencia).toList(),
                             ),
                             builder: (context, stockSnapshot) {
                               if (stockSnapshot.connectionState ==
@@ -608,8 +608,9 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                                     ),
                                 itemBuilder: (context, index) {
                                   final producto = productos[index];
+                                  // 🔵 CAMBIO: Obtener stock por referencia
                                   final stockDisponible =
-                                      stockMap[producto.codigo] ?? 0;
+                                      stockMap[producto.referencia] ?? 0;
 
                                   return GestureDetector(
                                     onTap: () async {

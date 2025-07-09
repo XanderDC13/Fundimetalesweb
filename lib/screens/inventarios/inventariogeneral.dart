@@ -91,7 +91,7 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
       child: TextField(
         onChanged: (value) => setState(() => searchQuery = value.toLowerCase()),
         decoration: InputDecoration(
-          hintText: 'Buscar por nombre o código...',
+          hintText: 'Buscar por nombre o referencia...',
           prefixIcon: const Icon(Icons.search),
           filled: true,
           fillColor: Colors.white,
@@ -125,15 +125,15 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
         }
 
         final ventasDocs = ventasSnapshot.data?.docs ?? [];
-        final ventasPorProducto = <String, int>{};
+        final ventasPorReferencia = <String, int>{};
 
         for (var venta in ventasDocs) {
           final productos = List<Map<String, dynamic>>.from(venta['productos']);
           for (var producto in productos) {
-            final codigo = producto['codigo']?.toString() ?? '';
+            final referencia = producto['referencia']?.toString() ?? '';
             final cantidad = (producto['cantidad'] ?? 0) as num;
-            ventasPorProducto[codigo] =
-                (ventasPorProducto[codigo] ?? 0) + cantidad.toInt();
+            ventasPorReferencia[referencia] =
+                (ventasPorReferencia[referencia] ?? 0) + cantidad.toInt();
           }
         }
 
@@ -149,36 +149,36 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
 
             for (var doc in allDocs) {
               final data = doc.data() as Map<String, dynamic>;
-              final codigo = (data['codigo'] ?? '').toString();
+              final referencia = (data['referencia'] ?? '').toString();
               final nombre = (data['nombre'] ?? '').toString();
               final cantidad = (data['cantidad'] ?? 0) as int;
               final tipo = (data['tipo'] ?? 'entrada').toString();
 
               final ajusteCantidad = tipo == 'salida' ? -cantidad : cantidad;
 
-              if (!grouped.containsKey(codigo)) {
-                grouped[codigo] = {
-                  'codigo': codigo,
+              if (!grouped.containsKey(referencia)) {
+                grouped[referencia] = {
+                  'referencia': referencia,
                   'nombre': nombre,
                   'cantidad': ajusteCantidad,
                 };
               } else {
-                grouped[codigo]!['cantidad'] += ajusteCantidad;
+                grouped[referencia]!['cantidad'] += ajusteCantidad;
               }
             }
 
-            ventasPorProducto.forEach((codigo, cantidadVendida) {
-              if (grouped.containsKey(codigo)) {
-                grouped[codigo]!['cantidad'] -= cantidadVendida;
+            ventasPorReferencia.forEach((referencia, cantidadVendida) {
+              if (grouped.containsKey(referencia)) {
+                grouped[referencia]!['cantidad'] -= cantidadVendida;
               }
             });
 
             final filtered =
                 grouped.values.where((data) {
-                  final codigo = data['codigo'].toString().toLowerCase();
+                  final ref = data['referencia'].toString().toLowerCase();
                   final nombre = data['nombre'].toString().toLowerCase();
                   return searchQuery.isEmpty ||
-                      codigo.contains(searchQuery) ||
+                      ref.contains(searchQuery) ||
                       nombre.contains(searchQuery);
                 }).toList();
 
@@ -220,7 +220,7 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
                                       MaterialPageRoute(
                                         builder:
                                             (_) => TablainvScreen(
-                                              codigo: data['codigo'],
+                                              codigo: data['referencia'],
                                               nombre: data['nombre'],
                                             ),
                                       ),
@@ -234,7 +234,7 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
                                   ),
                                 ),
                               ),
-                              DataCell(Text(data['codigo'])),
+                              DataCell(Text(data['referencia'])),
                               DataCell(Text(data['cantidad'].toString())),
                               DataCell(
                                 IconButton(
@@ -287,7 +287,6 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
                                         false;
 
                                     if (confirmar) {
-                                      // ✅ OBTENER usuario logueado
                                       final currentUser =
                                           FirebaseAuth.instance.currentUser;
                                       if (currentUser == null) {
@@ -303,7 +302,6 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
                                         return;
                                       }
 
-                                      // ✅ TRAER nombre real del usuario logueado
                                       final userDoc =
                                           await FirebaseFirestore.instance
                                               .collection('usuarios_activos')
@@ -315,27 +313,24 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
                                           currentUser.email ??
                                           '---';
 
-                                      // ✅ BORRAR registros
                                       final docsToDelete = snapshot.data!.docs
                                           .where(
                                             (doc) =>
-                                                doc['codigo'].toString() ==
-                                                data['codigo'],
+                                                doc['referencia'].toString() ==
+                                                data['referencia'],
                                           );
 
                                       for (var doc in docsToDelete) {
                                         await doc.reference.delete();
                                       }
 
-                                      // ✅ AUDITORÍA detallada
                                       await FirebaseFirestore.instance
                                           .collection('auditoria_general')
                                           .add({
                                             'accion':
                                                 'Eliminación de Inventario General',
                                             'detalle':
-                                                'Producto: ${data['nombre']}, '
-                                                'Cantidad eliminada: ${data['cantidad']}',
+                                                'Producto: ${data['nombre']}, Cantidad eliminada: ${data['cantidad']}',
                                             'fecha': DateTime.now(),
                                             'usuario_uid': currentUser.uid,
                                             'usuario_nombre': nombreUsuario,
