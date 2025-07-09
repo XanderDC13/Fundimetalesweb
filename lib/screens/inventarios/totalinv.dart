@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 class Producto {
   String codigo;
+  String referencia;
   String nombre;
   double precio;
   num cantidad;
@@ -16,6 +17,7 @@ class Producto {
 
   Producto({
     required this.codigo,
+    this.referencia = '',
     required this.nombre,
     required this.precio,
     required this.cantidad,
@@ -26,6 +28,7 @@ class Producto {
   static Producto fromMap(Map<String, dynamic> map) {
     return Producto(
       codigo: map['codigo'] ?? '',
+      referencia: map['referencia'] ?? '',
       nombre: map['nombre'] ?? '',
       precio: (map['precio'] ?? 0).toDouble(),
       cantidad: map['general'] ?? map['cantidad'] ?? 0,
@@ -37,6 +40,7 @@ class Producto {
   Map<String, dynamic> toMap() {
     return {
       'codigo': codigo,
+      'referencia': referencia,
       'nombre': nombre,
       'precio': precio,
       'cantidad': cantidad,
@@ -68,7 +72,12 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
     for (String codigo in codigos) {
       stockMap[codigo] = 0;
     }
+    final listaCodigos = codigos.take(10).toList();
 
+    if (listaCodigos.isEmpty) {
+      // Maneja caso vacío
+      return {};
+    }
     final historialSnapshot =
         await FirebaseFirestore.instance
             .collection('historial_inventario_general')
@@ -309,7 +318,7 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                     child: TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
-                        hintText: 'Buscar productos...',
+                        hintText: 'Buscar por nombre, código o referencia...',
                         prefixIcon: const Icon(Icons.search),
                         filled: true,
                         fillColor: const Color.fromARGB(255, 255, 255, 255),
@@ -521,11 +530,15 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                             ),
                           )
                           .where((p) {
+                            // 🔵 FILTRO CORREGIDO: Incluye búsqueda por referencia
                             final coincideBusqueda =
                                 p.nombre.toLowerCase().contains(
                                   searchQuery.toLowerCase(),
                                 ) ||
                                 p.codigo.toLowerCase().contains(
+                                  searchQuery.toLowerCase(),
+                                ) ||
+                                p.referencia.toLowerCase().contains(
                                   searchQuery.toLowerCase(),
                                 );
                             final coincideCategoria =
@@ -661,6 +674,20 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                                             ),
                                           ),
 
+                                          // 🔵 Mostrar referencia si existe
+                                          if (producto.referencia.isNotEmpty)
+                                            Text(
+                                              'Ref: ${producto.referencia}',
+                                              textAlign: TextAlign.center,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 8,
+                                                color: Colors.grey,
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                            ),
+
                                           // 🔵 Stock disponible con colores
                                           Container(
                                             padding: const EdgeInsets.symmetric(
@@ -734,18 +761,18 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
                                                           .set({
                                                             'codigo':
                                                                 resultado['codigo'],
+                                                            'referencia':
+                                                                resultado['referencia'],
                                                             'nombre':
                                                                 resultado['nombre'],
                                                             'costo':
                                                                 resultado['costo'],
-                                                            'precio':
-                                                                resultado['precio'],
+                                                            'precios':
+                                                                resultado['precios'],
                                                             'categoria':
                                                                 resultado['categoria'],
                                                             'fecha_creacion':
                                                                 Timestamp.now(),
-                                                            'estado':
-                                                                'en_proceso',
                                                           });
                                                     }
                                                   },

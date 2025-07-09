@@ -46,9 +46,9 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
     final Map<String, Map<String, dynamic>> baseProductos = {};
     for (var doc in inventarioSnapshot.docs) {
       final data = doc.data();
-      final codigo = (data['codigo'] ?? '').toString();
-      baseProductos[codigo] = {
-        'codigo': codigo,
+      final referencia = (data['referencia'] ?? '').toString();
+      baseProductos[referencia] = {
+        'referencia': referencia,
         'nombre': data['nombre'] ?? '',
         'precios': (data['precios'] ?? []),
         'cantidad': 0,
@@ -57,24 +57,18 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
 
     for (var doc in historialSnapshot.docs) {
       final data = doc.data();
-      final codigo = (data['codigo'] ?? '').toString();
+      final referencia = (data['referencia'] ?? '').toString();
       final cantidad = (data['cantidad'] ?? 0) as int;
       final tipo = (data['tipo'] ?? 'entrada').toString();
       final ajuste = tipo == 'salida' ? -cantidad : cantidad;
 
-      if (baseProductos.containsKey(codigo)) {
-        baseProductos[codigo]!['cantidad'] += ajuste;
+      if (baseProductos.containsKey(referencia)) {
+        baseProductos[referencia]!['cantidad'] += ajuste;
       } else {
-        baseProductos[codigo] = {
-          'codigo': codigo,
+        baseProductos[referencia] = {
+          'referencia': referencia,
           'nombre': data['nombre'] ?? '',
-          'precio': 0.0,
-          'PVP1': 0.0,
-          'PVP2': 0.0,
-          'PVP3': 0.0,
-          'PVP4': 0.0,
-          'PVP5': 0.0,
-          'PVP6': 0.0,
+          'precios': [],
           'cantidad': ajuste,
         };
       }
@@ -83,11 +77,11 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
     for (var venta in ventasSnapshot.docs) {
       final productos = List<Map<String, dynamic>>.from(venta['productos']);
       for (var producto in productos) {
-        final codigo = producto['codigo']?.toString() ?? '';
+        final referencia = producto['referencia']?.toString() ?? '';
         final cantidad = (producto['cantidad'] ?? 0) as num;
 
-        if (baseProductos.containsKey(codigo)) {
-          baseProductos[codigo]!['cantidad'] -= cantidad.toInt();
+        if (baseProductos.containsKey(referencia)) {
+          baseProductos[referencia]!['cantidad'] -= cantidad.toInt();
         }
       }
     }
@@ -143,7 +137,7 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
 
     if (precioSeleccionado != null) {
       final producto = ProductoEnCarrito(
-        codigo: data['codigo'],
+        referencia: data['referencia'],
         nombre: data['nombre'],
         precio: precioSeleccionado,
         disponibles: data['cantidad'],
@@ -222,7 +216,7 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
                         });
                       },
                       decoration: InputDecoration(
-                        hintText: 'Buscar por nombre o código',
+                        hintText: 'Buscar por nombre o referencia',
                         prefixIcon: const Icon(Icons.search),
                         filled: true,
                         fillColor: Colors.white,
@@ -261,10 +255,11 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
                   final filtered =
                       productos.where((data) {
                         final nombre = data['nombre'].toString().toLowerCase();
-                        final codigo = data['codigo'].toString().toLowerCase();
+                        final referencia =
+                            data['referencia'].toString().toLowerCase();
                         return searchQuery.isEmpty ||
                             nombre.contains(searchQuery.toLowerCase()) ||
-                            codigo.contains(searchQuery.toLowerCase());
+                            referencia.contains(searchQuery.toLowerCase());
                       }).toList();
 
                   if (filtered.isEmpty) {

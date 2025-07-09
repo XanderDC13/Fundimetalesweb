@@ -204,7 +204,7 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
                     headingTextStyle: const TextStyle(color: Colors.white),
                     columns: const [
                       DataColumn(label: Text('Nombre')),
-                      DataColumn(label: Text('Código')),
+                      DataColumn(label: Text('Referencia')),
                       DataColumn(label: Text('Cantidad')),
                       DataColumn(label: Text('Acciones')),
                     ],

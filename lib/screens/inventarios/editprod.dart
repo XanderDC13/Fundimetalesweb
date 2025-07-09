@@ -21,8 +21,8 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   late TextEditingController nombreController;
   late TextEditingController costoController;
   late TextEditingController codigoController;
+  late TextEditingController referenciaController;
 
-  // 6 controladores para los precios - inicializados directamente
   final TextEditingController precio1Controller = TextEditingController();
   final TextEditingController precio2Controller = TextEditingController();
   final TextEditingController precio3Controller = TextEditingController();
@@ -43,7 +43,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     nombreController = TextEditingController();
     costoController = TextEditingController();
     codigoController = TextEditingController(text: widget.codigoBarras);
-
+    referenciaController = TextEditingController();
     // Los controladores de precios ya están inicializados arriba
 
     _inicializarDatos();
@@ -62,6 +62,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                 ? ''
                 : widget.precioInicial.toStringAsFixed(2);
         costoController.text = '';
+        referenciaController.text = '';
         if (categorias.isNotEmpty) {
           categoriaSeleccionada = categorias.first;
         }
@@ -109,6 +110,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
           nombreController.text = data['nombre'] ?? widget.nombreInicial;
           costoController.text =
               data['costo'] != null ? data['costo'].toString() : '';
+          referenciaController.text = data['referencia'] ?? '';
           categoriaSeleccionada =
               categoriaEnDB ??
               (categorias.isNotEmpty ? categorias.first : null);
@@ -144,6 +146,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                   ? ''
                   : widget.precioInicial.toStringAsFixed(2);
           costoController.text = '';
+          referenciaController.text = '';
           categoriaSeleccionada =
               categorias.isNotEmpty ? categorias.first : null;
         });
@@ -156,6 +159,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   Future<void> guardarProducto() async {
     final codigo = codigoController.text.trim();
     final nombre = nombreController.text.trim();
+    final referencia = referenciaController.text.trim();
     final costoText = costoController.text.trim();
 
     if (codigo.isEmpty || nombre.isEmpty || costoText.isEmpty) {
@@ -215,6 +219,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
 
       final Map<String, dynamic> datosAGuardar = {
         'codigo': codigo,
+        'referencia': referencia,
         'nombre': nombre,
         'precios': precios,
         'costo': costo,
@@ -245,6 +250,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
 
       Navigator.pop(context, {
         'codigo': codigo,
+        'referencia': referencia,
         'nombre': nombre,
         'precios': precios,
         'costo': costo,
@@ -567,6 +573,11 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                             label: 'Código de Barras',
                             icon: Icons.qr_code,
                             controller: codigoController,
+                          ),
+                          buildTextField(
+                            label: 'Referencia',
+                            icon: Icons.code,
+                            controller: referenciaController,
                           ),
                           buildTextField(
                             label: 'Nombre del Producto',

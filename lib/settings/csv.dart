@@ -53,9 +53,10 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
 
         for (int i = 1; i < rowsAsListOfValues.length; i++) {
           final fila = rowsAsListOfValues[i];
+          print('Fila $i: $fila');
 
-          if (fila.length < 10) {
-            print('⚠️ Fila $i incompleta, saltada: $fila');
+          if (fila.length < 11) {
+            print('⚠️ Fila $i incompleta, saltada.');
             continue;
           }
 
@@ -63,22 +64,29 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
           final codigo =
               rawCodigo.startsWith("'") ? rawCodigo.substring(1) : rawCodigo;
 
-          final nombre = fila[1].toString().trim();
-          final costo = double.tryParse(fila[2].toString().trim()) ?? 0.0;
+          final referencia = fila[1].toString().trim();
+          final nombre = fila[2].toString().trim();
+          final costo = double.tryParse(fila[3].toString().trim()) ?? 0.0;
 
-          // Leer los 6 precios
           List<double> precios = [];
-          for (int j = 3; j <= 8; j++) {
+          for (int j = 4; j <= 9; j++) {
             final precio = double.tryParse(fila[j].toString().trim()) ?? 0.0;
             if (precio > 0) {
               precios.add(precio);
             }
           }
 
-          final categoria = fila[9].toString().trim();
+          final categoria = fila[10].toString().trim();
 
-          if (codigo.isEmpty || nombre.isEmpty) {
-            print('⚠️ Fila $i sin código o nombre, saltada.');
+          print('→ CODIGO: $codigo');
+          print('→ REFERENCIA: $referencia');
+          print('→ NOMBRE: $nombre');
+          print('→ COSTO: $costo');
+          print('→ PRECIOS: $precios');
+          print('→ CATEGORIA: $categoria');
+
+          if (codigo.isEmpty || nombre.isEmpty || categoria.isEmpty) {
+            print('⚠️ Fila $i inválida (faltan datos), saltada.');
             continue;
           }
 
@@ -89,6 +97,7 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
 
             await docRef.set({
               'codigo': codigo,
+              'referencia': referencia,
               'nombre': nombre,
               'costo': costo,
               'precios': precios,
@@ -97,10 +106,10 @@ class _ImportarProductosScreenState extends State<ImportarProductosScreen> {
             }, SetOptions(merge: true));
 
             print(
-              '✅ Guardado: $codigo | $nombre | Costo: $costo | Precios: $precios | $categoria',
+              '✅ Guardado: $codigo | Ref: $referencia | Categoria: $categoria',
             );
           } catch (e) {
-            print('❌ Error al guardar fila $i: $e');
+            print('❌ Error fila $i: $e');
           }
 
           setState(() {

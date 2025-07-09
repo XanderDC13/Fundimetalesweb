@@ -129,13 +129,13 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
 
         return SingleChildScrollView(
           child: DataTable(
-            headingRowColor: MaterialStateColor.resolveWith(
+            headingRowColor: WidgetStateColor.resolveWith(
               (states) => Colors.blue.shade100,
             ),
             columnSpacing: 0,
             columns: const [
               DataColumn(label: Text('Fecha')),
-              DataColumn(label: Text('Código')),
+              DataColumn(label: Text('Ref')),
               DataColumn(label: Text('Nombre')),
               DataColumn(label: Text('Cant')),
             ],
@@ -167,7 +167,7 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
                         SizedBox(
                           width: 71,
                           child: Text(
-                            '${entrada['codigo'] ?? '-'}',
+                            '${entrada['referencia'] ?? '-'}',
                             style: const TextStyle(fontSize: 10),
                           ),
                         ),
@@ -241,7 +241,7 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
 
           return [
             fecha,
-            '${entrada['codigo'] ?? '-'}',
+            '${entrada['referencia'] ?? '-'}',
             '${entrada['nombre'] ?? '-'}',
             '${entrada['cantidad'] ?? 0}',
           ];
@@ -250,7 +250,7 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
     pdf.addPage(
       buildReporteInventarioPDF(
         titulo: 'Reporte de ${coleccion.replaceAll('_', ' ').toUpperCase()}',
-        headers: ['Fecha', 'Código', 'Nombre', 'Cant'],
+        headers: ['Fecha', 'Ref', 'Nombre', 'Cant'],
         dataRows: lista,
         footerText: 'Total registros: ${lista.length}',
       ),

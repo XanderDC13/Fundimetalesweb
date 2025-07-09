@@ -144,7 +144,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                                                                 ? () {
                                                                   carrito.actualizarCantidad(
                                                                     producto
-                                                                        .codigo,
+                                                                        .referencia,
                                                                     producto.cantidad -
                                                                         1,
                                                                   );
@@ -152,7 +152,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                                                                 : () {
                                                                   carrito.eliminarProducto(
                                                                     producto
-                                                                        .codigo,
+                                                                        .referencia,
                                                                   );
                                                                 },
                                                       ),
@@ -177,29 +177,28 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                                                                 parsed <=
                                                                     producto
                                                                         .disponibles) {
-                                                              carrito
-                                                                  .actualizarCantidad(
-                                                                    producto
-                                                                        .codigo,
-                                                                    parsed,
-                                                                  );
+                                                              carrito.actualizarCantidad(
+                                                                producto
+                                                                    .referencia,
+                                                                parsed,
+                                                              );
                                                             } else if (parsed !=
                                                                     null &&
                                                                 parsed >
                                                                     producto
                                                                         .disponibles) {
                                                               carrito.actualizarCantidad(
-                                                                producto.codigo,
+                                                                producto
+                                                                    .referencia,
                                                                 producto
                                                                     .disponibles,
                                                               );
                                                             } else {
-                                                              carrito
-                                                                  .actualizarCantidad(
-                                                                    producto
-                                                                        .codigo,
-                                                                    1,
-                                                                  );
+                                                              carrito.actualizarCantidad(
+                                                                producto
+                                                                    .referencia,
+                                                                1,
+                                                              );
                                                             }
                                                           },
                                                         ),
@@ -216,7 +215,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                                                                 ? () {
                                                                   carrito.actualizarCantidad(
                                                                     producto
-                                                                        .codigo,
+                                                                        .referencia,
                                                                     producto.cantidad +
                                                                         1,
                                                                   );

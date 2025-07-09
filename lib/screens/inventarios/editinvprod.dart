@@ -15,6 +15,36 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
   int? cantidadPintura;
   int? cantidadGeneral;
 
+  @override
+  void initState() {
+    super.initState();
+    _cargarSaldos();
+  }
+
+  Future<void> _cargarSaldos() async {
+    final docFundicion =
+        await FirebaseFirestore.instance
+            .collection('stock_fundicion')
+            .doc(widget.producto.codigo)
+            .get();
+    final docPintura =
+        await FirebaseFirestore.instance
+            .collection('stock_pintura')
+            .doc(widget.producto.codigo)
+            .get();
+    final docGeneral =
+        await FirebaseFirestore.instance
+            .collection('stock_general')
+            .doc(widget.producto.codigo)
+            .get();
+
+    setState(() {
+      cantidadFundicion = docFundicion.exists ? docFundicion['cantidad'] : 0;
+      cantidadPintura = docPintura.exists ? docPintura['cantidad'] : 0;
+      cantidadGeneral = docGeneral.exists ? docGeneral['cantidad'] : 0;
+    });
+  }
+
   void _mostrarFormulario(BuildContext context, String tipo) {
     final TextEditingController cantidadController = TextEditingController();
     bool puedeGuardar = false;
@@ -58,10 +88,6 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                         labelText: 'Cantidad',
-                        labelStyle: const TextStyle(
-                          color: Color(0xFF2C3E50),
-                          fontWeight: FontWeight.w500,
-                        ),
                         prefixIcon: const Icon(
                           Icons.production_quantity_limits,
                           color: Color(0xFF4682B4),
@@ -70,17 +96,11 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                         fillColor: Colors.white,
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: Colors.white,
-                            width: 1.5,
-                          ),
+                          borderSide: const BorderSide(color: Colors.white),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: Colors.white,
-                            width: 2,
-                          ),
+                          borderSide: const BorderSide(color: Colors.white),
                         ),
                       ),
                       onChanged: (value) {
@@ -103,62 +123,184 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                   final timestamp = Timestamp.now();
 
                                   if (tipo == 'Fundición') {
-                                    setState(() {
-                                      cantidadFundicion = cantidad;
-                                    });
+                                    // ✅ Guardar historial de entrada Fundición
                                     await FirebaseFirestore.instance
                                         .collection('inventario_fundicion')
                                         .add({
-                                          'codigo': widget.producto.codigo,
+                                          'referencia':
+                                              widget.producto.referencia,
                                           'nombre': widget.producto.nombre,
                                           'cantidad': cantidad,
                                           'fecha': timestamp,
                                         });
+
+                                    print(
+                                      'Guardado en historial_fundicion: $cantidad',
+                                    );
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Entrada registrada en Fundición',
+                                        ),
+                                      ),
+                                    );
+
+                                    // ✅ Actualizar stock Fundición
+                                    final docStock = FirebaseFirestore.instance
+                                        .collection('stock_fundicion')
+                                        .doc(widget.producto.referencia);
+                                    final snapshot = await docStock.get();
+                                    if (snapshot.exists) {
+                                      final saldo = snapshot['cantidad'] ?? 0;
+                                      await docStock.update({
+                                        'cantidad': saldo + cantidad,
+                                        'fecha_actualizacion': timestamp,
+                                      });
+                                    } else {
+                                      await docStock.set({
+                                        'referencia':
+                                            widget.producto.referencia,
+                                        'nombre': widget.producto.nombre,
+                                        'cantidad': cantidad,
+                                        'fecha_actualizacion': timestamp,
+                                      });
+                                    }
                                   } else if (tipo == 'Pintura') {
-                                    setState(() {
-                                      cantidadPintura = cantidad;
-                                    });
+                                    // ✅ Guardar historial de entrada Pintura
                                     await FirebaseFirestore.instance
                                         .collection('inventario_pintura')
                                         .add({
-                                          'codigo': widget.producto.codigo,
+                                          'referencia':
+                                              widget.producto.referencia,
                                           'nombre': widget.producto.nombre,
                                           'cantidad': cantidad,
                                           'fecha': timestamp,
                                         });
+
+                                    print(
+                                      'Guardado en historial_pintura: $cantidad',
+                                    );
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Entrada registrada en Pintura',
+                                        ),
+                                      ),
+                                    );
+
+                                    // Restar de Fundición
+                                    final docFundicion = FirebaseFirestore
+                                        .instance
+                                        .collection('stock_fundicion')
+                                        .doc(widget.producto.referencia);
+                                    final snapFundicion =
+                                        await docFundicion.get();
+                                    if (snapFundicion.exists) {
+                                      final saldoF = snapFundicion['cantidad'];
+                                      await docFundicion.update({
+                                        'cantidad':
+                                            (saldoF - cantidad) < 0
+                                                ? 0
+                                                : saldoF - cantidad,
+                                        'fecha_actualizacion': timestamp,
+                                      });
+                                    }
+
+                                    // Sumar a Pintura
+                                    final docPintura = FirebaseFirestore
+                                        .instance
+                                        .collection('stock_pintura')
+                                        .doc(widget.producto.referencia);
+                                    final snapPintura = await docPintura.get();
+                                    if (snapPintura.exists) {
+                                      final saldoP = snapPintura['cantidad'];
+                                      await docPintura.update({
+                                        'cantidad': saldoP + cantidad,
+                                        'fecha_actualizacion': timestamp,
+                                      });
+                                    } else {
+                                      await docPintura.set({
+                                        'referencia':
+                                            widget.producto.referencia,
+                                        'nombre': widget.producto.nombre,
+                                        'cantidad': cantidad,
+                                        'fecha_actualizacion': timestamp,
+                                      });
+                                    }
                                   } else if (tipo == 'Inventario General') {
-                                    setState(() {
-                                      cantidadGeneral = cantidad;
-                                    });
+                                    // ✅ Guardar historial de entrada General
                                     await FirebaseFirestore.instance
                                         .collection(
                                           'historial_inventario_general',
                                         )
                                         .add({
-                                          'codigo': widget.producto.codigo,
+                                          'referencia':
+                                              widget.producto.referencia,
                                           'nombre': widget.producto.nombre,
                                           'cantidad': cantidad,
                                           'fecha_actualizacion': timestamp,
                                         });
-                                    await FirebaseFirestore.instance
-                                        .collection('inventario_general')
-                                        .doc(widget.producto.codigo)
-                                        .set({
-                                          'codigo': widget.producto.codigo,
-                                          'nombre': widget.producto.nombre,
-                                          'cantidad': cantidad,
-                                          'fecha_actualizacion': timestamp,
-                                        }, SetOptions(merge: true));
+
+                                    print(
+                                      'Guardado en historial_inventario_general: $cantidad',
+                                    );
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Entrada registrada en Inventario General',
+                                        ),
+                                      ),
+                                    );
+
+                                    // Restar de Pintura
+                                    final docPintura = FirebaseFirestore
+                                        .instance
+                                        .collection('stock_pintura')
+                                        .doc(widget.producto.referencia);
+                                    final snapPintura = await docPintura.get();
+                                    if (snapPintura.exists) {
+                                      final saldoP = snapPintura['cantidad'];
+                                      await docPintura.update({
+                                        'cantidad':
+                                            (saldoP - cantidad) < 0
+                                                ? 0
+                                                : saldoP - cantidad,
+                                        'fecha_actualizacion': timestamp,
+                                      });
+                                    }
+
+                                    // Sumar a General
+                                    final docGeneral = FirebaseFirestore
+                                        .instance
+                                        .collection('stock_general')
+                                        .doc(widget.producto.referencia);
+                                    final snapGeneral = await docGeneral.get();
+                                    if (snapGeneral.exists) {
+                                      final saldoG = snapGeneral['cantidad'];
+                                      await docGeneral.update({
+                                        'cantidad': saldoG + cantidad,
+                                        'fecha_actualizacion': timestamp,
+                                      });
+                                    } else {
+                                      await docGeneral.set({
+                                        'referencia':
+                                            widget.producto.referencia,
+                                        'nombre': widget.producto.nombre,
+                                        'cantidad': cantidad,
+                                        'fecha_actualizacion': timestamp,
+                                      });
+                                    }
                                   }
 
-                                  // ignore: use_build_context_synchronously
+                                  await _cargarSaldos();
                                   Navigator.pop(context);
                                 }
                                 : null,
-                        icon: const Icon(
-                          Icons.check_circle_outline,
-                          color: Colors.white,
-                        ),
+
+                        icon: const Icon(Icons.check_circle_outline),
                         label: const Text(
                           'Guardar entrada',
                           style: TextStyle(fontWeight: FontWeight.bold),
@@ -170,8 +312,6 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          elevation: 3,
-                          textStyle: const TextStyle(fontSize: 16),
                         ),
                       ),
                     ),
@@ -234,8 +374,6 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
                 ),
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(30),

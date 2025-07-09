@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
 class ProductoEnCarrito {
-  final String codigo;
+  final String referencia;
   final String nombre;
   final double precio;
   final int disponibles;
   int cantidad;
 
   ProductoEnCarrito({
-    required this.codigo,
+    required this.referencia,
     required this.nombre,
     required this.precio,
     required this.disponibles,
@@ -25,7 +25,7 @@ class CarritoController extends ChangeNotifier {
   double get total => _items.fold(0, (sum, item) => sum + item.subtotal);
 
   void agregarProducto(ProductoEnCarrito producto) {
-    final index = _items.indexWhere((p) => p.codigo == producto.codigo);
+    final index = _items.indexWhere((p) => p.referencia == producto.referencia);
 
     if (index != -1) {
       if (_items[index].cantidad < _items[index].disponibles) {
@@ -45,8 +45,8 @@ class CarritoController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void actualizarCantidad(String codigo, int nuevaCantidad) {
-    final index = _items.indexWhere((p) => p.codigo == codigo);
+  void actualizarCantidad(String referencia, int nuevaCantidad) {
+    final index = _items.indexWhere((p) => p.referencia == referencia);
 
     if (index != -1) {
       if (nuevaCantidad <= _items[index].disponibles) {
@@ -59,7 +59,7 @@ class CarritoController extends ChangeNotifier {
   }
 
   void eliminarProducto(String codigo) {
-    _items.removeWhere((p) => p.codigo == codigo);
+    _items.removeWhere((p) => p.referencia == codigo);
     notifyListeners();
   }
 
@@ -73,7 +73,7 @@ class CarritoController extends ChangeNotifier {
     int cantidadDeseada, {
     required int disponibles,
   }) {
-    final index = _items.indexWhere((p) => p.codigo == codigo);
+    final index = _items.indexWhere((p) => p.referencia == codigo);
 
     if (index != -1) {
       return (_items[index].cantidad + cantidadDeseada) <=
@@ -85,10 +85,10 @@ class CarritoController extends ChangeNotifier {
 
   int cantidadEnCarrito(String codigo) {
     final producto = _items.firstWhere(
-      (p) => p.codigo == codigo,
+      (p) => p.referencia == codigo,
       orElse:
           () => ProductoEnCarrito(
-            codigo: codigo,
+            referencia: codigo,
             nombre: '',
             precio: 0,
             disponibles: 0,
