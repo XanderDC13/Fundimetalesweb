@@ -499,7 +499,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
     double total,
     String cliente,
     String metodoPago,
-    bool conIva, // ⚡️ Ahora se pasa como parámetro
+    bool conIva,
   ) async {
     final currentUser = FirebaseAuth.instance.currentUser;
 
@@ -531,7 +531,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
           productos
               .map(
                 (p) => {
-                  'codigo': p.codigo,
+                  'referencia': p.referencia,
                   'nombre': p.nombre,
                   'cantidad': p.cantidad,
                   'precio': p.precio,

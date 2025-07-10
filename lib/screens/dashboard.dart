@@ -3,6 +3,7 @@ import 'package:basefundi/screens/inventario.dart';
 import 'package:basefundi/screens/personal.dart';
 import 'package:basefundi/screens/personal/tareas.dart';
 import 'package:basefundi/screens/reportes.dart';
+import 'package:basefundi/screens/reportes/bajostock.dart';
 import 'package:basefundi/screens/ventas.dart';
 import 'package:basefundi/settings/settings.dart';
 import 'package:flutter/material.dart';
@@ -94,52 +95,53 @@ class _DashboardScreenState extends State<DashboardScreen>
         }
       }
 
-      // Cargar productos bajo stock desde historial_inventario_general
-      // Cargar historial inventario
+      // Traer historial de inventario
       final inventarioSnapshot =
           await FirebaseFirestore.instance
               .collection('historial_inventario_general')
               .orderBy('fecha_actualizacion', descending: true)
               .get();
 
-      // Cargar ventas
+      // Traer ventas totales para restar
       final ventasSnapshot =
           await FirebaseFirestore.instance.collection('ventas').get();
       final ventasDocs = ventasSnapshot.docs;
 
-      final Map<String, int> ventasPorProducto = {};
+      // Agrupar ventas por REFERENCIA
+      final Map<String, int> ventasPorReferencia = {};
       for (var venta in ventasDocs) {
         final productos = List<Map<String, dynamic>>.from(venta['productos']);
         for (var producto in productos) {
-          final codigo = producto['codigo']?.toString() ?? '';
+          final referencia = producto['referencia']?.toString() ?? '';
           final cantidad = (producto['cantidad'] ?? 0) as num;
-          ventasPorProducto[codigo] =
-              (ventasPorProducto[codigo] ?? 0) + cantidad.toInt();
+          ventasPorReferencia[referencia] =
+              (ventasPorReferencia[referencia] ?? 0) + cantidad.toInt();
         }
       }
 
-      // Procesar inventario agrupado
+      // Procesar inventario agrupado POR REFERENCIA
       final Map<String, int> stockFinal = {};
       for (var doc in inventarioSnapshot.docs) {
         final data = doc.data();
-        final codigo = (data['codigo'] ?? '').toString();
+        final referencia =
+            (data['referencia'] ?? '').toString(); // ✅ usar referencia
         final cantidad = (data['cantidad'] ?? 0) as int;
         final tipo = (data['tipo'] ?? 'entrada').toString();
 
         final ajuste = tipo == 'salida' ? -cantidad : cantidad;
-        stockFinal[codigo] = (stockFinal[codigo] ?? 0) + ajuste;
+        stockFinal[referencia] = (stockFinal[referencia] ?? 0) + ajuste;
       }
 
       // Restar ventas al inventario
-      ventasPorProducto.forEach((codigo, cantidadVendida) {
-        if (stockFinal.containsKey(codigo)) {
-          stockFinal[codigo] = stockFinal[codigo]! - cantidadVendida;
+      ventasPorReferencia.forEach((referencia, cantidadVendida) {
+        if (stockFinal.containsKey(referencia)) {
+          stockFinal[referencia] = stockFinal[referencia]! - cantidadVendida;
         }
       });
 
-      // Contar productos con stock bajo (< 10)
+      // Contar referencias con stock bajo (< 10)
       int bajoStock =
-          stockFinal.values.where((cantidad) => cantidad < 10).length;
+          stockFinal.values.where((cantidad) => cantidad < 5).length;
 
       setState(() {
         ventasRealizadas = totalVentas;
@@ -292,9 +294,12 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
               const SizedBox(width: 20),
               Expanded(
-                child: _buildResumenItem(
+                child: _buildResumenItemClickable(
                   value: productosBajoStock.toString(),
                   label: 'Productos Bajo Stock',
+                  onTap: () {
+                    _navegarConFade(context, const BajoStockScreen());
+                  },
                 ),
               ),
             ],
@@ -326,6 +331,38 @@ class _DashboardScreenState extends State<DashboardScreen>
           textAlign: TextAlign.center,
         ),
       ],
+    );
+  }
+
+  Widget _buildResumenItemClickable({
+    required String value,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 

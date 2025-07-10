@@ -252,7 +252,7 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
     pdf.addPage(
       buildReporteInventarioPDF(
         titulo: 'Reporte de ${coleccion.replaceAll('_', ' ').toUpperCase()}',
-        headers: ['Fecha', 'Ref', 'Nombre', 'Cantidad'],
+        headers: ['Fecha', 'Ref', 'Nombre', 'Cant'],
         dataRows: lista,
         footerText: 'Total registros: ${lista.length}',
       ),

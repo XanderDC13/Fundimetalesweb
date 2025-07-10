@@ -54,35 +54,37 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
         venta['productos'] ?? [],
       );
       for (var producto in productosVenta) {
-        final codigo = producto['codigo'];
+        final referencia = producto['referencia'] ?? producto['referencia'];
         final cantidad = (producto['cantidad'] ?? 0) as int;
-        ventasPorProducto[codigo] = (ventasPorProducto[codigo] ?? 0) + cantidad;
+        ventasPorProducto[referencia] =
+            (ventasPorProducto[referencia] ?? 0) + cantidad;
       }
     }
 
     final disponibles = <String, int>{};
     for (var doc in historialSnapshot.docs) {
       final data = doc.data();
-      final codigo = (data['codigo'] ?? '').toString();
+      final referencia = (data['referencia'] ?? '').toString();
       final cantidad = (data['cantidad'] ?? 0) as int;
       final tipo = (data['tipo'] ?? 'entrada').toString();
       final ajuste = tipo == 'salida' ? -cantidad : cantidad;
 
-      disponibles[codigo] = (disponibles[codigo] ?? 0) + ajuste;
+      disponibles[referencia] = (disponibles[referencia] ?? 0) + ajuste;
     }
 
     // Resta todas las ventas (incluye la actual)
-    ventasPorProducto.forEach((codigo, vendidos) {
-      disponibles[codigo] = (disponibles[codigo] ?? 0) - vendidos;
+    ventasPorProducto.forEach((referencia, vendidos) {
+      disponibles[referencia] = (disponibles[referencia] ?? 0) - vendidos;
     });
 
     // NO sumar lo de _productos de la venta actual
 
     // ✅ Sumar lo que ya está agregado para no bloquear stock usado en esta edición
     for (var producto in _productos) {
-      final codigo = producto['codigo'];
+      final referencia = producto['referencia'];
       final cantidad = producto['cantidad'] ?? 0;
-      disponibles[codigo] = ((disponibles[codigo] ?? 0) + cantidad).toInt();
+      disponibles[referencia] =
+          ((disponibles[referencia] ?? 0) + cantidad).toInt();
     }
 
     setState(() {
@@ -116,7 +118,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
             'id': doc.id,
             'nombre': data['nombre'],
             'precios': data['precios'],
-            'codigo': data['codigo'],
+            'referencia': data['referencia'],
           };
         }).toList();
 
@@ -131,13 +133,16 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             final filtrados =
-                productosDisponibles
-                    .where(
-                      (p) => p['nombre'].toLowerCase().contains(
-                        searchTerm.toLowerCase(),
-                      ),
-                    )
-                    .toList();
+                productosDisponibles.where((p) {
+                  final nombre = (p['nombre'] ?? '').toString().toLowerCase();
+                  final referencia =
+                      (p['referencia'] ?? '').toString().toLowerCase();
+                  final query = searchTerm.toLowerCase();
+
+                  return query.isEmpty ||
+                      nombre.contains(query) ||
+                      referencia.contains(query);
+                }).toList();
 
             return Dialog(
               backgroundColor: Colors.transparent,
@@ -267,18 +272,14 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                         itemCount: filtrados.length,
                                         itemBuilder: (context, index) {
                                           final producto = filtrados[index];
-                                          final codigo = producto['codigo'];
+                                          final referencia =
+                                              producto['referencia'];
                                           final yaExiste = _productos.any(
-                                            (p) => p['codigo'] == codigo,
+                                            (p) =>
+                                                p['referencia'] == referencia,
                                           );
                                           final disponibles =
-                                              _disponibles[codigo] ?? 0;
-                                          final precioBase =
-                                              producto['precio'] ?? 0;
-                                          final precioFinal =
-                                              _usarIva
-                                                  ? precioBase * 1.15
-                                                  : precioBase;
+                                              _disponibles[referencia] ?? 0;
 
                                           return Container(
                                             margin: const EdgeInsets.only(
@@ -362,7 +363,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                                 children: [
                                                   const SizedBox(height: 4),
                                                   Text(
-                                                    'Código: $codigo',
+                                                    'Ref: $referencia',
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       color: Colors.grey[600],
@@ -409,17 +410,6 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                                         ),
                                                       ),
                                                       const SizedBox(width: 8),
-                                                      Text(
-                                                        'PVP: \$${precioFinal.toStringAsFixed(2)}',
-                                                        style: TextStyle(
-                                                          fontSize: 11,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          color: const Color(
-                                                            0xFF4682B4,
-                                                          ),
-                                                        ),
-                                                      ),
                                                     ],
                                                   ),
                                                 ],
@@ -527,7 +517,8 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                                               'precio':
                                                                   precioSeleccionado,
                                                               'cantidad': 1,
-                                                              'codigo': codigo,
+                                                              'referencia':
+                                                                  referencia,
                                                             });
                                                           });
                                                           Navigator.pop(
@@ -557,9 +548,9 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
 
   void _guardarCambios() async {
     for (var producto in _productos) {
-      final codigo = producto['codigo'];
+      final referencia = producto['referencia'];
       final cantidad = producto['cantidad'] ?? 0;
-      final disponible = _disponibles[codigo] ?? 0;
+      final disponible = _disponibles[referencia] ?? 0;
       if (cantidad > disponible) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -713,7 +704,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
       ..._productos.asMap().entries.map((entry) {
         final index = entry.key;
         final producto = entry.value;
-        final disponibles = _disponibles[producto['codigo']] ?? 0;
+        final disponibles = _disponibles[producto['referencia']] ?? 0;
 
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 8),

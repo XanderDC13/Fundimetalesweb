@@ -128,18 +128,12 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen>
                       border: pw.TableBorder.all(
                         color: PdfColor.fromInt(0xFF4682B4),
                       ),
-                      headers: [
-                        'Código',
-                        'Nombre',
-                        'Cant',
-                        'Precio',
-                        'Subtotal',
-                      ],
+                      headers: ['Ref', 'Nombre', 'Cant', 'Precio', 'Subtotal'],
                       data:
                           productos.map<List<String>>((p) {
                             final producto = p as Map<String, dynamic>;
                             return [
-                              producto['codigo'] ?? '',
+                              producto['referencia'] ?? '',
                               producto['nombre'] ?? '',
                               producto['cantidad'].toString(),
                               '\$${(producto['precio'] ?? 0).toStringAsFixed(2)}',
