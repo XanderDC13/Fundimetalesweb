@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EditarProductoScreen extends StatefulWidget {
   final String codigoBarras;
@@ -37,6 +38,14 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   List<String> categorias = [];
   bool datosInicializados = false;
 
+  // Originales para auditoría
+  late String originalCodigo;
+  late String originalReferencia;
+  late String originalNombre;
+  late String originalCosto;
+  late String? originalCategoria;
+  late List<String> originalPrecios;
+
   @override
   void initState() {
     super.initState();
@@ -44,7 +53,12 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     costoController = TextEditingController();
     codigoController = TextEditingController(text: widget.codigoBarras);
     referenciaController = TextEditingController();
-    // Los controladores de precios ya están inicializados arriba
+    originalCodigo = widget.codigoBarras;
+    originalNombre = widget.nombreInicial;
+    originalReferencia = '';
+    originalCosto = '';
+    originalCategoria = null;
+    originalPrecios = [];
 
     _inicializarDatos();
   }
@@ -56,7 +70,6 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     } else {
       setState(() {
         nombreController.text = widget.nombreInicial;
-        // Establecer el precio inicial en el primer campo
         precio1Controller.text =
             widget.precioInicial == 0
                 ? ''
@@ -67,6 +80,14 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
           categoriaSeleccionada = categorias.first;
         }
       });
+
+      // Originales
+      originalCodigo = widget.codigoBarras;
+      originalNombre = widget.nombreInicial;
+      originalReferencia = '';
+      originalCosto = '';
+      originalCategoria = categorias.isNotEmpty ? categorias.first : null;
+      originalPrecios = [widget.precioInicial.toStringAsFixed(2)];
     }
     setState(() {
       datosInicializados = true;
@@ -97,14 +118,16 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         final data = doc.data()!;
         final categoriaEnDB = data['categoria'];
 
-        print(
-          "Cargando datos -> Nombre: ${data['nombre']}, Precios: ${data['precios']}, Costo: ${data['costo']}, Categoría: $categoriaEnDB",
-        );
-
         if (categoriaEnDB != null && !categorias.contains(categoriaEnDB)) {
           categorias.add(categoriaEnDB);
           categorias.sort();
         }
+
+        final precios =
+            (data['precios'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            [];
 
         setState(() {
           nombreController.text = data['nombre'] ?? widget.nombreInicial;
@@ -115,40 +138,26 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
               categoriaEnDB ??
               (categorias.isNotEmpty ? categorias.first : null);
 
-          // Cargar los 6 precios
-          final precios = data['precios'] as List<dynamic>?;
-          if (precios != null && precios.isNotEmpty) {
-            precio1Controller.text =
-                precios.length > 0 ? precios[0].toString() : '';
-            precio2Controller.text =
-                precios.length > 1 ? precios[1].toString() : '';
-            precio3Controller.text =
-                precios.length > 2 ? precios[2].toString() : '';
-            precio4Controller.text =
-                precios.length > 3 ? precios[3].toString() : '';
-            precio5Controller.text =
-                precios.length > 4 ? precios[4].toString() : '';
-            precio6Controller.text =
-                precios.length > 5 ? precios[5].toString() : '';
-          } else {
-            // Si no hay precios guardados, usar el precio inicial
-            precio1Controller.text =
-                widget.precioInicial == 0
-                    ? ''
-                    : widget.precioInicial.toStringAsFixed(2);
-          }
-        });
-      } else {
-        setState(() {
-          nombreController.text = widget.nombreInicial;
-          precio1Controller.text =
-              widget.precioInicial == 0
-                  ? ''
-                  : widget.precioInicial.toStringAsFixed(2);
-          costoController.text = '';
-          referenciaController.text = '';
-          categoriaSeleccionada =
-              categorias.isNotEmpty ? categorias.first : null;
+          precio1Controller.text = precios.isNotEmpty ? precios[0] : '';
+          precio2Controller.text = precios.length > 1 ? precios[1] : '';
+          precio3Controller.text = precios.length > 2 ? precios[2] : '';
+          precio4Controller.text = precios.length > 3 ? precios[3] : '';
+          precio5Controller.text = precios.length > 4 ? precios[4] : '';
+          precio6Controller.text = precios.length > 5 ? precios[5] : '';
+
+          originalCodigo = widget.codigoBarras;
+          originalNombre = nombreController.text;
+          originalReferencia = referenciaController.text;
+          originalCosto = costoController.text;
+          originalCategoria = categoriaSeleccionada;
+          originalPrecios = [
+            precio1Controller.text,
+            precio2Controller.text,
+            precio3Controller.text,
+            precio4Controller.text,
+            precio5Controller.text,
+            precio6Controller.text,
+          ];
         });
       }
     } catch (e) {
@@ -172,37 +181,22 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     }
 
     final costo = double.tryParse(costoText);
-    if (costo == null || costo < 0) {
+    if (costo == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Costo inválido')));
       return;
     }
 
-    // Recopilar todos los precios
-    List<double> precios = [];
-    final preciosTexto = [
-      precio1Controller.text.trim(),
-      precio2Controller.text.trim(),
-      precio3Controller.text.trim(),
-      precio4Controller.text.trim(),
-      precio5Controller.text.trim(),
-      precio6Controller.text.trim(),
-    ];
-
-    for (String precioTexto in preciosTexto) {
-      if (precioTexto.isNotEmpty) {
-        final precio = double.tryParse(precioTexto);
-        if (precio != null && precio >= 0) {
-          precios.add(precio);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Hay precios inválidos')),
-          );
-          return;
-        }
-      }
-    }
+    final precios =
+        [
+          precio1Controller.text.trim(),
+          precio2Controller.text.trim(),
+          precio3Controller.text.trim(),
+          precio4Controller.text.trim(),
+          precio5Controller.text.trim(),
+          precio6Controller.text.trim(),
+        ].where((e) => e.isNotEmpty).toList();
 
     if (precios.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -211,57 +205,266 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
       return;
     }
 
-    try {
-      final docRef = FirebaseFirestore.instance
-          .collection('inventario_general')
-          .doc(codigo);
-      final docSnapshot = await docRef.get();
+    // Verificar cambios
+    List<String> cambios = [];
 
-      final Map<String, dynamic> datosAGuardar = {
-        'codigo': codigo,
-        'referencia': referencia,
-        'nombre': nombre,
-        'precios': precios,
-        'costo': costo,
-        'fecha': FieldValue.serverTimestamp(),
-      };
+    if (codigo != originalCodigo)
+      cambios.add('Código: "$originalCodigo" → "$codigo"');
+    if (nombre != originalNombre)
+      cambios.add('Nombre: "$originalNombre" → "$nombre"');
+    if (referencia != originalReferencia)
+      cambios.add('Referencia: "$originalReferencia" → "$referencia"');
+    if (costoText != originalCosto)
+      cambios.add('Costo: "$originalCosto" → "$costoText"');
+    if (categoriaSeleccionada != originalCategoria)
+      cambios.add('Categoría: "$originalCategoria" → "$categoriaSeleccionada"');
 
-      if (categoriaSeleccionada != null) {
-        datosAGuardar['categoria'] = categoriaSeleccionada;
+    for (int i = 0; i < precios.length; i++) {
+      final pActual = precios[i];
+      final pOrig = i < originalPrecios.length ? originalPrecios[i] : '';
+      if (pActual != pOrig) {
+        cambios.add('Precio ${i + 1}: "$pOrig" → "$pActual"');
       }
+    }
 
-      if (docSnapshot.exists) {
-        await docRef.update(datosAGuardar);
-        print("Producto actualizado: $datosAGuardar");
-      } else {
-        if (categoriaSeleccionada == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Selecciona una categoría')),
-          );
-          return;
-        }
-        await docRef.set(datosAGuardar, SetOptions(merge: true));
-        print("Producto creado: $datosAGuardar");
-      }
-
+    if (cambios.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Producto guardado correctamente')),
+        const SnackBar(content: Text('No se detectaron cambios.')),
       );
+      return;
+    }
 
-      Navigator.pop(context, {
-        'codigo': codigo,
-        'referencia': referencia,
-        'nombre': nombre,
-        'precios': precios,
-        'costo': costo,
-        'categoria': categoriaSeleccionada,
+    // Guardar producto
+    final docRef = FirebaseFirestore.instance
+        .collection('inventario_general')
+        .doc(codigo);
+    final datos = {
+      'codigo': codigo,
+      'nombre': nombre,
+      'referencia': referencia,
+      'costo': costo,
+      'precios': precios.map((e) => double.tryParse(e) ?? 0).toList(),
+      'categoria': categoriaSeleccionada,
+      'fecha': FieldValue.serverTimestamp(),
+    };
+
+    await docRef.set(datos, SetOptions(merge: true));
+
+    // Guardar auditoría
+    if (cambios.isNotEmpty) {
+      final user = FirebaseAuth.instance.currentUser;
+
+      String auditor = 'Desconocido';
+      String uid = user?.uid ?? 'sin_uid';
+
+      if (user != null) {
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('usuarios_activos')
+                .doc(user.uid)
+                .get();
+
+        if (userDoc.exists && userDoc.data()!.containsKey('nombre')) {
+          auditor = userDoc['nombre'];
+        }
+      }
+
+      await FirebaseFirestore.instance.collection('auditoria_general').add({
+        'accion': 'Edición de producto',
+        'detalle': cambios.join('\n'),
+        'fecha': FieldValue.serverTimestamp(),
+        'usuario_nombre': auditor,
+        'usuario_uid': uid,
       });
-    } catch (e) {
-      print("Error al guardar producto: $e");
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error al guardar el producto')),
+        SnackBar(content: Text('Cambios:\n${cambios.join('\n')}')),
       );
     }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Cambios:\n${cambios.join('\n')}')));
+
+    Navigator.pop(context);
+  }
+
+  // --- UI helpers se mantienen igual ---
+  Widget buildTextField({
+    required String label,
+    required IconData icon,
+    required TextEditingController controller,
+    TextInputType inputType = TextInputType.text,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade300,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: inputType,
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon, color: const Color(0xFF2C3E50)),
+          labelText: label,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget buildPrecioField({
+    required String label,
+    required TextEditingController controller,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade300,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.attach_money, color: Color(0xFF2C3E50)),
+          labelText: label,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget buildPreciosGrid() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Precios',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C3E50),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: buildPrecioField(
+                  label: 'PVP1',
+                  controller: precio1Controller,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: buildPrecioField(
+                  label: 'PVP2',
+                  controller: precio2Controller,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: buildPrecioField(
+                  label: 'PVP3',
+                  controller: precio3Controller,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: buildPrecioField(
+                  label: 'PVP4',
+                  controller: precio4Controller,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: buildPrecioField(
+                  label: 'PVP5',
+                  controller: precio5Controller,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: buildPrecioField(
+                  label: 'PVP6',
+                  controller: precio6Controller,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildCategoriaDropdown() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade300,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: DropdownButtonFormField<String>(
+        value: categoriaSeleccionada,
+        items:
+            categorias
+                .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                .toList(),
+        onChanged: (value) {
+          setState(() {
+            categoriaSeleccionada = value;
+          });
+        },
+        decoration: InputDecoration(
+          labelText: 'Categoría',
+          prefixIcon: const Icon(Icons.category, color: Color(0xFF2C3E50)),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+        ),
+      ),
+    );
   }
 
   void mostrarDialogoNuevaCategoria() {
@@ -349,185 +552,6 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
               ),
             ),
           ),
-    );
-  }
-
-  Widget buildTextField({
-    required String label,
-    required IconData icon,
-    required TextEditingController controller,
-    TextInputType inputType = TextInputType.text,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade300,
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: inputType,
-        decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: const Color(0xFF2C3E50)),
-          labelText: label,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.white,
-        ),
-      ),
-    );
-  }
-
-  Widget buildPrecioField({
-    required String label,
-    required TextEditingController controller,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade300,
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: InputDecoration(
-          prefixIcon: const Icon(Icons.attach_money, color: Color(0xFF2C3E50)),
-          labelText: label,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.white,
-        ),
-      ),
-    );
-  }
-
-  Widget buildPreciosGrid() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Precios',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color.fromARGB(255, 80, 49, 44),
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Primera fila - 3 precios
-          Row(
-            children: [
-              Expanded(
-                child: buildPrecioField(
-                  label: 'PVP1',
-                  controller: precio1Controller,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: buildPrecioField(
-                  label: 'PVP2',
-                  controller: precio2Controller,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: buildPrecioField(
-                  label: 'PVP3',
-                  controller: precio3Controller,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Segunda fila - 3 precios
-          Row(
-            children: [
-              Expanded(
-                child: buildPrecioField(
-                  label: 'PVP4',
-                  controller: precio4Controller,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: buildPrecioField(
-                  label: 'PVP5',
-                  controller: precio5Controller,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: buildPrecioField(
-                  label: 'PVP6',
-                  controller: precio6Controller,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildCategoriaDropdown() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade300,
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: DropdownButtonFormField<String>(
-        value: categoriaSeleccionada,
-        items:
-            categorias
-                .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
-                .toList(),
-        onChanged: (value) {
-          setState(() {
-            categoriaSeleccionada = value;
-          });
-        },
-        decoration: InputDecoration(
-          labelText: 'Categoría',
-          prefixIcon: const Icon(Icons.category, color: Color(0xFF2C3E50)),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.white,
-        ),
-      ),
     );
   }
 
@@ -640,6 +664,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     nombreController.dispose();
     costoController.dispose();
     codigoController.dispose();
+    referenciaController.dispose();
     precio1Controller.dispose();
     precio2Controller.dispose();
     precio3Controller.dispose();

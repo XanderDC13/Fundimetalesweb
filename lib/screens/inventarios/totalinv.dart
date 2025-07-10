@@ -4,6 +4,7 @@ import 'package:basefundi/screens/inventarios/editprod.dart';
 import 'package:basefundi/screens/inventarios/scaninv.dart';
 import 'package:basefundi/settings/csv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class Producto {
@@ -205,6 +206,10 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
       'inventario_pintura',
       'historial_inventario_general',
     ];
+    final FirebaseAuth _auth = FirebaseAuth.instance; // 👈 Agrega esto
+    final user = _auth.currentUser; // 👈 Usa tu instancia de auth
+    final nombreUsuario = 'Administrador'; // O tu variable real
+    final usuarioUid = user?.uid ?? 'Desconocido';
 
     for (String col in colecciones) {
       QuerySnapshot snapshot =
@@ -214,7 +219,21 @@ class _TotalInvScreenState extends State<TotalInvScreen> {
               .get();
 
       for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final cantidadEliminada = data['cantidad'] ?? 0;
+
+        // Elimina el documento
         await _firestore.collection(col).doc(doc.id).delete();
+
+        // Guarda la auditoría
+        await _firestore.collection('auditoria_general').add({
+          'accion': 'Producto eliminado',
+          'detalle':
+              'Producto: $nombre, Cantidad eliminada: $cantidadEliminada',
+          'fecha': Timestamp.now(),
+          'usuario_nombre': nombreUsuario,
+          'usuario_uid': usuarioUid,
+        });
       }
     }
   }
