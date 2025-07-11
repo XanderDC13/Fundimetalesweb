@@ -9,9 +9,12 @@ class FacturaDetalleScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cliente = venta['cliente'] ?? 'Desconocido';
+    final codigoComprobante = venta['codigo_comprobante'] ?? '---';
+    final tipoComprobante = venta['tipoComprobante'] ?? 'Comprobante';
     final metodoPago = venta['metodoPago'] ?? 'No especificado';
     final fecha = venta['fecha']?.toDate();
     final total = venta['total'] ?? 0;
+    final vendedor = venta['usuario_nombre'] ?? 'No especificado';
     final productos = List<Map<String, dynamic>>.from(venta['productos']);
 
     return Scaffold(
@@ -32,15 +35,27 @@ class FacturaDetalleScreen extends StatelessWidget {
                   bottomRight: Radius.circular(30),
                 ),
               ),
-              child: const Center(
-                child: Text(
-                  'Factura de Venta',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    tipoComprobante,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 4),
+                  Text(
+                    codigoComprobante,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -70,6 +85,8 @@ class FacturaDetalleScreen extends StatelessWidget {
                       _buildRow('Cliente:', cliente),
                       const SizedBox(height: 8),
                       _buildRow('Método de pago:', metodoPago),
+                      const SizedBox(height: 8),
+                      _buildRow('Vendedor:', vendedor),
                       const SizedBox(height: 8),
                       _buildRow(
                         'Fecha:',
@@ -105,7 +122,7 @@ class FacturaDetalleScreen extends StatelessWidget {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Código: ${producto['codigo']}',
+                                    'Referencia: ${producto['referencia'] ?? 'N/A'}',
                                     style: const TextStyle(color: Colors.grey),
                                   ),
                                   Text(

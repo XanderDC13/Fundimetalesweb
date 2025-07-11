@@ -15,7 +15,8 @@ class ReporteInventarioScreen extends StatefulWidget {
 class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String _filtroNombre = '';
+  String _filtroTexto = '';
+  DateTimeRange? _rangoFechas;
 
   @override
   void initState() {
@@ -98,20 +99,34 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
 
     return FirebaseFirestore.instance
         .collection(coleccion)
-        .orderBy('referencia')
         .orderBy(ordenCampo, descending: true)
         .snapshots()
         .map(
           (snapshot) =>
-              snapshot.docs
-                  .map((doc) => doc.data())
-                  .where(
-                    (e) => (e['nombre'] ?? '')
-                        .toString()
-                        .toLowerCase()
-                        .contains(_filtroNombre.toLowerCase()),
-                  )
-                  .toList(),
+              snapshot.docs.map((doc) => doc.data()).where((e) {
+                final nombre = (e['nombre'] ?? '').toString().toLowerCase();
+                final referencia =
+                    (e['referencia'] ?? '').toString().toLowerCase();
+                final textoCoincide =
+                    nombre.contains(_filtroTexto.toLowerCase()) ||
+                    referencia.contains(_filtroTexto.toLowerCase());
+
+                final fechaCampo =
+                    coleccion == 'historial_inventario_general'
+                        ? e['fecha_actualizacion']
+                        : e['fecha'];
+
+                if (_rangoFechas != null && fechaCampo != null) {
+                  final fecha = (fechaCampo as Timestamp).toDate();
+                  return textoCoincide &&
+                      fecha.isAfter(_rangoFechas!.start) &&
+                      fecha.isBefore(
+                        _rangoFechas!.end.add(const Duration(days: 1)),
+                      );
+                }
+
+                return textoCoincide;
+              }).toList(),
         );
   }
 
@@ -130,14 +145,22 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
         return SingleChildScrollView(
           child: DataTable(
             headingRowColor: WidgetStateColor.resolveWith(
-              (states) => Colors.blue.shade100,
+              (states) => const Color(0xFF4682B4),
             ),
             columnSpacing: 0,
             columns: const [
-              DataColumn(label: Text('Fecha')),
-              DataColumn(label: Text('Ref')),
-              DataColumn(label: Text('Nombre')),
-              DataColumn(label: Text('Cantidad')),
+              DataColumn(
+                label: Text('Fecha', style: TextStyle(color: Colors.white)),
+              ),
+              DataColumn(
+                label: Text('Ref', style: TextStyle(color: Colors.white)),
+              ),
+              DataColumn(
+                label: Text('Nombre', style: TextStyle(color: Colors.white)),
+              ),
+              DataColumn(
+                label: Text('Cantidad', style: TextStyle(color: Colors.white)),
+              ),
             ],
             rows:
                 entradas.map((entrada) {
@@ -215,7 +238,6 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
     final snapshot =
         await FirebaseFirestore.instance
             .collection(coleccion)
-            .orderBy('referencia')
             .orderBy(
               coleccion == 'historial_inventario_general'
                   ? 'fecha_actualizacion'
@@ -224,7 +246,28 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
             )
             .get();
 
-    final entradas = snapshot.docs.map((doc) => doc.data()).toList();
+    final entradas =
+        snapshot.docs.map((doc) => doc.data()).where((e) {
+          final nombre = (e['nombre'] ?? '').toString().toLowerCase();
+          final referencia = (e['referencia'] ?? '').toString().toLowerCase();
+          final textoCoincide =
+              nombre.contains(_filtroTexto.toLowerCase()) ||
+              referencia.contains(_filtroTexto.toLowerCase());
+
+          final fechaCampo =
+              coleccion == 'historial_inventario_general'
+                  ? e['fecha_actualizacion']
+                  : e['fecha'];
+
+          if (_rangoFechas != null && fechaCampo != null) {
+            final fecha = (fechaCampo as Timestamp).toDate();
+            return textoCoincide &&
+                fecha.isAfter(_rangoFechas!.start) &&
+                fecha.isBefore(_rangoFechas!.end.add(const Duration(days: 1)));
+          }
+
+          return textoCoincide;
+        }).toList();
 
     final lista =
         entradas.map((entrada) {
@@ -299,10 +342,10 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: TextField(
                 decoration: InputDecoration(
-                  hintText: 'Buscar por nombre...',
+                  hintText: 'Buscar nombre o referencia...',
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
                   fillColor: Colors.white,
@@ -317,10 +360,57 @@ class _ReporteInventarioScreenState extends State<ReporteInventarioScreen>
                 ),
                 onChanged: (value) {
                   setState(() {
-                    _filtroNombre = value;
+                    _filtroTexto = value;
                   });
                 },
               ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton.icon(
+                  onPressed: () async {
+                    DateTimeRange? picked;
+                    DateTime? start = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now(),
+                    );
+                    if (start != null) {
+                      DateTime? end = await showDatePicker(
+                        context: context,
+                        initialDate: start,
+                        firstDate: start,
+                        lastDate: DateTime.now(),
+                      );
+                      if (end != null) {
+                        picked = DateTimeRange(start: start, end: end);
+                        setState(() {
+                          _rangoFechas = picked;
+                        });
+                      }
+                    }
+                  },
+                  icon: Icon(Icons.date_range, color: Color(0xFF4682B4)),
+                  label: Text(
+                    _rangoFechas == null
+                        ? 'Filtrar por fecha'
+                        : 'Desde ${_rangoFechas!.start.toLocal().toString().split(' ')[0]} hasta ${_rangoFechas!.end.toLocal().toString().split(' ')[0]}',
+                    style: TextStyle(color: Color(0xFF4682B4)),
+                  ),
+                ),
+
+                if (_rangoFechas != null)
+                  IconButton(
+                    icon: Icon(Icons.clear, color: const Color(0xFF4682B4)),
+                    onPressed: () {
+                      setState(() {
+                        _rangoFechas = null;
+                      });
+                    },
+                  ),
+              ],
             ),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

@@ -46,7 +46,6 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
 
                   final allVentas = snapshot.data!.docs;
 
-                  // Filtro por cliente
                   final filteredByCliente =
                       allVentas.where((venta) {
                         final cliente =
@@ -54,7 +53,6 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
                         return cliente.contains(_searchCliente.toLowerCase());
                       }).toList();
 
-                  // Filtro por fecha (si se seleccionó)
                   final filteredVentas =
                       _selectedDate != null
                           ? filteredByCliente.where((venta) {
@@ -80,10 +78,10 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
                     itemBuilder: (context, index) {
                       final venta = filteredVentas[index];
                       final cliente = venta['cliente'] ?? 'Desconocido';
+                      final codigoComprobante =
+                          venta['codigo_comprobante'] ?? 'Sin código';
                       final fecha = venta['fecha']?.toDate();
                       final total = venta['total'] ?? 0;
-                      final tipoComprobante =
-                          venta['tipoComprobante'] ?? 'Desconocido';
 
                       return GestureDetector(
                         onTap: () {
@@ -136,24 +134,21 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
+                                        '$codigoComprobante',
+                                        style: const TextStyle(
+                                          color: Colors.black54,
+
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
                                         fecha != null
                                             ? '${fecha.day}/${fecha.month}/${fecha.year} — ${fecha.hour}:${fecha.minute.toString().padLeft(2, '0')}'
                                             : 'Sin fecha',
                                         style: const TextStyle(
                                           color: Colors.grey,
                                           fontSize: 13,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        tipoComprobante,
-                                        style: TextStyle(
-                                          color:
-                                              tipoComprobante == 'Factura'
-                                                  ? Colors.green
-                                                  : Colors.orange,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
                                         ),
                                       ),
                                     ],

@@ -374,6 +374,7 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
     final carrito = Provider.of<CarritoController>(context, listen: false);
     final cliente = _clienteController.text.trim();
     final productos = carrito.items;
+    final usuario = FirebaseAuth.instance.currentUser;
 
     showModalBottomSheet(
       context: context,
@@ -411,6 +412,42 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
                       _opcionPago(setState, 'Otro', Icons.more_horiz),
                     ],
                   ),
+                  const SizedBox(height: 20),
+
+                  /// 🔑 NUEVO: Mostrar vendedor autenticado
+                  FutureBuilder<DocumentSnapshot>(
+                    future:
+                        FirebaseFirestore.instance
+                            .collection('usuarios_activos')
+                            .doc(usuario?.uid)
+                            .get(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const CircularProgressIndicator();
+                      }
+                      if (!snapshot.hasData || !snapshot.data!.exists) {
+                        return const Text(
+                          'Vendedor: No disponible',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2C3E50),
+                          ),
+                        );
+                      }
+
+                      final nombreVendedor =
+                          snapshot.data!.get('nombre') ?? '---';
+
+                      return Text(
+                        'Vendedor: $nombreVendedor',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      );
+                    },
+                  ),
+
                   const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,
@@ -517,8 +554,34 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
         userDoc.data()?['nombre'] ?? currentUser.email ?? '---';
 
     final tipoComprobante = conIva ? 'Factura' : 'Nota de Venta';
+    final prefijo = conIva ? 'FAC' : 'NV';
+    final tipoClave = conIva ? 'factura' : 'nota_venta';
+
+    // Transacción para obtener y actualizar el contador
+    final firestore = FirebaseFirestore.instance;
+    final contadorRef = firestore
+        .collection('contadores_comprobantes')
+        .doc(tipoClave);
+
+    String codigoComprobante = '';
+
+    await firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(contadorRef);
+
+      int ultimoNumero = 0;
+      if (snapshot.exists) {
+        ultimoNumero = snapshot.get('ultimo_numero') ?? 0;
+      }
+
+      final nuevoNumero = ultimoNumero + 1;
+      final numeroFormateado = nuevoNumero.toString().padLeft(5, '0');
+      codigoComprobante = '$prefijo-$numeroFormateado';
+
+      transaction.set(contadorRef, {'ultimo_numero': nuevoNumero});
+    });
 
     final venta = {
+      'codigo_comprobante': codigoComprobante,
       'cliente': cliente.isNotEmpty ? cliente : null,
       'total': total,
       'metodoPago': metodoPago,
@@ -548,7 +611,8 @@ class _VerCarritoScreenState extends State<VerCarritoScreen> {
     await FirebaseFirestore.instance.collection('auditoria_general').add({
       'accion': 'Registro de Venta',
       'detalle':
-          'Total: \$${total.toStringAsFixed(2)} | Método: $metodoPago | IVA: ${conIva ? 'Sí' : 'No'} | Comprobante: $tipoComprobante',
+          'Comprobante: $codigoComprobante | Total: \$${total.toStringAsFixed(2)} | Método: $metodoPago | IVA: ${conIva ? 'Sí' : 'No'} | Tipo: $tipoComprobante',
+
       'fecha': DateTime.now(),
       'referencia_venta': ventaRef.id,
       'usuario_uid': currentUser.uid,

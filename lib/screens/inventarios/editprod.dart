@@ -271,7 +271,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
 
       await FirebaseFirestore.instance.collection('auditoria_general').add({
         'accion': 'Edición de producto',
-        'detalle': cambios.join('\n'),
+        'detalle': 'Producto: $nombre\n${cambios.join('\n')}',
         'fecha': FieldValue.serverTimestamp(),
         'usuario_nombre': auditor,
         'usuario_uid': uid,

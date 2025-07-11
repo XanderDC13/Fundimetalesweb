@@ -85,6 +85,7 @@ class _ModificarVentasScreenState extends State<ModificarVentasScreen> {
             _buildHeader(),
             const SizedBox(height: 20),
             _buildFilters(),
+            const SizedBox(height: 10), // Igual que en VentasTotalesScreen
             Expanded(child: _buildListaVentas()),
             const SizedBox(height: 10),
           ],
@@ -246,6 +247,9 @@ class _ModificarVentasScreenState extends State<ModificarVentasScreen> {
             final cliente = data['cliente'] ?? 'Sin nombre';
             final total = data['total'] ?? 0.0;
             final fecha = (data['fecha'] as Timestamp?)?.toDate();
+            final codigoComprobante =
+                data['codigo_comprobante'] ?? 'Sin código';
+
             final fechaStr =
                 fecha != null
                     ? DateFormat('dd/MM/yyyy hh:mm a').format(fecha)
@@ -287,6 +291,14 @@ class _ModificarVentasScreenState extends State<ModificarVentasScreen> {
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                               color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$codigoComprobante',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black54,
                             ),
                           ),
                           const SizedBox(height: 4),

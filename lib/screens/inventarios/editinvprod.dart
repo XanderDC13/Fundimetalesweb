@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EditInvProdScreen extends StatefulWidget {
   final dynamic producto;
@@ -14,6 +15,8 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
   int? cantidadFundicion;
   int? cantidadPintura;
   int? cantidadGeneral;
+
+  final _auth = FirebaseAuth.instance;
 
   @override
   void initState() {
@@ -38,10 +41,49 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
             .doc(widget.producto.referencia)
             .get();
 
+    if (!mounted) return;
+
     setState(() {
       cantidadFundicion = docFundicion.exists ? docFundicion['cantidad'] : 0;
       cantidadPintura = docPintura.exists ? docPintura['cantidad'] : 0;
       cantidadGeneral = docGeneral.exists ? docGeneral['cantidad'] : 0;
+    });
+  }
+
+  Future<Map<String, String>> _obtenerDatosUsuario() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return {'uid': 'desconocido', 'nombre': 'Desconocido'};
+    }
+
+    final userDoc =
+        await FirebaseFirestore.instance
+            .collection('usuarios_activos')
+            .doc(user.uid)
+            .get();
+
+    final nombre =
+        userDoc.exists ? (userDoc['nombre'] ?? 'Desconocido') : 'Desconocido';
+
+    return {'uid': user.uid, 'nombre': nombre};
+  }
+
+  Future<void> _guardarAuditoria({
+    required String tipo,
+    required int cantidad,
+    required String uid,
+    required String nombreUsuario,
+    required Timestamp fecha,
+  }) async {
+    final detalle =
+        'Producto: ${widget.producto.nombre}, Referencia: ${widget.producto.referencia}, Cantidad: $cantidad, Movimiento: $tipo';
+
+    await FirebaseFirestore.instance.collection('auditoria_general').add({
+      'accion': 'Entrada de inventario',
+      'detalle': detalle,
+      'fecha': fecha,
+      'usuario_nombre': nombreUsuario,
+      'usuario_uid': uid,
     });
   }
 
@@ -122,8 +164,9 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                       0;
                                   final timestamp = Timestamp.now();
 
+                                  final usuario = await _obtenerDatosUsuario();
+
                                   if (tipo == 'Fundición') {
-                                    // ✅ Guardar historial de entrada Fundición
                                     await FirebaseFirestore.instance
                                         .collection('inventario_fundicion')
                                         .add({
@@ -132,21 +175,10 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                           'nombre': widget.producto.nombre,
                                           'cantidad': cantidad,
                                           'fecha': timestamp,
+                                          'usuario_uid': usuario['uid'],
+                                          'usuario_nombre': usuario['nombre'],
                                         });
 
-                                    print(
-                                      'Guardado en historial_fundicion: $cantidad',
-                                    );
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Entrada registrada en Fundición',
-                                        ),
-                                      ),
-                                    );
-
-                                    // ✅ Actualizar stock Fundición
                                     final docStock = FirebaseFirestore.instance
                                         .collection('stock_fundicion')
                                         .doc(widget.producto.referencia);
@@ -167,7 +199,6 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                       });
                                     }
                                   } else if (tipo == 'Pintura') {
-                                    // ✅ Guardar historial de entrada Pintura
                                     await FirebaseFirestore.instance
                                         .collection('inventario_pintura')
                                         .add({
@@ -176,21 +207,10 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                           'nombre': widget.producto.nombre,
                                           'cantidad': cantidad,
                                           'fecha': timestamp,
+                                          'usuario_uid': usuario['uid'],
+                                          'usuario_nombre': usuario['nombre'],
                                         });
 
-                                    print(
-                                      'Guardado en historial_pintura: $cantidad',
-                                    );
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Entrada registrada en Pintura',
-                                        ),
-                                      ),
-                                    );
-
-                                    // Restar de Fundición
                                     final docFundicion = FirebaseFirestore
                                         .instance
                                         .collection('stock_fundicion')
@@ -208,7 +228,6 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                       });
                                     }
 
-                                    // Sumar a Pintura
                                     final docPintura = FirebaseFirestore
                                         .instance
                                         .collection('stock_pintura')
@@ -230,7 +249,6 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                       });
                                     }
                                   } else if (tipo == 'Inventario General') {
-                                    // ✅ Guardar historial de entrada General
                                     await FirebaseFirestore.instance
                                         .collection(
                                           'historial_inventario_general',
@@ -241,21 +259,10 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                           'nombre': widget.producto.nombre,
                                           'cantidad': cantidad,
                                           'fecha_actualizacion': timestamp,
+                                          'usuario_uid': usuario['uid'],
+                                          'usuario_nombre': usuario['nombre'],
                                         });
 
-                                    print(
-                                      'Guardado en historial_inventario_general: $cantidad',
-                                    );
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Entrada registrada en Inventario General',
-                                        ),
-                                      ),
-                                    );
-
-                                    // Restar de Pintura
                                     final docPintura = FirebaseFirestore
                                         .instance
                                         .collection('stock_pintura')
@@ -272,7 +279,6 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                       });
                                     }
 
-                                    // Sumar a General
                                     final docGeneral = FirebaseFirestore
                                         .instance
                                         .collection('stock_general')
@@ -295,11 +301,19 @@ class _EditInvProdScreenState extends State<EditInvProdScreen> {
                                     }
                                   }
 
+                                  // 🔴 GUARDAR EN AUDITORÍA GENERAL
+                                  await _guardarAuditoria(
+                                    tipo: tipo,
+                                    cantidad: cantidad,
+                                    uid: usuario['uid']!,
+                                    nombreUsuario: usuario['nombre']!,
+                                    fecha: timestamp,
+                                  );
+
                                   await _cargarSaldos();
-                                  Navigator.pop(context);
+                                  if (mounted) Navigator.pop(context);
                                 }
                                 : null,
-
                         icon: const Icon(Icons.check_circle_outline),
                         label: const Text(
                           'Guardar entrada',

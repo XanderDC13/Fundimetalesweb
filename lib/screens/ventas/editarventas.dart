@@ -23,7 +23,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
   List<Map<String, dynamic>> _productos = [];
   Map<String, int> _disponibles = {};
   bool _usarIva = false; // ✅ Nuevo: switch para aplicar IVA
-
+  String _codigoComprobante = '';
   @override
   void initState() {
     super.initState();
@@ -35,6 +35,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
     _productos = List<Map<String, dynamic>>.from(
       widget.datosVenta['productos'] ?? [],
     );
+    _codigoComprobante = widget.datosVenta['codigo_comprobante'] ?? '';
     _cargarDisponibles();
   }
 
@@ -612,6 +613,49 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
     }
   }
 
+  Widget _buildCodigoComprobanteField() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 255, 255, 255),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color.fromARGB(255, 255, 255, 255),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 1),
+                  Text(
+                    _codigoComprobante.isEmpty
+                        ? 'No asignado'
+                        : _codigoComprobante,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          _codigoComprobante.isEmpty
+                              ? Colors.grey[500]
+                              : Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -655,13 +699,49 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
+                    _buildCodigoComprobanteField(),
                     TextFormField(
                       controller: _clienteController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Cliente',
                         filled: true,
                         fillColor: Colors.white,
-                        border: OutlineInputBorder(),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(
+                            16,
+                          ), // 👈 Borde redondeado de 16
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(
+                            16,
+                          ), // 👈 También cuando no está enfocado
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(
+                              255,
+                              255,
+                              255,
+                              255,
+                            ), // Puedes ajustar el color del borde
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(
+                            16,
+                          ), // 👈 También cuando está enfocado
+                          borderSide: const BorderSide(
+                            color: Color.fromARGB(
+                              255,
+                              255,
+                              255,
+                              255,
+                            ), // Color cuando está enfocado
+                            width: 1,
+                          ),
+                        ),
                       ),
                       validator:
                           (value) =>
@@ -669,7 +749,9 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                   ? 'Requerido'
                                   : null,
                     ),
+
                     const SizedBox(height: 16),
+
                     ..._buildProductos(),
                     const SizedBox(height: 20),
                     _buildTotalConIva(),

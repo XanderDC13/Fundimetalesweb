@@ -188,173 +188,198 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
               );
             }
 
-            return SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minWidth: MediaQuery.of(context).size.width,
-                  ),
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final totalWidth = constraints.maxWidth;
+
+                // Ajusta estos valores según el espacio que quieres para cada columna
+                final double anchoNombre = totalWidth * 0.3;
+                final double anchoReferencia = totalWidth * 0.30;
+                final double anchoCantidad = totalWidth * 0.2;
+                final double anchoAcciones = totalWidth * 0.10;
+
+                return SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
                   child: DataTable(
-                    columnSpacing: 16,
-                    headingRowColor: WidgetStateProperty.all(
+                    columnSpacing: 0,
+                    headingRowColor: MaterialStateProperty.all(
                       const Color(0xFF4682B4),
                     ),
                     headingTextStyle: const TextStyle(color: Colors.white),
+
                     columns: const [
                       DataColumn(label: Text('Nombre')),
                       DataColumn(label: Text('Referencia')),
                       DataColumn(label: Text('Cantidad')),
-                      DataColumn(label: Text('Acciones')),
+                      DataColumn(label: Text('Accion')),
                     ],
                     rows:
                         filtered.map((data) {
                           return DataRow(
                             cells: [
                               DataCell(
-                                GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (_) => TablainvScreen(
-                                              codigo: data['referencia'],
-                                              nombre: data['nombre'],
-                                            ),
+                                SizedBox(
+                                  width: anchoNombre,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) => TablainvScreen(
+                                                codigo: data['referencia'],
+                                                nombre: data['nombre'],
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                    child: SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Text(
+                                        data['nombre'],
+                                        style: const TextStyle(
+                                          color: Color(0xFF4682B4),
+                                        ),
                                       ),
-                                    );
-                                  },
-                                  child: Text(
-                                    data['nombre'],
-                                    style: const TextStyle(
-                                      color: Color(0xFF4682B4),
                                     ),
                                   ),
                                 ),
                               ),
-                              DataCell(Text(data['referencia'])),
-                              DataCell(Text(data['cantidad'].toString())),
                               DataCell(
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete_outline,
-                                    color: Colors.redAccent,
-                                  ),
-                                  tooltip: 'Eliminar',
-                                  onPressed: () async {
-                                    final confirmar =
-                                        await showDialog<bool>(
-                                          context: context,
-                                          builder:
-                                              (_) => AlertDialog(
-                                                title: const Text(
-                                                  'Confirmar eliminación',
-                                                ),
-                                                content: Text(
-                                                  '¿Estás seguro de eliminar todos los registros del producto "${data['nombre']}"?',
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed:
-                                                        () => Navigator.pop(
-                                                          context,
-                                                          false,
-                                                        ),
-                                                    child: const Text(
-                                                      'Cancelar',
-                                                    ),
+                                SizedBox(
+                                  width: anchoReferencia,
+                                  child: Text(data['referencia']),
+                                ),
+                              ),
+                              DataCell(
+                                SizedBox(
+                                  width: anchoCantidad,
+                                  child: Text(data['cantidad'].toString()),
+                                ),
+                              ),
+                              DataCell(
+                                SizedBox(
+                                  width: anchoAcciones,
+                                  child: IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.redAccent,
+                                    ),
+                                    tooltip: 'Eliminar',
+                                    onPressed: () async {
+                                      final confirmar =
+                                          await showDialog<bool>(
+                                            context: context,
+                                            builder:
+                                                (_) => AlertDialog(
+                                                  title: const Text(
+                                                    'Confirmar eliminación',
                                                   ),
-                                                  ElevatedButton(
-                                                    style:
-                                                        ElevatedButton.styleFrom(
-                                                          backgroundColor:
-                                                              Colors.red,
-                                                        ),
-                                                    onPressed:
-                                                        () => Navigator.pop(
-                                                          context,
-                                                          true,
-                                                        ),
-                                                    child: const Text(
-                                                      'Eliminar',
-                                                    ),
+                                                  content: Text(
+                                                    '¿Estás seguro de eliminar todos los registros del producto "${data['nombre']}"?',
                                                   ),
-                                                ],
-                                              ),
-                                        ) ??
-                                        false;
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            context,
+                                                            false,
+                                                          ),
+                                                      child: const Text(
+                                                        'Cancelar',
+                                                      ),
+                                                    ),
+                                                    ElevatedButton(
+                                                      style:
+                                                          ElevatedButton.styleFrom(
+                                                            backgroundColor:
+                                                                Colors.red,
+                                                          ),
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            context,
+                                                            true,
+                                                          ),
+                                                      child: const Text(
+                                                        'Eliminar',
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                          ) ??
+                                          false;
 
-                                    if (confirmar) {
-                                      final currentUser =
-                                          FirebaseAuth.instance.currentUser;
-                                      if (currentUser == null) {
+                                      if (confirmar) {
+                                        final currentUser =
+                                            FirebaseAuth.instance.currentUser;
+                                        if (currentUser == null) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Usuario no autenticado',
+                                              ),
+                                            ),
+                                          );
+                                          return;
+                                        }
+
+                                        final userDoc =
+                                            await FirebaseFirestore.instance
+                                                .collection('usuarios_activos')
+                                                .doc(currentUser.uid)
+                                                .get();
+
+                                        final nombreUsuario =
+                                            userDoc.data()?['nombre'] ??
+                                            currentUser.email ??
+                                            '---';
+
+                                        final docsToDelete = snapshot.data!.docs
+                                            .where(
+                                              (doc) =>
+                                                  doc['referencia']
+                                                      .toString() ==
+                                                  data['referencia'],
+                                            );
+
+                                        for (var doc in docsToDelete) {
+                                          await doc.reference.delete();
+                                        }
+
+                                        await FirebaseFirestore.instance
+                                            .collection('auditoria_general')
+                                            .add({
+                                              'accion':
+                                                  'Eliminación de Inventario General',
+                                              'detalle':
+                                                  'Producto: ${data['nombre']}, Cantidad eliminada: ${data['cantidad']}',
+                                              'fecha': DateTime.now(),
+                                              'usuario_uid': currentUser.uid,
+                                              'usuario_nombre': nombreUsuario,
+                                            });
+
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
                                           const SnackBar(
                                             content: Text(
-                                              'Usuario no autenticado',
+                                              'Registros eliminados correctamente.',
                                             ),
                                           ),
                                         );
-                                        return;
                                       }
-
-                                      final userDoc =
-                                          await FirebaseFirestore.instance
-                                              .collection('usuarios_activos')
-                                              .doc(currentUser.uid)
-                                              .get();
-
-                                      final nombreUsuario =
-                                          userDoc.data()?['nombre'] ??
-                                          currentUser.email ??
-                                          '---';
-
-                                      final docsToDelete = snapshot.data!.docs
-                                          .where(
-                                            (doc) =>
-                                                doc['referencia'].toString() ==
-                                                data['referencia'],
-                                          );
-
-                                      for (var doc in docsToDelete) {
-                                        await doc.reference.delete();
-                                      }
-
-                                      await FirebaseFirestore.instance
-                                          .collection('auditoria_general')
-                                          .add({
-                                            'accion':
-                                                'Eliminación de Inventario General',
-                                            'detalle':
-                                                'Producto: ${data['nombre']}, Cantidad eliminada: ${data['cantidad']}',
-                                            'fecha': DateTime.now(),
-                                            'usuario_uid': currentUser.uid,
-                                            'usuario_nombre': nombreUsuario,
-                                          });
-
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Registros eliminados correctamente.',
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  },
+                                    },
+                                  ),
                                 ),
                               ),
                             ],
                           );
                         }).toList(),
                   ),
-                ),
-              ),
+                );
+              },
             );
           },
         );
