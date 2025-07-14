@@ -114,20 +114,19 @@ class _InventarioFundicionScreenState extends State<InventarioFundicionScreen>
         }
 
         final allDocs = snapshot.data!.docs;
-
         final Map<String, Map<String, dynamic>> grouped = {};
 
         for (var doc in allDocs) {
           final data = doc.data() as Map<String, dynamic>;
           final nombre = (data['nombre'] ?? '').toString();
-          final codigo = (data['codigo'] ?? '').toString();
+          final referencia = (data['referencia'] ?? '').toString();
           final cantidad =
               int.tryParse(data['cantidad']?.toString() ?? '0') ?? 0;
 
           if (!grouped.containsKey(nombre)) {
             grouped[nombre] = {
               'nombre': nombre,
-              'codigo': codigo,
+              'referencia': referencia,
               'cantidad': cantidad,
             };
           } else {
@@ -138,172 +137,211 @@ class _InventarioFundicionScreenState extends State<InventarioFundicionScreen>
         final filtered =
             grouped.values.where((data) {
               final nombre = data['nombre'].toString().toLowerCase();
-              final codigo = data['codigo'].toString().toLowerCase();
+              final referencia = data['referencia'].toString().toLowerCase();
               return searchQuery.isEmpty ||
                   nombre.contains(searchQuery) ||
-                  codigo.contains(searchQuery);
+                  referencia.contains(searchQuery);
             }).toList();
 
         if (filtered.isEmpty) {
           return const Center(child: Text('No hay registros para mostrar.'));
         }
 
-        return SingleChildScrollView(
-          scrollDirection: Axis.vertical,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minWidth: MediaQuery.of(context).size.width,
-              ),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final totalWidth = constraints.maxWidth;
+            final double anchoNombre = totalWidth * 0.3;
+            final double anchoreferencia = totalWidth * 0.30;
+            final double anchoCantidad = totalWidth * 0.2;
+            final double anchoAcciones = totalWidth * 0.10;
+
+            return SingleChildScrollView(
+              scrollDirection: Axis.vertical,
               child: DataTable(
-                columnSpacing: 16,
+                columnSpacing: 0,
                 headingRowColor: MaterialStateProperty.all(
                   const Color(0xFF4682B4),
                 ),
                 headingTextStyle: const TextStyle(color: Colors.white),
                 columns: const [
                   DataColumn(label: Text('Nombre')),
-                  DataColumn(label: Text('Código')),
+                  DataColumn(label: Text('Referencia')),
                   DataColumn(label: Text('Cantidad')),
-                  DataColumn(label: Text('Acciones')),
+                  DataColumn(label: Text('Acción')),
                 ],
                 rows:
                     filtered.map((data) {
                       return DataRow(
                         cells: [
                           DataCell(
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (_) => TablaInvFundicionScreen(
-                                          codigo: data['codigo'],
-                                          nombre: data['nombre'],
-                                        ),
+                            SizedBox(
+                              width: anchoNombre,
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) => TablaInvFundicionScreen(
+                                              referencia: data['referencia'],
+                                              nombre: data['nombre'],
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Text(
+                                      data['nombre'],
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Color(0xFF4682B4),
+                                      ),
+                                    ),
                                   ),
-                                );
-                              },
-                              child: Text(
-                                data['nombre'],
-                                style: const TextStyle(
-                                  color: Color(0xFF4682B4),
                                 ),
                               ),
                             ),
                           ),
-                          DataCell(Text(data['codigo'])),
-                          DataCell(Text(data['cantidad'].toString())),
                           DataCell(
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete_outline,
-                                color: Colors.redAccent,
+                            SizedBox(
+                              width: anchoreferencia,
+                              child: Align(
+                                alignment: const Alignment(-0.6, 0.0),
+                                child: Text(
+                                  data['referencia'],
+                                  style: const TextStyle(fontSize: 10),
+                                ),
                               ),
-                              tooltip: 'Eliminar',
-                              onPressed: () async {
-                                final confirmar =
-                                    await showDialog<bool>(
-                                      context: context,
-                                      builder:
-                                          (_) => AlertDialog(
-                                            title: const Text(
-                                              'Confirmar eliminación',
-                                            ),
-                                            content: Text(
-                                              '¿Eliminar todos los registros de "${data['nombre']}" en Fundición?',
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed:
-                                                    () => Navigator.pop(
-                                                      context,
-                                                      false,
-                                                    ),
-                                                child: const Text('Cancelar'),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: anchoCantidad,
+                              child: Text(
+                                data['cantidad'].toString(),
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: anchoAcciones,
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.redAccent,
+                                ),
+                                tooltip: 'Eliminar',
+                                onPressed: () async {
+                                  final confirmar =
+                                      await showDialog<bool>(
+                                        context: context,
+                                        builder:
+                                            (_) => AlertDialog(
+                                              title: const Text(
+                                                'Confirmar eliminación',
                                               ),
-                                              ElevatedButton(
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.red,
+                                              content: Text(
+                                                '¿Eliminar todos los registros de "${data['nombre']}" en Fundición?',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed:
+                                                      () => Navigator.pop(
+                                                        context,
+                                                        false,
+                                                      ),
+                                                  child: const Text('Cancelar'),
                                                 ),
-                                                onPressed:
-                                                    () => Navigator.pop(
-                                                      context,
-                                                      true,
-                                                    ),
-                                                child: const Text('Eliminar'),
-                                              ),
-                                            ],
-                                          ),
-                                    ) ??
-                                    false;
+                                                ElevatedButton(
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                        backgroundColor:
+                                                            Colors.red,
+                                                      ),
+                                                  onPressed:
+                                                      () => Navigator.pop(
+                                                        context,
+                                                        true,
+                                                      ),
+                                                  child: const Text('Eliminar'),
+                                                ),
+                                              ],
+                                            ),
+                                      ) ??
+                                      false;
 
-                                if (confirmar) {
-                                  final currentUser =
-                                      FirebaseAuth.instance.currentUser;
-                                  if (currentUser == null) {
+                                  if (confirmar) {
+                                    final currentUser =
+                                        FirebaseAuth.instance.currentUser;
+                                    if (currentUser == null) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Usuario no autenticado',
+                                          ),
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    final userDoc =
+                                        await FirebaseFirestore.instance
+                                            .collection('usuarios_activos')
+                                            .doc(currentUser.uid)
+                                            .get();
+
+                                    final nombreUsuario =
+                                        userDoc.data()?['nombre'] ??
+                                        currentUser.email ??
+                                        '---';
+
+                                    final docsToDelete = snapshot.data!.docs
+                                        .where(
+                                          (doc) =>
+                                              doc['nombre'].toString() ==
+                                              data['nombre'],
+                                        );
+
+                                    for (var doc in docsToDelete) {
+                                      await doc.reference.delete();
+                                    }
+
+                                    await FirebaseFirestore.instance
+                                        .collection('auditoria_general')
+                                        .add({
+                                          'accion':
+                                              'Eliminación de Inventario Fundición',
+                                          'detalle':
+                                              'Producto: ${data['nombre']}, Cantidad eliminada: ${data['cantidad']}',
+                                          'fecha': DateTime.now(),
+                                          'usuario_uid': currentUser.uid,
+                                          'usuario_nombre': nombreUsuario,
+                                        });
+
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Usuario no autenticado'),
+                                        content: Text(
+                                          'Registros eliminados correctamente',
+                                        ),
                                       ),
                                     );
-                                    return;
                                   }
-
-                                  final userDoc =
-                                      await FirebaseFirestore.instance
-                                          .collection('usuarios_activos')
-                                          .doc(currentUser.uid)
-                                          .get();
-
-                                  final nombreUsuario =
-                                      userDoc.data()?['nombre'] ??
-                                      currentUser.email ??
-                                      '---';
-
-                                  final docsToDelete = snapshot.data!.docs
-                                      .where(
-                                        (doc) =>
-                                            doc['nombre'].toString() ==
-                                            data['nombre'],
-                                      );
-
-                                  for (var doc in docsToDelete) {
-                                    await doc.reference.delete();
-                                  }
-
-                                  await FirebaseFirestore.instance
-                                      .collection('auditoria_general')
-                                      .add({
-                                        'accion':
-                                            'Eliminación de Inventario Fundición',
-                                        'detalle':
-                                            'Producto: ${data['nombre']}, '
-                                            'Cantidad eliminada: ${data['cantidad']}',
-                                        'fecha': DateTime.now(),
-                                        'usuario_uid': currentUser.uid,
-                                        'usuario_nombre': nombreUsuario,
-                                      });
-
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Registros eliminados correctamente',
-                                      ),
-                                    ),
-                                  );
-                                }
-                              },
+                                },
+                              ),
                             ),
                           ),
                         ],
                       );
                     }).toList(),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );

@@ -16,35 +16,50 @@ class _AuditoriaScreenState extends State<AuditoriaScreen> {
   String _filtro = '';
   DateTime? _fechaSeleccionada;
 
+  // Función para dividir la lista en chunks de tamaño dado
+  List<List<T>> chunkList<T>(List<T> list, int chunkSize) {
+    List<List<T>> chunks = [];
+    for (var i = 0; i < list.length; i += chunkSize) {
+      int end = (i + chunkSize < list.length) ? i + chunkSize : list.length;
+      chunks.add(list.sublist(i, end));
+    }
+    return chunks;
+  }
+
   Future<void> _exportarPdf(List<QueryDocumentSnapshot> registros) async {
     final pdf = pw.Document();
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
-    final dataRows =
-        registros.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          final fecha =
-              (data['fecha'] as Timestamp?)?.toDate() ?? DateTime.now();
-          final usuario = data['usuario_nombre'] ?? '---';
-          final accion = data['accion'] ?? '---';
-          final detalle = data['detalle'] ?? '';
+    // Dividir en chunks de 50 filas por página
+    final chunks = chunkList(registros, 50);
 
-          return [
-            dateFormat.format(fecha),
-            usuario.toString(),
-            accion.toString(),
-            detalle.toString(),
-          ];
-        }).toList();
+    for (var i = 0; i < chunks.length; i++) {
+      final dataRows =
+          chunks[i].map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final fecha =
+                (data['fecha'] as Timestamp?)?.toDate() ?? DateTime.now();
+            final usuario = data['usuario_nombre'] ?? '---';
+            final accion = data['accion'] ?? '---';
+            final detalle = data['detalle'] ?? '';
 
-    pdf.addPage(
-      buildReportePDF(
-        titulo: 'Reporte de Auditoría',
-        headers: ['Fecha', 'Usuario', 'Acción', 'Detalle'],
-        dataRows: dataRows,
-        footerText: 'Total registros: ${dataRows.length}',
-      ),
-    );
+            return [
+              dateFormat.format(fecha),
+              usuario.toString(),
+              accion.toString(),
+              detalle.toString(),
+            ];
+          }).toList();
+
+      pdf.addPage(
+        buildReportePDF(
+          titulo: 'Reporte de Auditoría - Página ${i + 1} de ${chunks.length}',
+          headers: ['Fecha', 'Usuario', 'Acción', 'Detalle'],
+          dataRows: dataRows,
+          footerText: 'Registros en esta página: ${dataRows.length}',
+        ),
+      );
+    }
 
     await Printing.layoutPdf(onLayout: (format) => pdf.save());
   }
@@ -145,12 +160,15 @@ class _AuditoriaScreenState extends State<AuditoriaScreen> {
                     icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
                     tooltip: 'Exportar PDF',
                     onPressed: () async {
+                      // Obtener todos los documentos
                       final snapshot =
                           await FirebaseFirestore.instance
                               .collection('auditoria_general')
                               .orderBy('fecha', descending: true)
                               .get();
-                      final registros =
+
+                      // Filtrar usando texto y fecha
+                      final registrosFiltrados =
                           snapshot.docs.where((doc) {
                             final data = doc.data();
                             final usuario =
@@ -179,8 +197,8 @@ class _AuditoriaScreenState extends State<AuditoriaScreen> {
                                 cumpleFecha;
                           }).toList();
 
-                      if (registros.isNotEmpty) {
-                        await _exportarPdf(registros);
+                      if (registrosFiltrados.isNotEmpty) {
+                        await _exportarPdf(registrosFiltrados);
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -194,7 +212,7 @@ class _AuditoriaScreenState extends State<AuditoriaScreen> {
               ),
             ),
 
-            // Barra de búsqueda y filtro por fecha única
+            // Barra de búsqueda y filtro por fecha
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -222,18 +240,15 @@ class _AuditoriaScreenState extends State<AuditoriaScreen> {
                       Expanded(
                         child: TextButton.icon(
                           style: TextButton.styleFrom(
-                            backgroundColor: Colors.white, // Fondo blanco
+                            backgroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
-                              side: BorderSide.none, // Sin borde
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 8),
                           ),
-                          icon: Icon(
+                          icon: const Icon(
                             Icons.event,
-                            color: const Color(
-                              0xFF2C3E50,
-                            ), // Ícono color personalizado
+                            color: Color(0xFF2C3E50),
                           ),
                           label: Text(
                             _fechaSeleccionada == null
@@ -242,9 +257,7 @@ class _AuditoriaScreenState extends State<AuditoriaScreen> {
                                   'dd/MM/yyyy',
                                 ).format(_fechaSeleccionada!),
                             style: const TextStyle(
-                              color: Color(
-                                0xFF2C3E50,
-                              ), // Texto color personalizado
+                              color: Color(0xFF2C3E50),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -278,7 +291,7 @@ class _AuditoriaScreenState extends State<AuditoriaScreen> {
               ),
             ),
 
-            // Lista de registros filtrados
+            // Tabla con scroll horizontal y vertical
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream:
@@ -291,7 +304,7 @@ class _AuditoriaScreenState extends State<AuditoriaScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  final registros =
+                  final registrosFiltrados =
                       snapshot.data!.docs.where((doc) {
                         final data = doc.data() as Map<String, dynamic>;
                         final usuario =
@@ -317,37 +330,129 @@ class _AuditoriaScreenState extends State<AuditoriaScreen> {
                             cumpleFecha;
                       }).toList();
 
-                  if (registros.isEmpty) {
+                  if (registrosFiltrados.isEmpty) {
                     return const Center(child: Text('No hay registros aún.'));
                   }
 
-                  return ListView.builder(
-                    itemCount: registros.length,
-                    itemBuilder: (context, index) {
-                      final data =
-                          registros[index].data() as Map<String, dynamic>;
-                      final fecha =
-                          (data['fecha'] as Timestamp?)?.toDate() ??
-                          DateTime.now();
-                      final usuario = data['usuario_nombre'] ?? '---';
-                      final accion = data['accion'] ?? '---';
-                      final detalle = data['detalle'] ?? '';
-
-                      return Card(
-                        color: Colors.white,
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        headingRowColor: MaterialStateProperty.all(
+                          const Color(0xFF4682B4),
                         ),
-                        child: ListTile(
-                          leading: const Icon(Icons.history),
-                          title: Text('$usuario - $accion'),
-                          subtitle: Text(
-                            '${DateFormat('dd/MM/yyyy HH:mm').format(fecha)}\n$detalle',
+                        headingTextStyle: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        columnSpacing: 2,
+                        columns: [
+                          DataColumn(
+                            label: SizedBox(
+                              width: 80,
+                              child: const Text(
+                                'Fecha',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                          DataColumn(
+                            label: SizedBox(
+                              width: 140,
+                              child: const Text(
+                                'Acción',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: SizedBox(
+                              width: 70,
+                              child: const Text(
+                                'Usuario',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: SizedBox(
+                              width: 300,
+                              child: const Text(
+                                'Detalle',
+                                textAlign: TextAlign.left,
+                              ),
+                            ),
+                          ),
+                        ],
+                        rows:
+                            registrosFiltrados.map((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              final fecha =
+                                  (data['fecha'] as Timestamp?)?.toDate() ??
+                                  DateTime.now();
+                              final fechaStr = DateFormat(
+                                'dd/MM/yy HH:mm',
+                              ).format(fecha);
+                              final accion = data['accion'] ?? '---';
+                              final usuario = data['usuario_nombre'] ?? '---';
+                              final detalle = data['detalle'] ?? '';
+
+                              return DataRow(
+                                cells: [
+                                  DataCell(
+                                    SizedBox(
+                                      width: 80,
+                                      child: Text(
+                                        fechaStr,
+                                        style: const TextStyle(fontSize: 10),
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    SizedBox(
+                                      width: 140,
+                                      child: SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        child: Text(
+                                          accion,
+                                          style: const TextStyle(fontSize: 10),
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    SizedBox(
+                                      width: 90,
+                                      child: SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        child: Text(
+                                          usuario,
+                                          style: const TextStyle(fontSize: 10),
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  DataCell(
+                                    SizedBox(
+                                      width: 300,
+                                      child: Text(
+                                        detalle,
+                                        style: const TextStyle(fontSize: 10),
+                                        softWrap: true,
+                                        maxLines: 8,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
+                      ),
+                    ),
                   );
                 },
               ),

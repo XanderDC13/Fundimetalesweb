@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class TablaInvPinturaScreen extends StatefulWidget {
-  final String codigo;
+  final String referencia;
   final String nombre;
 
   const TablaInvPinturaScreen({
     super.key,
-    required this.codigo,
+    required this.referencia,
     required this.nombre,
   });
 
@@ -69,7 +69,7 @@ class _TablaInvPinturaScreenState extends State<TablaInvPinturaScreen> {
           const SizedBox(height: 8),
           _buildFiltroFecha(context),
           const SizedBox(height: 12),
-          Expanded(child: _buildTabla(widget.codigo)),
+          Expanded(child: _buildTabla(widget.referencia)),
         ],
       ),
     );
@@ -115,10 +115,10 @@ class _TablaInvPinturaScreenState extends State<TablaInvPinturaScreen> {
     );
   }
 
-  Widget _buildTabla(String codigo) {
+  Widget _buildTabla(String referencia) {
     Query query = FirebaseFirestore.instance
         .collection('inventario_pintura')
-        .where('codigo', isEqualTo: codigo);
+        .where('referencia', isEqualTo: referencia);
 
     if (_fechaSeleccionada != null) {
       final inicioDelDia = DateTime(
@@ -141,53 +141,118 @@ class _TablaInvPinturaScreenState extends State<TablaInvPinturaScreen> {
     return StreamBuilder<QuerySnapshot>(
       stream: query.orderBy('fecha', descending: true).snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
         if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
 
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final docs = snapshot.data!.docs;
+        final docs = snapshot.data?.docs ?? [];
 
         if (docs.isEmpty) {
           return const Center(child: Text('No hay registros para esta fecha.'));
         }
 
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            headingRowColor: MaterialStateProperty.all(const Color(0xFF4682B4)),
-            headingTextStyle: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-            columns: const [
-              DataColumn(label: Text('Fecha')),
-              DataColumn(label: Text('Producto')),
-              DataColumn(label: Text('Cantidad')),
-            ],
-            rows:
-                docs.map((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final nombre = data['nombre'] ?? 'Sin nombre';
-                  final cantidad = data['cantidad'] ?? 0;
-                  final fecha = (data['fecha'] as Timestamp?)?.toDate();
-                  final fechaStr =
-                      fecha != null
-                          ? DateFormat('dd/MM/yyyy HH:mm').format(fecha)
-                          : 'Sin fecha';
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final double totalWidth = constraints.maxWidth;
+            final double anchoFecha = totalWidth * 0.50;
+            final double anchoCantidad = totalWidth * 0.50;
 
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(fechaStr)),
-                      DataCell(Text(nombre)),
-                      DataCell(Text(cantidad.toString())),
-                    ],
-                  );
-                }).toList(),
-          ),
+            return SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: DataTable(
+                headingRowColor: MaterialStateProperty.all(
+                  const Color(0xFF4682B4),
+                ),
+                headingTextStyle: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                columnSpacing: 0,
+                columns: [
+                  DataColumn(
+                    label: SizedBox(
+                      width: 150,
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Fecha',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  DataColumn(
+                    label: SizedBox(
+                      width: 150,
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Cantidad',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                rows:
+                    docs.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>?;
+                      final cantidad = data?['cantidad'] ?? 0;
+                      final fecha = (data?['fecha'] as Timestamp?)?.toDate();
+                      final fechaStr =
+                          fecha != null
+                              ? DateFormat('dd/MM/yyyy HH:mm').format(fecha)
+                              : 'Sin fecha';
+
+                      return DataRow(
+                        cells: [
+                          DataCell(
+                            SizedBox(
+                              width: anchoFecha,
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 20),
+                                  child: Text(
+                                    fechaStr,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: anchoCantidad,
+                              child: Align(
+                                alignment: Alignment.centerRight,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 140),
+                                  child: Text(
+                                    cantidad.toString(),
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+              ),
+            );
+          },
         );
       },
     );

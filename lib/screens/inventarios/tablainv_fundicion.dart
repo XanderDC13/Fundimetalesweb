@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class TablaInvFundicionScreen extends StatefulWidget {
-  final String codigo;
+  final String referencia;
   final String nombre;
 
   const TablaInvFundicionScreen({
     super.key,
-    required this.codigo,
+    required this.referencia,
     required this.nombre,
   });
 
@@ -70,7 +70,7 @@ class _TablaInvFundicionScreenState extends State<TablaInvFundicionScreen> {
           const SizedBox(height: 8),
           _buildFiltroFecha(context),
           const SizedBox(height: 12),
-          Expanded(child: _buildTabla(widget.codigo)),
+          Expanded(child: _buildTabla(widget.referencia)),
         ],
       ),
     );
@@ -108,7 +108,7 @@ class _TablaInvFundicionScreenState extends State<TablaInvFundicionScreen> {
               },
               child: const Text(
                 'Limpiar filtro de fecha',
-                style: TextStyle(color: Color(0xFF2C3E50)),
+                style: TextStyle(color: Color(0xFF4682B4)),
               ),
             ),
         ],
@@ -116,10 +116,10 @@ class _TablaInvFundicionScreenState extends State<TablaInvFundicionScreen> {
     );
   }
 
-  Widget _buildTabla(String codigo) {
+  Widget _buildTabla(String referencia) {
     Query query = FirebaseFirestore.instance
         .collection('inventario_fundicion')
-        .where('codigo', isEqualTo: codigo);
+        .where('referencia', isEqualTo: referencia);
 
     if (_fechaSeleccionada != null) {
       final inicioDelDia = DateTime(
@@ -142,53 +142,123 @@ class _TablaInvFundicionScreenState extends State<TablaInvFundicionScreen> {
     return StreamBuilder<QuerySnapshot>(
       stream: query.orderBy('fecha', descending: true).snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
         if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
 
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final docs = snapshot.data!.docs;
+        final docs = snapshot.data?.docs ?? [];
 
         if (docs.isEmpty) {
           return const Center(child: Text('No hay registros para esta fecha.'));
         }
 
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            headingRowColor: MaterialStateProperty.all(const Color(0xFF4682B4)),
-            headingTextStyle: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-            columns: const [
-              DataColumn(label: Text('Fecha')),
-              DataColumn(label: Text('Producto')),
-              DataColumn(label: Text('Cantidad')),
-            ],
-            rows:
-                docs.map((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final nombre = data['nombre'] ?? 'Sin nombre';
-                  final cantidad = data['cantidad'] ?? 0;
-                  final fecha = (data['fecha'] as Timestamp?)?.toDate();
-                  final fechaStr =
-                      fecha != null
-                          ? DateFormat('dd/MM/yyyy HH:mm').format(fecha)
-                          : 'Sin fecha';
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final totalWidth = constraints.maxWidth;
+            final anchoFecha = 150.0;
+            final anchoProducto = totalWidth - anchoFecha - 150; // ajuste
+            final anchoCantidad = 150.0;
 
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(fechaStr)),
-                      DataCell(Text(nombre)),
-                      DataCell(Text(cantidad.toString())),
-                    ],
-                  );
-                }).toList(),
-          ),
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowColor: MaterialStateProperty.all(
+                  const Color(0xFF4682B4),
+                ),
+                headingTextStyle: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                columnSpacing: 0,
+                columns: [
+                  DataColumn(
+                    label: SizedBox(
+                      width: anchoFecha,
+                      child: Center(child: Text('Fecha')),
+                    ),
+                  ),
+                  DataColumn(
+                    label: SizedBox(
+                      width: anchoProducto,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 20),
+                        child: Text(
+                          'Producto',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ),
+                  DataColumn(
+                    label: SizedBox(
+                      width: anchoCantidad,
+                      child: Center(child: Text('Cantidad')),
+                    ),
+                  ),
+                ],
+                rows:
+                    docs.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final nombre = data['nombre'] ?? 'Sin nombre';
+                      final cantidad = data['cantidad'] ?? 0;
+                      final fecha = (data['fecha'] as Timestamp?)?.toDate();
+                      final fechaStr =
+                          fecha != null
+                              ? DateFormat('dd/MM/yyyy HH:mm').format(fecha)
+                              : 'Sin fecha';
+
+                      return DataRow(
+                        cells: [
+                          DataCell(
+                            SizedBox(
+                              width: anchoFecha,
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 20),
+                                child: Text(
+                                  fechaStr,
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: anchoProducto,
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 20),
+                                child: Text(
+                                  nombre,
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: anchoCantidad,
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 20),
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Text(
+                                    cantidad.toString(),
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+              ),
+            );
+          },
         );
       },
     );

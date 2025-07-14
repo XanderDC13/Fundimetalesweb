@@ -220,25 +220,32 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
                               DataCell(
                                 SizedBox(
                                   width: anchoNombre,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder:
-                                              (_) => TablainvScreen(
-                                                codigo: data['referencia'],
-                                                nombre: data['nombre'],
-                                              ),
-                                        ),
-                                      );
-                                    },
-                                    child: SingleChildScrollView(
-                                      scrollDirection: Axis.horizontal,
-                                      child: Text(
-                                        data['nombre'],
-                                        style: const TextStyle(
-                                          color: Color(0xFF4682B4),
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(
+                                      right: 8.0,
+                                    ), // Separación hacia la derecha
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (_) => TablainvScreen(
+                                                  referencia:
+                                                      data['referencia'],
+                                                  nombre: data['nombre'],
+                                                ),
+                                          ),
+                                        );
+                                      },
+                                      child: SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        child: Text(
+                                          data['nombre'],
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: Color(0xFF4682B4),
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -248,13 +255,26 @@ class _InventarioGeneralScreenState extends State<InventarioGeneralScreen>
                               DataCell(
                                 SizedBox(
                                   width: anchoReferencia,
-                                  child: Text(data['referencia']),
+                                  child: Align(
+                                    alignment: Alignment(
+                                      -0.6,
+                                      0.0,
+                                    ), // de -1.0 (izq) a 1.0 (der)
+                                    child: Text(
+                                      data['referencia'],
+                                      style: const TextStyle(fontSize: 10),
+                                    ),
+                                  ),
                                 ),
                               ),
+
                               DataCell(
                                 SizedBox(
                                   width: anchoCantidad,
-                                  child: Text(data['cantidad'].toString()),
+                                  child: Text(
+                                    data['cantidad'].toString(),
+                                    style: const TextStyle(fontSize: 10),
+                                  ),
                                 ),
                               ),
                               DataCell(
