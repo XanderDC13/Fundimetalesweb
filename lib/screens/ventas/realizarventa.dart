@@ -2,6 +2,7 @@ import 'package:basefundi/screens/ventas/carrito.dart';
 import 'package:basefundi/screens/ventas/carrito_controller.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
@@ -14,6 +15,8 @@ class VentasDetalleScreen extends StatefulWidget {
 
 class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
   String searchQuery = '';
+  final TextEditingController _precioPersonalizadoController =
+      TextEditingController();
 
   void _startScanner() async {
     final result = await Navigator.of(context).push<String>(
@@ -95,41 +98,134 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
   ) async {
     final List<dynamic> precios = data['precios'] ?? [];
 
-    if (precios.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No hay precios configurados')),
-      );
-      return;
-    }
-
     final precioSeleccionado = await showModalBottomSheet<double>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Selecciona un precio',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFD6EAF8), Color(0xFFEBF5FB)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              const SizedBox(height: 10),
-              ...precios.asMap().entries.map((entry) {
-                final index = entry.key + 1;
-                final precio = (entry.value as num).toDouble();
-                return ListTile(
-                  leading: const Icon(Icons.attach_money),
-                  title: Text('PVP$index: \$ ${precio.toStringAsFixed(2)}'),
-                  onTap: () {
-                    Navigator.pop(context, precio);
-                  },
-                );
-              }).toList(),
-            ],
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 12,
+                  offset: Offset(0, -4),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Selecciona un precio',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                    letterSpacing: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Lista de precios configurados
+                if (precios.isNotEmpty) ...[
+                  ...precios.asMap().entries.map((entry) {
+                    final index = entry.key + 1;
+                    final precio = (entry.value as num).toDouble();
+                    return Card(
+                      color: Colors.white,
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                      child: ListTile(
+                        leading: const Icon(
+                          Icons.attach_money,
+                          color: Color(0xFF4682B4),
+                        ),
+                        title: Text(
+                          'PVP$index: \$${precio.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            color: Color(0xFF2C3E50),
+                          ),
+                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.pop(context, precio);
+                        },
+                      ),
+                    );
+                  }).toList(),
+                  const SizedBox(height: 10),
+                ],
+
+                // Botón de precio personalizado
+                Card(
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                  child: ListTile(
+                    leading: const Icon(Icons.edit, color: Color(0xFF4682B4)),
+                    title: const Text(
+                      'Precio personalizado',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        color: Color(0xFF2C3E50),
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Ingresa un precio diferente',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF7F8C8D)),
+                    ),
+                    onTap: () async {
+                      final personalizado =
+                          await _mostrarDialogPrecioPersonalizado(context);
+                      if (personalizado != null) {
+                        Navigator.pop(context, personalizado);
+                      }
+                    },
+                  ),
+                ),
+
+                if (precios.isEmpty) ...[
+                  const SizedBox(height: 20),
+                  const Text(
+                    'No hay precios configurados',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ],
+            ),
           ),
         );
       },
@@ -365,5 +461,117 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
         ),
       ),
     );
+  }
+
+  Future<double?> _mostrarDialogPrecioPersonalizado(
+    BuildContext context,
+  ) async {
+    final TextEditingController controller = TextEditingController();
+
+    return showDialog<double>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFD6EAF8), Color(0xFFEBF5FB)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.all(Radius.circular(20)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Precio personalizado',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: controller,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'Ingresa el precio',
+                    prefixIcon: const Icon(
+                      Icons.attach_money,
+                      color: Color(0xFF4682B4),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4682B4),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {
+                      final text = controller.text.trim();
+                      final valor = double.tryParse(text);
+
+                      if (valor != null && valor > 0) {
+                        Navigator.pop(context, valor);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Ingresa un precio válido'),
+                          ),
+                        );
+                      }
+                    },
+                    child: const Text(
+                      'Guardar',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _precioPersonalizadoController.dispose();
+    super.dispose();
   }
 }

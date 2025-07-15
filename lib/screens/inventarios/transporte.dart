@@ -11,9 +11,12 @@ class ReporteTransporteFScreen extends StatefulWidget {
 }
 
 class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
-  TimeOfDay? horaLlegada;
-  TimeOfDay? horaSalida;
-  Duration? diferencia;
+  TimeOfDay? salidaSede;
+  TimeOfDay? llegadaFabrica;
+  TimeOfDay? salidaFabrica;
+  TimeOfDay? llegadaSede;
+  Duration? tiempoSedeAFabrica;
+  Duration? tiempoFabricaASede;
 
   String formatHora(TimeOfDay? hora) {
     if (hora == null) return '--:--';
@@ -22,64 +25,101 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
     return DateFormat('hh:mm a').format(dt);
   }
 
-  void calcularDiferencia() {
-    if (horaLlegada != null && horaSalida != null) {
-      final ahora = DateTime.now();
-      final llegada = DateTime(
+  void calcularDiferencias() {
+    final ahora = DateTime.now();
+    if (salidaSede != null && llegadaFabrica != null) {
+      final salida = DateTime(
         ahora.year,
         ahora.month,
         ahora.day,
-        horaLlegada!.hour,
-        horaLlegada!.minute,
+        salidaSede!.hour,
+        salidaSede!.minute,
       );
-      DateTime salida = DateTime(
+      DateTime llegada = DateTime(
         ahora.year,
         ahora.month,
         ahora.day,
-        horaSalida!.hour,
-        horaSalida!.minute,
+        llegadaFabrica!.hour,
+        llegadaFabrica!.minute,
       );
-
-      // Si la salida es antes que llegada, asumimos que es al día siguiente
-      if (salida.isBefore(llegada)) {
-        salida = salida.add(const Duration(days: 1));
+      if (llegada.isBefore(salida)) {
+        llegada = llegada.add(const Duration(days: 1));
       }
-
-      final duracion = salida.difference(llegada);
-
+      final diff = llegada.difference(salida);
       setState(() {
-        diferencia = duracion.isNegative ? duracion.abs() : duracion;
+        tiempoSedeAFabrica = diff;
+      });
+    }
+    if (salidaFabrica != null && llegadaSede != null) {
+      final salida = DateTime(
+        ahora.year,
+        ahora.month,
+        ahora.day,
+        salidaFabrica!.hour,
+        salidaFabrica!.minute,
+      );
+      DateTime llegada = DateTime(
+        ahora.year,
+        ahora.month,
+        ahora.day,
+        llegadaSede!.hour,
+        llegadaSede!.minute,
+      );
+      if (llegada.isBefore(salida)) {
+        llegada = llegada.add(const Duration(days: 1));
+      }
+      final diff = llegada.difference(salida);
+      setState(() {
+        tiempoFabricaASede = diff;
       });
     }
   }
 
-  Future<void> seleccionarHora(bool esLlegada) async {
+  Future<void> seleccionarHoraTramo(String tramo) async {
     final TimeOfDay? seleccionada = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
-      helpText:
-          esLlegada
-              ? 'Seleccionar hora de llegada'
-              : 'Seleccionar hora de salida',
+      helpText: 'Seleccionar hora',
     );
 
     if (seleccionada != null) {
       setState(() {
-        if (esLlegada) {
-          horaLlegada = seleccionada;
-        } else {
-          horaSalida = seleccionada;
+        switch (tramo) {
+          case 'salidaSede':
+            salidaSede = seleccionada;
+            break;
+          case 'llegadaFabrica':
+            llegadaFabrica = seleccionada;
+            break;
+          case 'salidaFabrica':
+            salidaFabrica = seleccionada;
+            break;
+          case 'llegadaSede':
+            llegadaSede = seleccionada;
+            break;
         }
-        calcularDiferencia();
+        calcularDiferencias();
       });
     }
   }
 
+  ButtonStyle buttonStyle() {
+    return ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFF4682B4),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final tiempoDemora =
-        (diferencia != null)
-            ? '${diferencia!.inHours}h ${diferencia!.inMinutes.remainder(60)}min'
+    final tiempoIda =
+        tiempoSedeAFabrica != null
+            ? '${tiempoSedeAFabrica!.inHours}h ${tiempoSedeAFabrica!.inMinutes.remainder(60)}m'
+            : '--';
+    final tiempoRegreso =
+        tiempoFabricaASede != null
+            ? '${tiempoFabricaASede!.inHours}h ${tiempoFabricaASede!.inMinutes.remainder(60)}m'
             : '--';
 
     return Scaffold(
@@ -102,7 +142,7 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
               padding: const EdgeInsets.symmetric(vertical: 25),
               alignment: Alignment.center,
               child: const Text(
-                'Transporte',
+                'Reporte Transporte',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -124,62 +164,33 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
                         child: Column(
                           children: [
                             const SizedBox(height: 20),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                icon: const Icon(
-                                  Icons.exit_to_app,
-                                  size: 28,
-                                  color: Colors.white,
-                                ),
-                                label: Text(
-                                  "Hora de salida: ${formatHora(horaSalida)}",
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF4682B4),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 18,
-                                    horizontal: 20,
-                                  ),
-                                ),
-                                onPressed: () => seleccionarHora(false),
-                              ),
+                            // Botones uniformes
+                            _buildBoton(
+                              icon: Icons.exit_to_app,
+                              texto: "Salida Sede: ${formatHora(salidaSede)}",
+                              onTap: () => seleccionarHoraTramo('salidaSede'),
                             ),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                icon: const Icon(
-                                  Icons.login,
-                                  size: 28,
-                                  color: Colors.white,
-                                ),
-                                label: Text(
-                                  "Hora de llegada: ${formatHora(horaLlegada)}",
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF4682B4),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 18,
-                                    horizontal: 20,
-                                  ),
-                                ),
-                                onPressed: () => seleccionarHora(true),
-                              ),
+                            const SizedBox(height: 16),
+                            _buildBoton(
+                              icon: Icons.factory,
+                              texto:
+                                  "Llegada Fábrica: ${formatHora(llegadaFabrica)}",
+                              onTap:
+                                  () => seleccionarHoraTramo('llegadaFabrica'),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildBoton(
+                              icon: Icons.exit_to_app,
+                              texto:
+                                  "Salida Fábrica: ${formatHora(salidaFabrica)}",
+                              onTap:
+                                  () => seleccionarHoraTramo('salidaFabrica'),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildBoton(
+                              icon: Icons.home,
+                              texto: "Llegada Sede: ${formatHora(llegadaSede)}",
+                              onTap: () => seleccionarHoraTramo('llegadaSede'),
                             ),
                             const SizedBox(height: 30),
                             Card(
@@ -196,17 +207,34 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
                                 child: Column(
                                   children: [
                                     const Text(
-                                      "Tiempo de demora:",
+                                      "Tiempo Sede → Fábrica:",
                                       style: TextStyle(
-                                        fontSize: 20,
+                                        fontSize: 18,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    const SizedBox(height: 12),
+                                    const SizedBox(height: 8),
                                     Text(
-                                      tiempoDemora,
+                                      tiempoIda,
                                       style: const TextStyle(
-                                        fontSize: 28,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF2C3E50),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    const Text(
+                                      "Tiempo Fábrica → Sede:",
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      tiempoRegreso,
+                                      style: const TextStyle(
+                                        fontSize: 24,
                                         fontWeight: FontWeight.bold,
                                         color: Color(0xFF2C3E50),
                                       ),
@@ -222,20 +250,24 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
                     const SizedBox(height: 15),
                     SizedBox(
                       width: double.infinity,
+                      height: 60,
                       child: ElevatedButton.icon(
                         onPressed:
-                            (horaLlegada != null &&
-                                    horaSalida != null &&
-                                    diferencia != null)
+                            (salidaSede != null &&
+                                    llegadaFabrica != null &&
+                                    salidaFabrica != null &&
+                                    llegadaSede != null)
                                 ? () async {
                                   final firestore = FirebaseFirestore.instance;
-                                  final tiempo =
-                                      '${diferencia!.inHours}h ${diferencia!.inMinutes.remainder(60)} min';
-
                                   await firestore.collection('transporte').add({
-                                    'hora_llegada': formatHora(horaLlegada),
-                                    'hora_salida': formatHora(horaSalida),
-                                    'tiempo_demora': tiempo,
+                                    'salida_sede': formatHora(salidaSede),
+                                    'llegada_fabrica': formatHora(
+                                      llegadaFabrica,
+                                    ),
+                                    'salida_fabrica': formatHora(salidaFabrica),
+                                    'llegada_sede': formatHora(llegadaSede),
+                                    'tiempo_sede_fabrica': tiempoIda,
+                                    'tiempo_fabrica_sede': tiempoRegreso,
                                     'fecha_registro': Timestamp.now(),
                                   });
 
@@ -248,9 +280,12 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
                                   );
 
                                   setState(() {
-                                    horaLlegada = null;
-                                    horaSalida = null;
-                                    diferencia = null;
+                                    salidaSede = null;
+                                    llegadaFabrica = null;
+                                    salidaFabrica = null;
+                                    llegadaSede = null;
+                                    tiempoSedeAFabrica = null;
+                                    tiempoFabricaASede = null;
                                   });
                                 }
                                 : null,
@@ -258,21 +293,12 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
                         label: const Text(
                           'Guardar',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4682B4),
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 18,
-                            horizontal: 20,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                        ),
+                        style: buttonStyle(),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -282,6 +308,26 @@ class _ReporteTransporteFScreenState extends State<ReporteTransporteFScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildBoton({
+    required IconData icon,
+    required String texto,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 60,
+      child: ElevatedButton.icon(
+        icon: Icon(icon, color: Colors.white),
+        label: Text(
+          texto,
+          style: const TextStyle(fontSize: 18, color: Colors.white),
+        ),
+        onPressed: onTap,
+        style: buttonStyle(),
       ),
     );
   }

@@ -53,112 +53,47 @@ class _EmpleadosActivosScreenState extends State<EmpleadosActivosScreen> {
                     );
                   }
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: empleados.length,
-                    itemBuilder: (context, index) {
-                      final empleado = empleados[index];
-                      final nombre = empleado['nombre'] ?? 'Sin nombre';
-                      final email = empleado['email'] ?? 'Sin email';
-                      final rol = empleado['rol'] ?? 'Empleado';
-                      final roles = ['Administrador', 'Empleado'];
-                      final sede =
-                          empleado.data()!.containsKey('sede')
-                              ? empleado['sede']
-                              : 'S/R';
-
-                      final valorRol = roles.firstWhere(
-                        (r) => r.toLowerCase() == rol.toLowerCase(),
-                        orElse: () => roles.first,
-                      );
-
-                      return Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        elevation: 0,
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      columnSpacing: 24,
+                      headingRowColor: MaterialStateProperty.all(
+                        const Color(0xFF4682B4),
+                      ),
+                      headingTextStyle: const TextStyle(
                         color: Colors.white,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const CircleAvatar(
-                                    radius: 24,
-                                    backgroundColor: Color.fromARGB(
-                                      255,
-                                      255,
-                                      255,
-                                      255,
-                                    ),
-                                    child: Icon(
-                                      Icons.person,
-                                      color: Color(0xFF2C3E50),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          nombre,
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF2C3E50),
-                                          ),
-                                        ),
-                                        Text(
-                                          email,
-                                          style: const TextStyle(
-                                            color: Color(0xFFB0BEC5),
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        Text(
-                                          'Sede $sede',
-                                          style: const TextStyle(
-                                            color: Color(0xFFB0BEC5),
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      color: Colors.redAccent,
-                                    ),
-                                    onPressed:
-                                        () => _confirmarEliminacion(
-                                          context,
-                                          empleado.id,
-                                          nombre,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'Rol:',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
+                      columns: const [
+                        DataColumn(label: Text('Nombre')),
+                        DataColumn(label: Text('Email')),
+                        DataColumn(label: Text('Sede')),
+                        DataColumn(label: Text('Rol')),
+                        DataColumn(label: Text('Acción')),
+                      ],
+                      rows:
+                          empleados.map((empleado) {
+                            final nombre = empleado['nombre'] ?? 'Sin nombre';
+                            final email = empleado['email'] ?? 'Sin email';
+                            final sede =
+                                (empleado.data() as Map<String, dynamic>)
+                                        .containsKey('sede')
+                                    ? empleado['sede']
+                                    : 'S/R';
+                            final rol = empleado['rol'] ?? 'Empleado';
+                            final roles = ['Administrador', 'Empleado'];
+
+                            final valorRol = roles.firstWhere(
+                              (r) => r.toLowerCase() == rol.toLowerCase(),
+                              orElse: () => roles.first,
+                            );
+
+                            return DataRow(
+                              cells: [
+                                DataCell(Text(nombre)),
+                                DataCell(Text(email)),
+                                DataCell(Text(sede)),
+                                DataCell(
                                   DropdownButton<String>(
                                     value: valorRol,
                                     underline: Container(),
@@ -176,8 +111,9 @@ class _EmpleadosActivosScreenState extends State<EmpleadosActivosScreen> {
                                                   color: const Color(
                                                     0xFF2C3E50,
                                                   ),
+                                                  size: 18,
                                                 ),
-                                                const SizedBox(width: 10),
+                                                const SizedBox(width: 8),
                                                 Text(value),
                                               ],
                                             ),
@@ -192,13 +128,25 @@ class _EmpleadosActivosScreenState extends State<EmpleadosActivosScreen> {
                                       }
                                     },
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                                ),
+                                DataCell(
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.redAccent,
+                                    ),
+                                    onPressed:
+                                        () => _confirmarEliminacion(
+                                          context,
+                                          empleado.id,
+                                          nombre,
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }).toList(),
+                    ),
                   );
                 },
               ),
@@ -264,9 +212,9 @@ class _EmpleadosActivosScreenState extends State<EmpleadosActivosScreen> {
                     color: Color(0xFF1E40AF),
                   ),
                   const SizedBox(height: 16),
-                  Text(
+                  const Text(
                     '¿Eliminar empleado?',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF1E3A8A),
@@ -332,14 +280,5 @@ class _EmpleadosActivosScreenState extends State<EmpleadosActivosScreen> {
             ),
           ),
     );
-  }
-}
-
-extension on Object {
-  bool containsKey(String s) {
-    if (this is Map) {
-      return (this as Map).containsKey(s);
-    }
-    return false;
   }
 }

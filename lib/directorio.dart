@@ -1,10 +1,9 @@
+import 'package:basefundi/screens/directorio/clientes.dart';
+import 'package:basefundi/screens/directorio/proveedores.dart';
 import 'package:flutter/material.dart';
 
-// Importa la pantalla Kardex que ya tengas
-import 'package:basefundi/screens/contabilidad/kardex.dart';
-
-class ContabilidadScreen extends StatelessWidget {
-  const ContabilidadScreen({super.key});
+class DirectorioScreen extends StatelessWidget {
+  const DirectorioScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -16,25 +15,25 @@ class ContabilidadScreen extends StatelessWidget {
             _buildHeader(),
             const SizedBox(height: 20),
 
-            // Tarjeta 1: Kardex
+            // Tarjeta 1: Clientes
             _buildCard(
               context: context,
-              title: 'Kardex',
+              title: 'Clientes',
               subtitle: 'Movimientos de inventario',
               icon: Icons.receipt_long,
-              destination: const KardexScreen(),
+              destination: const ClientesScreen(),
             ),
 
             const SizedBox(height: 12),
 
-            // Tarjeta 2: Puedes agregar más opciones aquí
-            // _buildCard(
-            //   context: context,
-            //   title: 'Otra opción',
-            //   subtitle: 'Descripción de otra opción',
-            //   icon: Icons.analytics,
-            //   destination: const OtraPantalla(),
-            // ),
+            // Tarjeta 2: Proveedores
+            _buildCard(
+              context: context,
+              title: 'Proveedores',
+              subtitle: 'Descripción de otra opción',
+              icon: Icons.analytics,
+              destination: const ProveedoresScreen(),
+            ),
           ],
         ),
       ),
@@ -58,7 +57,7 @@ class ContabilidadScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: const Center(
         child: Text(
-          'Contabilidad',
+          'Directorio',
           style: TextStyle(
             color: Colors.white,
             fontSize: 22,

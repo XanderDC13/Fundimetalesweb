@@ -1,4 +1,4 @@
-import 'package:basefundi/contabilidad.dart';
+import 'package:basefundi/directorio.dart';
 import 'package:basefundi/screens/inventario.dart';
 import 'package:basefundi/screens/personal.dart';
 import 'package:basefundi/screens/personal/tareas.dart';
@@ -411,8 +411,8 @@ class _DashboardScreenState extends State<DashboardScreen>
             _gridButton(Icons.bar_chart, 'Reportes', () {
               _navegarConFade(context, const ReportesScreen());
             }),
-            _gridButton(Icons.calculate, 'Contabilidad', () {
-              _navegarConFade(context, const ContabilidadScreen());
+            _gridButton(Icons.calculate, 'Directorio', () {
+              _navegarConFade(context, const DirectorioScreen());
             }),
             _gridButton(Icons.settings, 'Ajustes', () {
               _navegarConFade(context, const SettingsScreen());
