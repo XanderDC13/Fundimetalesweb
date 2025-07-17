@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProveedoresScreen extends StatefulWidget {
   const ProveedoresScreen({super.key});
@@ -9,83 +10,349 @@ class ProveedoresScreen extends StatefulWidget {
 }
 
 class _ProveedoresScreenState extends State<ProveedoresScreen> {
+  String _busqueda = '';
+  String? _filtroCiudad;
+
+  Widget _buildHeader() {
+    return SafeArea(
+      child: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(30),
+            bottomRight: Radius.circular(30),
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: const Text(
+          'Proveedores',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(List<String> ciudades) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              onChanged: (value) {
+                setState(() {
+                  _busqueda = value.toLowerCase();
+                });
+              },
+              decoration: InputDecoration(
+                hintText: 'Buscar por nombre o empresa',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                fillColor: Colors.white,
+                filled: true,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          DropdownButton<String>(
+            value: _filtroCiudad,
+            hint: const Text('Ciudad'),
+            onChanged: (value) {
+              setState(() {
+                _filtroCiudad = value;
+              });
+            },
+            items: [
+              const DropdownMenuItem(value: null, child: Text('Todas')),
+              ...ciudades.map(
+                (c) => DropdownMenuItem(value: c, child: Text(c)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Proveedores'),
-        backgroundColor: const Color(0xFF4682B4),
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream:
-            FirebaseFirestore.instance
-                .collection('proveedores')
-                .orderBy('nombre')
-                .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      backgroundColor: const Color(0xFFD6EAF8),
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream:
+                  FirebaseFirestore.instance
+                      .collection('proveedores')
+                      .orderBy('nombre')
+                      .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          final proveedores = snapshot.data?.docs ?? [];
+                final proveedores =
+                    snapshot.data!.docs
+                        .map((e) => e.data() as Map<String, dynamic>)
+                        .toList();
 
-          if (proveedores.isEmpty) {
-            return const Center(
-              child: Text(
-                'No hay proveedores registrados.',
-                style: TextStyle(fontSize: 16, color: Colors.black54),
-              ),
-            );
-          }
+                final ciudades =
+                    proveedores.map((p) => p['ciudad'] ?? '').toSet().toList()
+                      ..removeWhere((c) => c.isEmpty);
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: proveedores.length,
-            itemBuilder: (context, index) {
-              final proveedor =
-                  proveedores[index].data() as Map<String, dynamic>;
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ListTile(
-                  title: Text(
-                    proveedor['nombre'] ?? 'Sin nombre',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Ciudad: ${proveedor['ciudad'] ?? '-'}'),
-                      Text('Teléfono: ${proveedor['telefono'] ?? '-'}'),
-                      Text('Correo: ${proveedor['correo'] ?? '-'}'),
-                      Text('RUC: ${proveedor['ruc'] ?? '-'}'),
-                    ],
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit, color: Color(0xFF4682B4)),
-                    onPressed: () {
-                      _mostrarFormulario(
-                        context,
-                        proveedor,
-                        docId: proveedores[index].id,
-                      );
-                    },
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                final filtrados =
+                    proveedores.where((proveedor) {
+                      final nombre =
+                          (proveedor['nombre'] ?? '').toString().toLowerCase();
+                      final empresa =
+                          (proveedor['empresa'] ?? '').toString().toLowerCase();
+                      final ciudad = proveedor['ciudad'] ?? '';
+                      final coincideBusqueda =
+                          nombre.contains(_busqueda) ||
+                          empresa.contains(_busqueda);
+                      final coincideCiudad =
+                          _filtroCiudad == null
+                              ? true
+                              : ciudad == _filtroCiudad;
+                      return coincideBusqueda && coincideCiudad;
+                    }).toList();
+
+                final contador = filtrados.length;
+
+                return Column(
+                  children: [
+                    _buildSearchBar(ciudades.cast<String>()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Total: $contador',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: filtrados.length,
+                        itemBuilder: (context, index) {
+                          final proveedor = filtrados[index];
+                          return Card(
+                            color: Colors.white,
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            elevation: 1,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ListTile(
+                              title: Text(
+                                proveedor['nombre'] ?? '-',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.edit_outlined,
+                                      color: Color(0xFF4682B4),
+                                    ),
+                                    onPressed: () {
+                                      _mostrarFormulario(
+                                        context,
+                                        proveedor,
+                                        docId: snapshot.data!.docs[index].id,
+                                      );
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.redAccent,
+                                    ),
+                                    onPressed: () async {
+                                      final docId =
+                                          snapshot.data!.docs[index].id;
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder:
+                                            (context) => AlertDialog(
+                                              title: const Text(
+                                                'Confirmar eliminación',
+                                              ),
+                                              content: const Text(
+                                                '¿Estás seguro de eliminar este proveedor?',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  child: const Text('Cancelar'),
+                                                  onPressed:
+                                                      () => Navigator.pop(
+                                                        context,
+                                                        false,
+                                                      ),
+                                                ),
+                                                TextButton(
+                                                  child: const Text(
+                                                    'Eliminar',
+                                                    style: TextStyle(
+                                                      color: Colors.red,
+                                                    ),
+                                                  ),
+                                                  onPressed:
+                                                      () => Navigator.pop(
+                                                        context,
+                                                        true,
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
+                                      );
+
+                                      if (confirm == true) {
+                                        await FirebaseFirestore.instance
+                                            .collection('proveedores')
+                                            .doc(docId)
+                                            .delete();
+
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Proveedor eliminado',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                              onTap: () => _mostrarDetalle(proveedor),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           _mostrarFormulario(context, null);
         },
         backgroundColor: const Color(0xFF4682B4),
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+    );
+  }
+
+  void _mostrarDetalle(Map<String, dynamic> proveedor) {
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFFD6EAF8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            proveedor['nombre'] ?? '-',
+            style: const TextStyle(
+              color: Color(0xFF4682B4),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _info('RUC', proveedor['ruc']),
+                _info('País', proveedor['pais']),
+                _info('Provincia', proveedor['provincia']),
+                _info('Ciudad', proveedor['ciudad']),
+                _info('Empresa', proveedor['empresa']),
+                _info('Dirección', proveedor['direccion']),
+                Row(
+                  children: [
+                    const Text(
+                      'Teléfono: ',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    GestureDetector(
+                      onTap: () => _llamarTelefono(proveedor['telefono'] ?? ''),
+                      child: Text(
+                        proveedor['telefono'] ?? '-',
+                        style: const TextStyle(
+                          color: Color(0xFF4682B4),
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                _info('Correo', proveedor['correo']),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cerrar',
+                style: TextStyle(color: Color(0xFF4682B4)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _info(String label, String? valor) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        '$label: ${valor ?? '-'}',
+        style: const TextStyle(fontSize: 14),
       ),
     );
   }
@@ -98,7 +365,18 @@ class _ProveedoresScreenState extends State<ProveedoresScreen> {
     final _formKey = GlobalKey<FormState>();
 
     final nombreController = TextEditingController(text: proveedor?['nombre']);
+    final rucController = TextEditingController(text: proveedor?['ruc']);
+    final paisController = TextEditingController(
+      text: proveedor == null ? 'Ecuador' : proveedor['pais'],
+    );
+
+    final provinciaController = TextEditingController(
+      text: proveedor?['provincia'],
+    );
     final ciudadController = TextEditingController(text: proveedor?['ciudad']);
+    final empresaController = TextEditingController(
+      text: proveedor?['empresa'],
+    );
     final direccionController = TextEditingController(
       text: proveedor?['direccion'],
     );
@@ -106,17 +384,21 @@ class _ProveedoresScreenState extends State<ProveedoresScreen> {
       text: proveedor?['telefono'],
     );
     final correoController = TextEditingController(text: proveedor?['correo']);
-    final rucController = TextEditingController(text: proveedor?['ruc']);
 
     showDialog(
       context: context,
       builder: (_) {
         return AlertDialog(
+          backgroundColor: const Color(0xFFD6EAF8),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           title: Text(
             proveedor == null ? 'Nuevo Proveedor' : 'Editar Proveedor',
+            style: const TextStyle(
+              color: Color(0xFF4682B4),
+              fontWeight: FontWeight.bold,
+            ),
           ),
           content: SingleChildScrollView(
             child: Form(
@@ -124,9 +406,37 @@ class _ProveedoresScreenState extends State<ProveedoresScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _campo(nombreController, 'Nombre', Icons.business),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _campo(nombreController, 'Nombre', Icons.person),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _campo(rucController, 'RUC', Icons.business),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _campo(paisController, 'País', Icons.flag),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _campo(
+                          provinciaController,
+                          'Provincia',
+                          Icons.map,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
                   _campo(ciudadController, 'Ciudad', Icons.location_city),
+                  const SizedBox(height: 12),
+                  _campo(empresaController, 'Empresa', Icons.business),
                   const SizedBox(height: 12),
                   _campo(direccionController, 'Dirección', Icons.home),
                   const SizedBox(height: 12),
@@ -143,31 +453,36 @@ class _ProveedoresScreenState extends State<ProveedoresScreen> {
                     Icons.email,
                     keyboardType: TextInputType.emailAddress,
                   ),
-                  const SizedBox(height: 12),
-                  _campo(rucController, 'RUC', Icons.numbers),
                 ],
               ),
             ),
           ),
           actions: [
             TextButton(
-              child: const Text('Cancelar'),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: Color(0xFF4682B4)),
+              ),
               onPressed: () => Navigator.pop(context),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF4682B4),
+                foregroundColor: Colors.white,
               ),
               child: Text(proveedor == null ? 'Guardar' : 'Actualizar'),
               onPressed: () async {
                 if (_formKey.currentState!.validate()) {
                   final data = {
                     'nombre': nombreController.text.trim(),
+                    'ruc': rucController.text.trim(),
+                    'pais': paisController.text.trim(),
+                    'provincia': provinciaController.text.trim(),
                     'ciudad': ciudadController.text.trim(),
+                    'empresa': empresaController.text.trim(),
                     'direccion': direccionController.text.trim(),
                     'telefono': telefonoController.text.trim(),
                     'correo': correoController.text.trim(),
-                    'ruc': rucController.text.trim(),
                   };
 
                   if (docId == null) {
@@ -214,5 +529,18 @@ class _ProveedoresScreenState extends State<ProveedoresScreen> {
         return null;
       },
     );
+  }
+
+  void _llamarTelefono(String numero) async {
+    if (numero.isNotEmpty) {
+      final Uri launchUri = Uri(scheme: 'tel', path: numero);
+      if (await canLaunchUrl(launchUri)) {
+        await launchUrl(launchUri);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir el marcador.')),
+        );
+      }
+    }
   }
 }

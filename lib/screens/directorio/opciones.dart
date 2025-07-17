@@ -1,10 +1,10 @@
-import 'package:basefundi/screens/directorio/clientes.dart';
-import 'package:basefundi/screens/directorio/opciones.dart';
-import 'package:basefundi/screens/directorio/proveedores.dart';
+import 'package:basefundi/screens/directorio/proformafundicion.dart';
+import 'package:basefundi/screens/directorio/proformas.dart';
+import 'package:basefundi/screens/directorio/proformasguardadas.dart';
 import 'package:flutter/material.dart';
 
-class DirectorioScreen extends StatelessWidget {
-  const DirectorioScreen({super.key});
+class OpcionesProformasScreen extends StatelessWidget {
+  const OpcionesProformasScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -15,35 +15,36 @@ class DirectorioScreen extends StatelessWidget {
           children: [
             _buildHeader(),
             const SizedBox(height: 20),
-            // Tarjeta 1: Proformas
-            _buildCard(
-              context: context,
-              title: 'Proformas',
-              subtitle: 'Control de proformas e inventario',
-              icon: Icons.receipt_long,
-              destination: OpcionesProformasScreen(),
-            ),
 
-            const SizedBox(height: 12),
-            // Tarjeta 2: Clientes
             _buildCard(
               context: context,
-              title: 'Clientes',
-              subtitle: 'Gestión y contactos de clientes',
-              icon: Icons.receipt_long,
-              destination: const ClientesScreen(),
+              title: 'Proforma Ventas',
+              subtitle: 'Genera una proforma y guárdala',
+              icon: Icons.add_circle_outline,
+              destination: ProformaScreen(),
             ),
 
             const SizedBox(height: 12),
 
-            // Tarjeta 3: Proveedores
             _buildCard(
               context: context,
-              title: 'Proveedores',
-              subtitle: 'Lista de proveedores y suministros',
-              icon: Icons.analytics,
-              destination: const ProveedoresScreen(),
+              title: 'Proforma Fundicion',
+              subtitle: 'Genera una proforma compra de hierro',
+              icon: Icons.add_circle_outline,
+              destination: ProformaCompraScreen(),
             ),
+
+            const SizedBox(height: 12),
+
+            _buildCard(
+              context: context,
+              title: 'Ver Proformas Guardadas',
+              subtitle: 'Consulta todas las proformas registradas',
+              icon: Icons.list_alt_outlined,
+              destination: const ProformasGuardadasScreen(),
+            ),
+
+            const SizedBox(height: 12),
           ],
         ),
       ),
@@ -67,7 +68,7 @@ class DirectorioScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: const Center(
         child: Text(
-          'Directorio',
+          'Opciones de Proformas',
           style: TextStyle(
             color: Colors.white,
             fontSize: 22,
@@ -83,16 +84,21 @@ class DirectorioScreen extends StatelessWidget {
     required String title,
     required String subtitle,
     required IconData icon,
-    required Widget destination,
+    Widget? destination,
+    String? destinationNamed,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: InkWell(
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => destination),
-          );
+          if (destination != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => destination),
+            );
+          } else if (destinationNamed != null) {
+            Navigator.pushNamed(context, destinationNamed);
+          }
         },
         borderRadius: BorderRadius.circular(16),
         child: Card(
