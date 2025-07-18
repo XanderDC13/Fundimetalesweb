@@ -25,15 +25,9 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -71,4 +65,23 @@ class DefaultFirebaseOptions {
     authDomain: 'fundimetwork.firebaseapp.com',
     storageBucket: 'fundimetwork.firebasestorage.app',
   );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyBgXXqKFo_CbN-PCEBBIhodFNyBW7TrfOg',
+    appId: '1:726525590326:ios:1e19a362b97a78ac435197',
+    messagingSenderId: '726525590326',
+    projectId: 'fundimetwork',
+    storageBucket: 'fundimetwork.firebasestorage.app',
+    iosBundleId: 'com.example.basefundi',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyDzwVYh1U7sA1G94qOGIWQnmSti6zh7BBE',
+    appId: '1:726525590326:web:0f87d9f732a765fa435197',
+    messagingSenderId: '726525590326',
+    projectId: 'fundimetwork',
+    authDomain: 'fundimetwork.firebaseapp.com',
+    storageBucket: 'fundimetwork.firebasestorage.app',
+  );
+
 }

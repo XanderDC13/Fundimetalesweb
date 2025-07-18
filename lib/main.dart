@@ -1,8 +1,8 @@
 import 'package:basefundi/firebase_options.dart';
-import 'package:basefundi/screens/home.dart';
-import 'package:basefundi/screens/login.dart';
-import 'package:basefundi/screens/register.dart';
-import 'package:basefundi/screens/ventas/carrito_controller.dart';
+import 'package:basefundi/settings/animacion_inicio.dart';
+import 'package:basefundi/auth/login.dart';
+import 'package:basefundi/auth/register.dart';
+import 'package:basefundi/movil/ventas/carrito_controller_movil.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
