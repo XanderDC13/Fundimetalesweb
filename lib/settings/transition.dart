@@ -6,7 +6,7 @@ void navigateWithTransition({
   required BuildContext context,
   required Widget destination,
   TransitionType transition = TransitionType.fade,
-  Duration duration = const Duration(milliseconds: 200),
+  Duration duration = const Duration(milliseconds: 150),
   bool replace = true,
 }) {
   PageRouteBuilder route = PageRouteBuilder(

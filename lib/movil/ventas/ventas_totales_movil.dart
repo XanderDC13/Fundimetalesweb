@@ -137,7 +137,6 @@ class _VentasTotalesScreenState extends State<VentasTotalesScreen> {
                                         '$codigoComprobante',
                                         style: const TextStyle(
                                           color: Colors.black54,
-
                                           fontSize: 14,
                                         ),
                                       ),

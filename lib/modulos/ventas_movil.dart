@@ -1,7 +1,12 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:basefundi/movil/ventas/modificar_ventas_movil.dart';
 import 'package:basefundi/movil/ventas/ventas_totales_movil.dart';
-import 'package:flutter/material.dart';
 import 'package:basefundi/movil/ventas/realizar_venta_movil.dart';
+import 'package:basefundi/desktop/ventas/modificar_ventas_desk.dart';
+import 'package:basefundi/desktop/ventas/ventas_totales_desk.dart';
+import 'package:basefundi/desktop/ventas/realizar_venta_desk.dart';
+import 'package:flutter/material.dart';
 import 'package:basefundi/settings/transition.dart';
 
 class VentasScreen extends StatefulWidget {
@@ -15,6 +20,14 @@ class _VentasScreenState extends State<VentasScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
+
+  bool get isDesktop {
+    if (kIsWeb) return true;
+    if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+      return true;
+    }
+    return false; // Android o iOS
+  }
 
   @override
   void initState() {
@@ -54,21 +67,30 @@ class _VentasScreenState extends State<VentasScreen>
                         icono: Icons.receipt_long,
                         titulo: 'Ventas Totales',
                         subtitulo: 'Historial de ventas realizadas',
-                        destino: const VentasTotalesScreen(),
+                        destino:
+                            isDesktop
+                                ? const VentasTotalesDeskScreen()
+                                : const VentasTotalesScreen(),
                       ),
                       const SizedBox(height: 12),
                       _buildBoton(
                         icono: Icons.edit_note,
                         titulo: 'Modificar Ventas',
                         subtitulo: 'Editar ventas registradas',
-                        destino: const ModificarVentasScreen(),
+                        destino:
+                            isDesktop
+                                ? const ModificarVentasDeskScreen()
+                                : const ModificarVentasScreen(),
                       ),
                       const SizedBox(height: 12),
                       _buildBoton(
                         icono: Icons.shopping_cart,
                         titulo: 'Realizar Venta',
                         subtitulo: 'Registrar nueva venta',
-                        destino: const VentasDetalleScreen(),
+                        destino:
+                            isDesktop
+                                ? const VentasDetalleDeskScreen()
+                                : const VentasDetalleScreen(),
                       ),
                     ],
                   ),

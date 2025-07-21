@@ -1,11 +1,11 @@
-import 'package:basefundi/movil/modulos/directorio_movil.dart';
-import 'package:basefundi/movil/modulos/inventario_movil.dart';
-import 'package:basefundi/movil/modulos/personal_movil.dart';
+import 'package:basefundi/modulos/directorio_movil.dart';
+import 'package:basefundi/modulos/inventario_movil.dart';
+import 'package:basefundi/modulos/personal_movil.dart';
 import 'package:basefundi/movil/personal/funciones/tareas_realizar_movil.dart';
-import 'package:basefundi/movil/modulos/reportes_movil.dart';
+import 'package:basefundi/modulos/reportes_movil.dart';
 import 'package:basefundi/movil/dash_bajostock_movil.dart';
-import 'package:basefundi/movil/modulos/ventas_movil.dart';
-import 'package:basefundi/movil/modulos/ajustes_movil.dart';
+import 'package:basefundi/modulos/ventas_movil.dart';
+import 'package:basefundi/modulos/ajustes_movil.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

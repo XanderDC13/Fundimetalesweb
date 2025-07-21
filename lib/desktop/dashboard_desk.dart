@@ -1,11 +1,12 @@
-import 'package:basefundi/movil/modulos/directorio_movil.dart';
-import 'package:basefundi/movil/modulos/inventario_movil.dart';
-import 'package:basefundi/movil/modulos/personal_movil.dart';
+import 'package:basefundi/modulos/desk/ajustes_desk.dart';
+import 'package:basefundi/modulos/desk/directorio_desk.dart';
+import 'package:basefundi/modulos/desk/inventario_desk.dart';
+import 'package:basefundi/modulos/desk/personal_desk.dart';
+import 'package:basefundi/modulos/desk/reportes_desk.dart';
+import 'package:basefundi/modulos/desk/ventas_desk.dart';
+import 'package:basefundi/settings/navbar_desk.dart'; // ✅ Usa tu layout
 import 'package:basefundi/movil/personal/funciones/tareas_realizar_movil.dart';
-import 'package:basefundi/movil/modulos/reportes_movil.dart';
 import 'package:basefundi/movil/dash_bajostock_movil.dart';
-import 'package:basefundi/movil/modulos/ventas_movil.dart';
-import 'package:basefundi/movil/modulos/ajustes_movil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart'
@@ -56,7 +57,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
       final data = doc.data()!;
       setState(() {
         nombreUsuario = data['nombre'] ?? 'Usuario';
-        rolUsuario = data['rol'] ?? 'empleado';
+        rolUsuario = data['rol'] ?? 'Empleado';
         sedeUsuario =
             (data['sede'] ?? '').toString().trim().isEmpty
                 ? 'Sin sede'
@@ -67,9 +68,6 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
 
   Future<void> _cargarResumenHoy() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-
       final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day);
       final endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
@@ -91,7 +89,6 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
       for (var doc in ventasQuery.docs) {
         final data = doc.data();
         totalIngresos += (data['total'] ?? 0.0).toDouble();
-
         final productos = data['productos'] as List<dynamic>? ?? [];
         for (var producto in productos) {
           totalProductos += (producto['cantidad'] ?? 0) as int;
@@ -106,10 +103,8 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
 
       final ventasSnapshot =
           await FirebaseFirestore.instance.collection('ventas').get();
-      final ventasDocs = ventasSnapshot.docs;
-
       final Map<String, int> ventasPorReferencia = {};
-      for (var venta in ventasDocs) {
+      for (var venta in ventasSnapshot.docs) {
         final productos = List<Map<String, dynamic>>.from(venta['productos']);
         for (var producto in productos) {
           final referencia = producto['referencia']?.toString() ?? '';
@@ -125,7 +120,6 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
         final referencia = (data['referencia'] ?? '').toString();
         final cantidad = (data['cantidad'] ?? 0) as int;
         final tipo = (data['tipo'] ?? 'entrada').toString();
-
         final ajuste = tipo == 'salida' ? -cantidad : cantidad;
         stockFinal[referencia] = (stockFinal[referencia] ?? 0) + ajuste;
       }
@@ -158,65 +152,67 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFD6EAF8),
-      body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1400),
-            child: SingleChildScrollView(
-              child: Column(
+    return MainDeskLayout(
+      child: Column(
+        children: [
+          Transform.translate(
+            offset: const Offset(
+              -0.5,
+              0,
+            ), // Ajusta según el padding de MainDeskLayout
+            child: Container(
+              width: MediaQuery.of(context).size.width,
+              color: const Color(0xFF2C3E50),
+              padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 22),
+              child: Row(
                 children: [
-                  _buildHeader(),
-                  const SizedBox(height: 20),
-                  _buildResumenHoy(),
-                  const SizedBox(height: 20),
-                  _buildGridFunctions(),
-                  const SizedBox(height: 40),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Hola $nombreUsuario',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Sede $sedeUsuario',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
-      child: Row(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Hola $nombreUsuario',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
+          // Resto del contenido
+          Expanded(
+            child: SafeArea(
+              top: false,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1400),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 20),
+                        _buildResumenHoy(),
+                        const SizedBox(height: 20),
+                        _buildGridFunctions(),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Sede $sedeUsuario',
-                style: const TextStyle(color: Colors.white70, fontSize: 18),
-              ),
-            ],
+            ),
           ),
         ],
       ),
@@ -359,44 +355,44 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
               _gridButton(
                 Icons.attach_money,
                 'Ventas',
-                () => _navegarConFade(context, const VentasScreen()),
+                () => _navegarConFade(context, const VentasDeskScreen()),
               ),
               _gridButton(
                 Icons.inventory_2,
                 'Inventario',
-                () => _navegarConFade(context, const InventarioScreen()),
+                () => _navegarConFade(context, const InventarioDeskScreen()),
               ),
               _gridButton(
                 Icons.people,
                 'Personal',
-                () => _navegarConFade(context, const PersonalScreen()),
+                () => _navegarConFade(context, const PersonalDeskScreen()),
               ),
               _gridButton(
                 Icons.bar_chart,
                 'Reportes',
-                () => _navegarConFade(context, const ReportesScreen()),
+                () => _navegarConFade(context, const ReportesDeskScreen()),
               ),
               _gridButton(
                 Icons.calculate,
                 'Directorio',
-                () => _navegarConFade(context, const DirectorioScreen()),
+                () => _navegarConFade(context, const DirectorioDeskScreen()),
               ),
               _gridButton(
                 Icons.settings,
                 'Ajustes',
-                () => _navegarConFade(context, const SettingsScreen()),
+                () => _navegarConFade(context, const SettingsDeskScreen()),
               ),
             ]
             : [
               _gridButton(
                 Icons.attach_money,
                 'Ventas',
-                () => _navegarConFade(context, const VentasScreen()),
+                () => _navegarConFade(context, const VentasDeskScreen()),
               ),
               _gridButton(
                 Icons.inventory_2,
                 'Inventario',
-                () => _navegarConFade(context, const InventarioScreen()),
+                () => _navegarConFade(context, const InventarioDeskScreen()),
               ),
               _gridButton(
                 Icons.task_alt,
@@ -406,7 +402,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
               _gridButton(
                 Icons.settings,
                 'Ajustes',
-                () => _navegarConFade(context, const SettingsScreen()),
+                () => _navegarConFade(context, const SettingsDeskScreen()),
               ),
             ];
 

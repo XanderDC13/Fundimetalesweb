@@ -1,8 +1,6 @@
 import 'package:basefundi/movil/personal/empleados/empleados_registro.dart';
 import 'package:basefundi/movil/personal/funciones/tareas_empleados_movil.dart';
 import 'package:flutter/material.dart';
-
-// ⚠️ IMPORTA TU PANTALLA DE INSUMOS AQUÍ:
 import 'package:basefundi/movil/personal/insumos/insumos_movil.dart';
 
 class PersonalScreen extends StatelessWidget {

@@ -1,36 +1,23 @@
-import 'package:basefundi/movil/ventas/carrito_movil.dart';
+import 'package:basefundi/desktop/ventas/carrito_desk.dart';
+
 import 'package:basefundi/movil/ventas/carrito_controller_movil.dart';
+import 'package:basefundi/settings/navbar_desk.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
-class VentasDetalleScreen extends StatefulWidget {
-  const VentasDetalleScreen({super.key});
+class VentasDetalleDeskScreen extends StatefulWidget {
+  const VentasDetalleDeskScreen({super.key});
 
   @override
-  State<VentasDetalleScreen> createState() => _VentasDetalleScreenState();
+  State<VentasDetalleDeskScreen> createState() =>
+      _VentasDetalleDeskScreenState();
 }
 
-class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
+class _VentasDetalleDeskScreenState extends State<VentasDetalleDeskScreen> {
   String searchQuery = '';
   final TextEditingController _precioPersonalizadoController =
       TextEditingController();
-
-  void _startScanner() async {
-    final result = await Navigator.of(context).push<String>(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (context) => const SimpleBarcodeScannerPage(),
-      ),
-    );
-
-    if (result is String) {
-      setState(() {
-        searchQuery = result;
-      });
-    }
-  }
 
   Future<List<Map<String, dynamic>>> fetchProductosCombinados() async {
     final historialSnapshot =
@@ -257,133 +244,197 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFD6EAF8),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF4682B4),
-        icon: const Icon(Icons.shopping_cart, color: Colors.white),
-        label: const Text('Ver Carrito', style: TextStyle(color: Colors.white)),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const VerCarritoScreen()),
-          );
-        },
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 24),
+    return MainDeskLayout(
+      child: Column(
+        children: [
+          // ✅ CABECERA UNIDA Y CENTRADA
+          Transform.translate(
+            offset: const Offset(-0.5, 0),
+            child: Container(
               width: double.infinity,
-              child: const Center(
-                child: Text(
-                  'Realizar Venta',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
+              color: const Color(0xFF2C3E50),
+              padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 38),
+              child: Stack(
                 children: [
-                  Expanded(
-                    child: TextField(
-                      onChanged: (value) {
-                        setState(() {
-                          searchQuery = value;
-                        });
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_ios,
+                        color: Colors.white,
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
                       },
-                      decoration: InputDecoration(
-                        hintText: 'Buscar por nombre o referencia',
-                        prefixIcon: const Icon(Icons.search),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 0,
-                          horizontal: 16,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
+                    ),
+                  ),
+                  const Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Realizar Venta',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  IconButton(
-                    icon: const Icon(Icons.qr_code_scanner, size: 30),
-                    onPressed: _startScanner,
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF2C3E50),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.shopping_cart),
+                      label: const Text('Ver Carrito'),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const VerCarritoDeskScreen(),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
             ),
-            Expanded(
-              child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: fetchProductosCombinados(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
+          ),
 
-                  final productos = snapshot.data ?? [];
+          // ✅ CONTENIDO CON FONDO BLANCO
+          Expanded(
+            child: Container(
+              color: Colors.white,
+              child: SafeArea(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1200),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 20),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: TextField(
+                            onChanged: (value) {
+                              setState(() {
+                                searchQuery = value;
+                              });
+                            },
+                            decoration: InputDecoration(
+                              hintText: 'Buscar por nombre o referencia',
+                              prefixIcon: const Icon(Icons.search),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 16,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Expanded(
+                          child: FutureBuilder<List<Map<String, dynamic>>>(
+                            future: fetchProductosCombinados(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+                              if (snapshot.hasError) {
+                                return Center(
+                                  child: Text('Error: ${snapshot.error}'),
+                                );
+                              }
 
-                  final filtered =
-                      productos.where((data) {
-                        final nombre = data['nombre'].toString().toLowerCase();
-                        final referencia =
-                            data['referencia'].toString().toLowerCase();
-                        return searchQuery.isEmpty ||
-                            nombre.contains(searchQuery.toLowerCase()) ||
-                            referencia.contains(searchQuery.toLowerCase());
-                      }).toList();
+                              final productos = snapshot.data ?? [];
 
-                  if (filtered.isEmpty) {
-                    return const Center(
-                      child: Text('No hay productos disponibles.'),
-                    );
-                  }
+                              final filtered =
+                                  productos.where((data) {
+                                    final nombre =
+                                        data['nombre'].toString().toLowerCase();
+                                    final referencia =
+                                        data['referencia']
+                                            .toString()
+                                            .toLowerCase();
+                                    return searchQuery.isEmpty ||
+                                        nombre.contains(
+                                          searchQuery.toLowerCase(),
+                                        ) ||
+                                        referencia.contains(
+                                          searchQuery.toLowerCase(),
+                                        );
+                                  }).toList();
 
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+                              if (filtered.isEmpty) {
+                                return const Center(
+                                  child: Text('No hay productos disponibles.'),
+                                );
+                              }
+
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 32,
+                                  vertical: 8,
+                                ),
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    int crossAxisCount = 4;
+                                    if (constraints.maxWidth > 1200) {
+                                      crossAxisCount = 5;
+                                    } else if (constraints.maxWidth > 900) {
+                                      crossAxisCount = 4;
+                                    } else if (constraints.maxWidth > 600) {
+                                      crossAxisCount = 3;
+                                    } else {
+                                      crossAxisCount = 2;
+                                    }
+
+                                    return GridView.count(
+                                      crossAxisCount: crossAxisCount,
+                                      crossAxisSpacing: 16,
+                                      mainAxisSpacing: 16,
+                                      childAspectRatio: 0.85,
+                                      children:
+                                          filtered
+                                              .map(
+                                                (data) => _buildProductoCard(
+                                                  data,
+                                                  context,
+                                                ),
+                                              )
+                                              .toList(),
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                      childAspectRatio: 0.90,
-                      children:
-                          filtered
-                              .map((data) => _buildProductoCard(data, context))
-                              .toList(),
-                    ),
-                  );
-                },
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -398,58 +449,98 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.grey.shade300),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const Icon(
               Icons.shopping_bag_rounded,
-              size: 40,
+              size: 48,
               color: Color(0xFF2C3E50),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Expanded(
+              child: Column(
+                children: [
+                  Text(
+                    data['nombre'],
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Color(0xFF2C3E50),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ref: ${data['referencia']}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF7F8C8D),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              decoration: BoxDecoration(
+                color:
+                    data['cantidad'] > 0
+                        ? const Color(0xFF27AE60).withOpacity(0.1)
+                        : const Color(0xFFE74C3C).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: Text(
-                data['nombre'],
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10,
-                  color: Color(0xFF2C3E50),
+                '${data['cantidad']} disponibles',
+                style: TextStyle(
+                  fontSize: 12,
+                  color:
+                      data['cantidad'] > 0
+                          ? const Color(0xFF27AE60)
+                          : const Color(0xFFE74C3C),
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              '${data['cantidad']} disponibles',
-              style: const TextStyle(fontSize: 13, color: Color(0xFFB0BEC5)),
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4682B4),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+                    horizontal: 16,
+                    vertical: 12,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   elevation: 0,
                 ),
                 icon: const Icon(
                   Icons.add_shopping_cart,
                   color: Colors.white,
-                  size: 18,
+                  size: 20,
                 ),
                 label: const Text(
                   'Agregar',
-                  style: TextStyle(color: Colors.white, fontSize: 13),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 onPressed: () {
                   _seleccionarPrecioYAgregar(data, context);
@@ -475,7 +566,8 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
             borderRadius: BorderRadius.circular(20),
           ),
           child: Container(
-            padding: const EdgeInsets.all(20),
+            width: 400,
+            padding: const EdgeInsets.all(24),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFFD6EAF8), Color(0xFFEBF5FB)],
@@ -509,6 +601,10 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
                     ),
                     filled: true,
                     fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 16,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -523,14 +619,13 @@ class _VentasDetalleScreenState extends State<VentasDetalleScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF4682B4),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
