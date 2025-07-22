@@ -1,8 +1,8 @@
+import 'package:basefundi/desktop/personal/empleados/empleados_registro_desk.dart';
+import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
+import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
 import 'package:flutter/material.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
-import 'package:basefundi/movil/personal/empleados/empleados_registro.dart';
-import 'package:basefundi/movil/personal/funciones/tareas_empleados_movil.dart';
-import 'package:basefundi/movil/personal/insumos/insumos_movil.dart';
 
 class PersonalDeskScreen extends StatefulWidget {
   const PersonalDeskScreen({super.key});
@@ -15,6 +15,18 @@ class _PersonalDeskScreenState extends State<PersonalDeskScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
+
+  void _navegarConFade(BuildContext context, Widget pantalla) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 150),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -90,15 +102,16 @@ class _PersonalDeskScreenState extends State<PersonalDeskScreen>
                         title: 'Empleados',
                         subtitle: 'Lista de empleados',
                         icon: Icons.group,
-                        destination: const EmpleadosPendientesScreen(),
+                        destination: const EmpleadosPendientesDeskScreen(),
                       ),
+
                       const SizedBox(height: 20),
                       _buildCard(
                         context: context,
                         title: 'Funciones empleados',
                         subtitle: 'Asignación de funciones',
                         icon: Icons.assignment,
-                        destination: const FuncionesScreen(),
+                        destination: const FuncionesDeskScreen(),
                       ),
                       const SizedBox(height: 20),
                       _buildCard(
@@ -106,7 +119,7 @@ class _PersonalDeskScreenState extends State<PersonalDeskScreen>
                         title: 'Insumos',
                         subtitle: 'Solicitud de insumos',
                         icon: Icons.inventory_2,
-                        destination: const InsumosScreen(),
+                        destination: const InsumosDeskScreen(),
                       ),
                     ],
                   ),
@@ -128,11 +141,9 @@ class _PersonalDeskScreenState extends State<PersonalDeskScreen>
   }) {
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => destination),
-        );
+        _navegarConFade(context, destination);
       },
+
       borderRadius: BorderRadius.circular(16),
       child: Card(
         color: Colors.white,

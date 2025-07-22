@@ -4,24 +4,43 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-class ModificarVentasDeskScreen extends StatefulWidget {
-  const ModificarVentasDeskScreen({super.key});
+class ModificarVentaDeskScreen extends StatefulWidget {
+  const ModificarVentaDeskScreen({super.key});
 
   @override
-  State<ModificarVentasDeskScreen> createState() =>
-      _ModificarVentasDeskScreenState();
+  State<ModificarVentaDeskScreen> createState() =>
+      _ModificarVentaDeskScreenState();
 }
 
-class _ModificarVentasDeskScreenState extends State<ModificarVentasDeskScreen> {
+class _ModificarVentaDeskScreenState extends State<ModificarVentaDeskScreen>
+    with SingleTickerProviderStateMixin {
   bool _esAdmin = false;
   bool _verificado = false;
   String _busquedaCliente = '';
   DateTime? _selectedDate;
 
+  // Añadir controlador de animación
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+
   @override
   void initState() {
     super.initState();
+
+    // Inicializar animación
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+
     _verificarPermiso();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   Future<void> _verificarPermiso() async {
@@ -43,10 +62,17 @@ class _ModificarVentasDeskScreenState extends State<ModificarVentasDeskScreen> {
             _esAdmin = true;
             _verificado = true;
           });
+          // Iniciar animación solo cuando se verifica que es admin
+          _controller.forward();
           return;
         }
       }
     }
+
+    // Si no es admin, mostrar error y regresar
+    setState(() {
+      _verificado = true;
+    });
 
     SchedulerBinding.instance.addPostFrameCallback((_) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -61,22 +87,15 @@ class _ModificarVentasDeskScreenState extends State<ModificarVentasDeskScreen> {
         Navigator.pop(context);
       });
     });
-
-    setState(() {
-      _verificado = true;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_verificado || !_esAdmin) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
+    // Mostrar la estructura completa desde el inicio pero con contenido condicional
     return MainDeskLayout(
       child: Column(
         children: [
-          // ✅ CABECERA UNIDA Y CENTRADA
+          // ✅ CABECERA SIEMPRE VISIBLE
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
@@ -113,32 +132,52 @@ class _ModificarVentasDeskScreenState extends State<ModificarVentasDeskScreen> {
             ),
           ),
 
-          // ✅ CONTENIDO CON FONDO BLANCO
+          // ✅ CONTENIDO CONDICIONAL
           Expanded(
-            child: Container(
-              color: Colors.white,
-              child: SafeArea(
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1200),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 20),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: _buildFilters(),
-                        ),
-                        const SizedBox(height: 10),
-                        Expanded(child: _buildListaVentas()),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            child: Container(color: Colors.white, child: _buildContenido()),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildContenido() {
+    if (!_verificado) {
+      // Mientras se verifica, mostrar loading centrado
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (!_esAdmin) {
+      // Si no es admin, mostrar mensaje centrado
+      return const Center(
+        child: Text(
+          'Verificando permisos...',
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      );
+    }
+
+    // Si es admin, mostrar contenido con animación
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: _buildFilters(),
+                ),
+                const SizedBox(height: 10),
+                Expanded(child: _buildListaVentas()),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

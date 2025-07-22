@@ -1,9 +1,9 @@
+import 'package:basefundi/desktop/reportes/auditoria_desk.dart';
+import 'package:basefundi/desktop/reportes/reporte_inv_desk.dart';
+import 'package:basefundi/desktop/reportes/reporte_transporte_desk.dart';
+import 'package:basefundi/desktop/reportes/reporte_ventas_desk.dart';
 import 'package:flutter/material.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
-import 'package:basefundi/movil/reportes/auditoria_movil.dart';
-import 'package:basefundi/movil/reportes/reporte_inv_movil.dart';
-import 'package:basefundi/movil/reportes/reporte_transporte_movil.dart';
-import 'package:basefundi/movil/reportes/reporte_ventas_movil.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 class ReportesDeskScreen extends StatefulWidget {
@@ -17,6 +17,18 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
+
+  void _navegarConFade(BuildContext context, Widget pantalla) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 150),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -96,54 +108,44 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
                         titulo: 'Reporte de Inventario',
                         subtitulo: 'Detalle de productos',
                         onTap: () {
-                          Navigator.push(
+                          _navegarConFade(
                             context,
-                            MaterialPageRoute(
-                              builder: (_) => const ReporteInventarioScreen(),
-                            ),
+                            const ReporteInventarioDeskScreen(),
                           );
                         },
                       ),
+
                       const SizedBox(height: 20),
                       _buildBoton(
-                        icon: LucideIcons.barChart2,
+                        icon: LucideIcons.clipboardList,
                         titulo: 'Reporte de Ventas',
                         subtitulo: 'Historial de ventas',
                         onTap: () {
-                          Navigator.push(
+                          _navegarConFade(
                             context,
-                            MaterialPageRoute(
-                              builder: (_) => const ReporteVentasScreen(),
-                            ),
+                            const ReporteVentasDeskScreen(),
                           );
                         },
                       ),
                       const SizedBox(height: 20),
                       _buildBoton(
-                        icon: LucideIcons.truck,
+                        icon: LucideIcons.clipboardList,
                         titulo: 'Reporte de Transporte',
                         subtitulo: 'Tiempos y entregas',
                         onTap: () {
-                          Navigator.push(
+                          _navegarConFade(
                             context,
-                            MaterialPageRoute(
-                              builder: (_) => const ReporteTransporteScreen(),
-                            ),
+                            const ReporteTransporteDeskScreen(),
                           );
                         },
                       ),
                       const SizedBox(height: 20),
                       _buildBoton(
-                        icon: LucideIcons.shieldCheck,
+                        icon: LucideIcons.clipboardList,
                         titulo: 'Auditoría',
                         subtitulo: 'Ediciones y cambios en el sistema',
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const AuditoriaScreen(),
-                            ),
-                          );
+                          _navegarConFade(context, const AuditoriaDeskScreen());
                         },
                       ),
                     ],

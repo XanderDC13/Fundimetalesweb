@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:basefundi/movil/directorio/proformas/proforma_ventas_movil.dart';
 import 'package:basefundi/movil/directorio/proformas/proformas_guardadas_movil.dart';
 import 'package:basefundi/movil/directorio/proformas/proforma_fundicion_movil.dart';
-import 'package:basefundi/desktop/directorio/proforfun.dart'; // desktop version
-import 'package:basefundi/desktop/directorio/profventas.dart';
+import 'package:basefundi/desktop/directorio/proformas/proforfun.dart'; // desktop version
+import 'package:basefundi/desktop/directorio/proformas/profventas.dart';
 
 class OpcionesProformasScreen extends StatelessWidget {
   const OpcionesProformasScreen({super.key});

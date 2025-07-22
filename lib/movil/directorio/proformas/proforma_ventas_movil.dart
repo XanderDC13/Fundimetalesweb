@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -16,7 +14,6 @@ class ProformaScreen extends StatefulWidget {
 }
 
 class _ProformaScreenState extends State<ProformaScreen> {
-  // Controladores para la información del cliente
   final TextEditingController _clienteController = TextEditingController();
   final TextEditingController _nombreComercialController =
       TextEditingController();
@@ -212,10 +209,10 @@ class _ProformaScreenState extends State<ProformaScreen> {
   @override
   void initState() {
     super.initState();
-    _generarNumeroProforma(); // 👉 Llama la función que SÍ genera el número correctamente
+    _previsualizarNumeroProforma();
   }
 
-  Future<void> _generarNumeroProforma() async {
+  Future<void> _previsualizarNumeroProforma() async {
     final fechaHoy = DateTime.now();
     final fechaFormateada =
         "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
@@ -229,10 +226,7 @@ class _ProformaScreenState extends State<ProformaScreen> {
     int numero = 1;
 
     if (counterDoc.exists) {
-      numero = counterDoc['contador'] + 1;
-      await counterRef.update({'contador': numero});
-    } else {
-      await counterRef.set({'contador': numero});
+      numero = counterDoc['contador'] + 1; // SOLO LEE, NO ACTUALIZA
     }
 
     setState(() {
@@ -1902,70 +1896,35 @@ class _ProformaScreenState extends State<ProformaScreen> {
                   ElevatedButton.icon(
                     onPressed: () async {
                       try {
-                        // 1. Generar número de proforma
-                        await _generarNumeroProforma();
+                        // 👉 1. Generar y reservar número real de proforma (incrementar contador aquí)
+                        final fechaHoy = DateTime.now();
+                        final fechaFormateada =
+                            "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
+
+                        final counterRef = FirebaseFirestore.instance
+                            .collection('proformas_counters')
+                            .doc(fechaFormateada);
+
+                        final counterDoc = await counterRef.get();
+
+                        int numero = 1;
+                        if (counterDoc.exists) {
+                          numero = counterDoc['contador'] + 1;
+                          await counterRef.update({'contador': numero});
+                        } else {
+                          await counterRef.set({'contador': numero});
+                        }
+
+                        final numeroProformaFinal =
+                            "PROFORMA N-$fechaFormateada-$numero";
+
                         print(
-                          '✅ Número de proforma generado: $_numeroProforma',
+                          '✅ Número de proforma reservado: $numeroProformaFinal',
                         );
 
-                        // 2. Verificar conexión a Firebase
-                        try {
-                          await FirebaseStorage.instance
-                              .ref()
-                              .child('test')
-                              .putData(Uint8List.fromList([1, 2, 3]));
-                          print('✅ Conexión a Firebase Storage OK');
-                        } catch (testError) {
-                          print(
-                            '❌ Error de conexión a Firebase Storage: $testError',
-                          );
-                          throw Exception(
-                            'Error de conexión a Firebase Storage',
-                          );
-                        }
-
-                        // 3. Crear nombre único para el PDF
-                        final fileName =
-                            'proforma_${_numeroProforma}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-                        print('✅ Nombre del archivo: $fileName');
-
-                        // 4. Crear referencia al bucket principal (sin subcarpetas primero)
-                        final storageRef = FirebaseStorage.instance.ref();
-                        final pdfRef = storageRef.child(fileName);
-
-                        print('✅ Referencia creada: ${pdfRef.fullPath}');
-
-                        // 5. Subir PDF con retry y configuración específica
-                        int maxRetries = 3;
-
-                        for (int i = 0; i < maxRetries; i++) {
-                          try {
-                            print('📤 Intento ${i + 1} de subida del PDF...');
-
-                            print('✅ PDF subido exitosamente');
-                            break;
-                          } catch (uploadError) {
-                            print('❌ Error en intento ${i + 1}: $uploadError');
-                            if (i == maxRetries - 1) {
-                              throw uploadError;
-                            }
-                            await Future.delayed(Duration(seconds: 2));
-                          }
-                        }
-
-                        // 6. Obtener URL de descarga
-                        String pdfUrl;
-                        try {
-                          pdfUrl = await pdfRef.getDownloadURL();
-                          print('✅ URL obtenida: $pdfUrl');
-                        } catch (urlError) {
-                          print('❌ Error al obtener URL: $urlError');
-                          throw Exception('Error al obtener URL de descarga');
-                        }
-
-                        // 7. Preparar datos para Firestore
+                        // 👉 2. Preparar datos SIN PDF
                         final proformaData = {
-                          'numero': _numeroProforma,
+                          'numero': numeroProformaFinal,
                           'cliente': _clienteController.text,
                           'ruc': _rucController.text,
                           'telefono': _telefonoController.text,
@@ -1983,21 +1942,18 @@ class _ProformaScreenState extends State<ProformaScreen> {
                                   )
                                   .toList(),
                           'fecha': Timestamp.now(),
-                          'pdfUrl': pdfUrl,
-                          'pdfFileName': fileName,
-                          'pdfPath': pdfRef.fullPath,
                         };
 
-                        // 8. Guardar en Firestore
+                        // 👉 3. Guardar en Firestore
                         await FirebaseFirestore.instance
                             .collection('proformas')
                             .add(proformaData);
 
                         print(
-                          '✅ Proforma guardada en Firestore: $_numeroProforma',
+                          '✅ Proforma guardada en Firestore: $numeroProformaFinal',
                         );
 
-                        // 9. Limpiar campos
+                        // 👉 4. Limpiar campos
                         _clienteController.clear();
                         _rucController.clear();
                         _telefonoController.clear();
@@ -2017,9 +1973,7 @@ class _ProformaScreenState extends State<ProformaScreen> {
                           ),
                         );
                       } catch (e) {
-                        print('❌ Error completo al guardar proforma: $e');
-                        print('❌ Stack trace: ${StackTrace.current}');
-
+                        print('❌ Error al guardar proforma: $e');
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -2032,6 +1986,7 @@ class _ProformaScreenState extends State<ProformaScreen> {
                         );
                       }
                     },
+
                     icon: const Icon(Icons.save),
                     label: const Text('Guardar'),
                     style: ElevatedButton.styleFrom(

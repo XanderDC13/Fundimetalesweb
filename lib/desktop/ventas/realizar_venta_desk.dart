@@ -19,6 +19,18 @@ class _VentasDetalleDeskScreenState extends State<VentasDetalleDeskScreen> {
   final TextEditingController _precioPersonalizadoController =
       TextEditingController();
 
+  void _navegarConFade(BuildContext context, Widget pantalla) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 150),
+      ),
+    );
+  }
+
   Future<List<Map<String, dynamic>>> fetchProductosCombinados() async {
     final historialSnapshot =
         await FirebaseFirestore.instance
@@ -296,12 +308,7 @@ class _VentasDetalleDeskScreenState extends State<VentasDetalleDeskScreen> {
                       icon: const Icon(Icons.shopping_cart),
                       label: const Text('Ver Carrito'),
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const VerCarritoDeskScreen(),
-                          ),
-                        );
+                        _navegarConFade(context, const VerCarritoDeskScreen());
                       },
                     ),
                   ),

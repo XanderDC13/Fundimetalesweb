@@ -22,7 +22,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
   DateTime _fecha = DateTime.now();
   List<Map<String, dynamic>> _productos = [];
   Map<String, int> _disponibles = {};
-  bool _usarIva = false; // ✅ Nuevo: switch para aplicar IVA
+  bool _usarIva = false;
   String _codigoComprobante = '';
   @override
   void initState() {

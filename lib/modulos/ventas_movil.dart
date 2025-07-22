@@ -79,7 +79,7 @@ class _VentasScreenState extends State<VentasScreen>
                         subtitulo: 'Editar ventas registradas',
                         destino:
                             isDesktop
-                                ? const ModificarVentasDeskScreen()
+                                ? const ModificarVentaDeskScreen()
                                 : const ModificarVentasScreen(),
                       ),
                       const SizedBox(height: 12),

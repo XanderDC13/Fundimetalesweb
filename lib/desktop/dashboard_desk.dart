@@ -1,11 +1,11 @@
+import 'package:basefundi/desktop/personal/funciones/tareas_realizar_desk.dart';
 import 'package:basefundi/modulos/desk/ajustes_desk.dart';
 import 'package:basefundi/modulos/desk/directorio_desk.dart';
 import 'package:basefundi/modulos/desk/inventario_desk.dart';
 import 'package:basefundi/modulos/desk/personal_desk.dart';
 import 'package:basefundi/modulos/desk/reportes_desk.dart';
 import 'package:basefundi/modulos/desk/ventas_desk.dart';
-import 'package:basefundi/settings/navbar_desk.dart'; // ✅ Usa tu layout
-import 'package:basefundi/movil/personal/funciones/tareas_realizar_movil.dart';
+import 'package:basefundi/settings/navbar_desk.dart';
 import 'package:basefundi/movil/dash_bajostock_movil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -155,11 +155,9 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
     return MainDeskLayout(
       child: Column(
         children: [
+          // CABECERA AZUL
           Transform.translate(
-            offset: const Offset(
-              -0.5,
-              0,
-            ), // Ajusta según el padding de MainDeskLayout
+            offset: const Offset(-0.5, 0),
             child: Container(
               width: MediaQuery.of(context).size.width,
               color: const Color(0xFF2C3E50),
@@ -191,23 +189,27 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
               ),
             ),
           ),
-          // Resto del contenido
+
+          // ✅ CONTENIDO PRINCIPAL CON FONDO BLANCO EXPLÍCITO
           Expanded(
-            child: SafeArea(
-              top: false,
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1400),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 20),
-                        _buildResumenHoy(),
-                        const SizedBox(height: 20),
-                        _buildGridFunctions(),
-                        const SizedBox(height: 40),
-                      ],
+            child: Container(
+              color: Colors.white, // 🎯 FONDO BLANCO EXPLÍCITO
+              child: SafeArea(
+                top: false,
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1400),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 20),
+                          _buildResumenHoy(),
+                          const SizedBox(height: 20),
+                          _buildGridFunctions(),
+                          const SizedBox(height: 40),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -274,7 +276,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
               ),
               const SizedBox(width: 20),
               Expanded(
-                child: _buildResumenItemClickable(
+                child: _buildResumenItemClickeable(
                   value: productosBajoStock.toString(),
                   label: 'Productos Bajo Stock',
                   onTap: () {
@@ -314,7 +316,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
     );
   }
 
-  Widget _buildResumenItemClickable({
+  Widget _buildResumenItemClickeable({
     required String value,
     required String label,
     required VoidCallback onTap,
@@ -397,7 +399,10 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
               _gridButton(
                 Icons.task_alt,
                 'Tareas',
-                () => _navegarConFade(context, const TareasPendientesScreen()),
+                () => _navegarConFade(
+                  context,
+                  const TareasPendientesDeskScreen(),
+                ),
               ),
               _gridButton(
                 Icons.settings,

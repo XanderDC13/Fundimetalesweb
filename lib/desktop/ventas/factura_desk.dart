@@ -27,7 +27,7 @@ class FacturaDetalleDeskScreen extends StatelessWidget {
             child: Container(
               width: double.infinity,
               color: const Color(0xFF2C3E50),
-              padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 38),
+              padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 25),
               child: Stack(
                 children: [
                   Align(

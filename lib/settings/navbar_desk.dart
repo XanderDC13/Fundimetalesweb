@@ -1,4 +1,6 @@
 import 'package:basefundi/auth/login.dart';
+import 'package:basefundi/desktop/ajustes/editperfil_desk.dart';
+import 'package:basefundi/desktop/ajustes/feedback_desk.dart';
 import 'package:basefundi/desktop/dashboard_desk.dart';
 import 'package:basefundi/desktop/ventas/modificar_ventas_desk.dart';
 import 'package:basefundi/desktop/ventas/realizar_venta_desk.dart';
@@ -13,6 +15,18 @@ class MainDeskLayout extends StatefulWidget {
 
   @override
   State<MainDeskLayout> createState() => _MainDeskLayoutState();
+}
+
+void _navegarConFade(BuildContext context, Widget pantalla) {
+  Navigator.of(context).push(
+    PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => pantalla,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      transitionDuration: const Duration(milliseconds: 150),
+    ),
+  );
 }
 
 class _MainDeskLayoutState extends State<MainDeskLayout> {
@@ -64,12 +78,7 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
                         icon: Icons.home,
                         title: 'Inicio',
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const DashboardDeskScreen(),
-                            ),
-                          );
+                          _navegarConFade(context, const DashboardDeskScreen());
                         },
                       ),
                       _buildExpandableItem(
@@ -80,42 +89,33 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
                           _buildSubItem(
                             label: 'Ventas Totales',
                             onTap: () {
-                              Navigator.push(
+                              _navegarConFade(
                                 context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (_) => const VentasTotalesDeskScreen(),
-                                ),
+                                const VentasTotalesDeskScreen(),
                               );
                             },
                           ),
                           _buildSubItem(
                             label: 'Modificar Ventas',
                             onTap: () {
-                              Navigator.push(
+                              _navegarConFade(
                                 context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (_) => const ModificarVentasDeskScreen(),
-                                ),
+                                const ModificarVentaDeskScreen(),
                               );
                             },
                           ),
                           _buildSubItem(
                             label: 'Realizar Venta',
                             onTap: () {
-                              Navigator.push(
+                              _navegarConFade(
                                 context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (_) => const VentasDetalleDeskScreen(),
-                                ),
+                                const VentasDetalleDeskScreen(),
                               );
-                              ;
                             },
                           ),
                         ],
                       ),
+
                       _buildExpandableItem(
                         icon: Icons.inventory,
                         title: 'Inventario',
@@ -230,18 +230,18 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
                           _buildSubItem(
                             label: 'Editar Perfil',
                             onTap: () {
-                              Navigator.pushNamed(
+                              _navegarConFade(
                                 context,
-                                '/editar_perfil_desk',
+                                const EditarPerfilDeskScreen(),
                               );
                             },
                           ),
                           _buildSubItem(
-                            label: 'Centro de Ayuda',
+                            label: 'Enviar Feedback',
                             onTap: () {
-                              Navigator.pushNamed(
+                              _navegarConFade(
                                 context,
-                                '/centro_ayuda_desk',
+                                const FeedbackDeskScreen(),
                               );
                             },
                           ),

@@ -1,7 +1,7 @@
+import 'package:basefundi/desktop/directorio/clientes_desk.dart';
+import 'package:basefundi/desktop/directorio/proformas_desk.dart';
+import 'package:basefundi/desktop/directorio/proveedores_desk.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
-import 'package:basefundi/movil/directorio/clientes_movil.dart';
-import 'package:basefundi/movil/directorio/proformas_movil.dart';
-import 'package:basefundi/movil/directorio/proveedores_movil.dart';
 import 'package:flutter/material.dart';
 
 class DirectorioDeskScreen extends StatefulWidget {
@@ -9,6 +9,18 @@ class DirectorioDeskScreen extends StatefulWidget {
 
   @override
   State<DirectorioDeskScreen> createState() => _DirectorioDeskScreenState();
+}
+
+void _navegarConFade(BuildContext context, Widget pantalla) {
+  Navigator.of(context).push(
+    PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => pantalla,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      transitionDuration: const Duration(milliseconds: 150),
+    ),
+  );
 }
 
 class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
@@ -90,7 +102,7 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
                         title: 'Proformas',
                         subtitle: 'Control de proformas e inventario',
                         icon: Icons.receipt_long,
-                        destination: OpcionesProformasScreen(),
+                        destination: OpcionesProformasDeskScreen(),
                       ),
                       const SizedBox(height: 20),
                       _buildCard(
@@ -98,7 +110,7 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
                         title: 'Clientes',
                         subtitle: 'Gestión y contactos de clientes',
                         icon: Icons.people_outline,
-                        destination: const ClientesScreen(),
+                        destination: const ClientesDeskScreen(),
                       ),
                       const SizedBox(height: 20),
                       _buildCard(
@@ -106,7 +118,7 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
                         title: 'Proveedores',
                         subtitle: 'Lista de proveedores y suministros',
                         icon: Icons.analytics,
-                        destination: const ProveedoresScreen(),
+                        destination: const ProveedoresDeskScreen(),
                       ),
                     ],
                   ),
@@ -128,10 +140,7 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
   }) {
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => destination),
-        );
+        _navegarConFade(context, destination);
       },
       borderRadius: BorderRadius.circular(16),
       child: Card(

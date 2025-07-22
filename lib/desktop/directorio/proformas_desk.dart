@@ -1,32 +1,27 @@
-import 'package:basefundi/settings/navbar_desk.dart';
-import 'package:basefundi/desktop/ventas/modificar_ventas_desk.dart';
-import 'package:basefundi/desktop/ventas/ventas_totales_desk.dart';
-import 'package:basefundi/desktop/ventas/realizar_venta_desk.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 
-class VentasDeskScreen extends StatefulWidget {
-  const VentasDeskScreen({super.key});
+import 'package:basefundi/movil/directorio/proformas/proforma_ventas_movil.dart';
+import 'package:basefundi/movil/directorio/proformas/proformas_guardadas_movil.dart';
+import 'package:basefundi/movil/directorio/proformas/proforma_fundicion_movil.dart';
+import 'package:basefundi/desktop/directorio/proformas/proforfun.dart'; // desktop version
+import 'package:basefundi/desktop/directorio/proformas/profventas.dart';
+import 'package:basefundi/settings/navbar_desk.dart'; // Asegúrate de importar tu layout
+
+class OpcionesProformasDeskScreen extends StatefulWidget {
+  const OpcionesProformasDeskScreen({super.key});
 
   @override
-  State<VentasDeskScreen> createState() => _VentasDeskScreenState();
+  State<OpcionesProformasDeskScreen> createState() =>
+      _OpcionesProformasDeskScreenState();
 }
 
-class _VentasDeskScreenState extends State<VentasDeskScreen>
+class _OpcionesProformasDeskScreenState
+    extends State<OpcionesProformasDeskScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-
-  void _navegarConFade(BuildContext context, Widget pantalla) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 150),
-      ),
-    );
-  }
 
   @override
   void initState() {
@@ -45,12 +40,44 @@ class _VentasDeskScreenState extends State<VentasDeskScreen>
     super.dispose();
   }
 
+  void _navegarConFade(BuildContext context, Widget pantalla) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 150),
+      ),
+    );
+  }
+
+  Widget _getProformaFundicionScreen() {
+    if (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.linux) {
+      return const ProformaCompraScreenDesktop();
+    } else {
+      return const ProformaCompraScreen();
+    }
+  }
+
+  Widget _getProformaVentasScreen() {
+    if (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.linux) {
+      return ProformaScreenDesktop();
+    } else {
+      return ProformaScreen();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MainDeskLayout(
       child: Column(
         children: [
-          // CABECERA CON Transform.translate
+          // ✅ CABECERA CON Transform.translate
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
@@ -74,7 +101,7 @@ class _VentasDeskScreenState extends State<VentasDeskScreen>
                   const Align(
                     alignment: Alignment.center,
                     child: Text(
-                      'Ventas',
+                      'Opciones de Proformas',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -87,7 +114,7 @@ class _VentasDeskScreenState extends State<VentasDeskScreen>
             ),
           ),
 
-          // CONTENIDO PRINCIPAL CON FADE
+          // ✅ CONTENIDO PRINCIPAL CON FADE
           Expanded(
             child: Container(
               color: Colors.white,
@@ -98,24 +125,24 @@ class _VentasDeskScreenState extends State<VentasDeskScreen>
                   child: ListView(
                     children: [
                       _buildBoton(
-                        icono: Icons.receipt_long,
-                        titulo: 'Ventas Totales',
-                        subtitulo: 'Historial de ventas realizadas',
-                        destino: const VentasTotalesDeskScreen(),
+                        icono: Icons.add_circle_outline,
+                        titulo: 'Proforma Ventas',
+                        subtitulo: 'Genera una proforma y guárdala',
+                        destino: _getProformaVentasScreen(),
                       ),
                       const SizedBox(height: 20),
                       _buildBoton(
-                        icono: Icons.edit_note,
-                        titulo: 'Modificar Ventas',
-                        subtitulo: 'Editar ventas registradas',
-                        destino: const ModificarVentaDeskScreen(),
+                        icono: Icons.add_circle_outline,
+                        titulo: 'Proforma Fundición',
+                        subtitulo: 'Genera una proforma compra de hierro',
+                        destino: _getProformaFundicionScreen(),
                       ),
                       const SizedBox(height: 20),
                       _buildBoton(
-                        icono: Icons.shopping_cart,
-                        titulo: 'Realizar Venta',
-                        subtitulo: 'Registrar nueva venta',
-                        destino: const VentasDetalleDeskScreen(),
+                        icono: Icons.list_alt_outlined,
+                        titulo: 'Ver Proformas Guardadas',
+                        subtitulo: 'Consulta todas las proformas registradas',
+                        destino: const ProformasGuardadasScreen(),
                       ),
                     ],
                   ),

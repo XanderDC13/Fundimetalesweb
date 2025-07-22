@@ -1,12 +1,10 @@
+import 'package:basefundi/desktop/inventario/inventario_fundicion_desk.dart';
+import 'package:basefundi/desktop/inventario/inventario_general_desk.dart';
+import 'package:basefundi/desktop/inventario/inventario_pintura_desk.dart';
+import 'package:basefundi/desktop/inventario/productos_desk.dart';
+import 'package:basefundi/desktop/reportes/reporte_transporte_desk.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-
-import 'package:basefundi/movil/inventario/inventario_general_movil.dart';
-import 'package:basefundi/movil/inventario/inventario_pintura_movil.dart';
-import 'package:basefundi/movil/inventario/productos_movil.dart';
-import 'package:basefundi/movil/inventario/transporte_movil.dart';
-import 'package:basefundi/movil/inventario/inventario_fundicion_movil.dart';
-import 'package:basefundi/settings/transition.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
 
 class InventarioDeskScreen extends StatefulWidget {
@@ -20,6 +18,18 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
+
+  void _navegarConFade(BuildContext context, Widget pantalla) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 150),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -95,12 +105,7 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
                         titulo: 'Productos',
                         subtitulo: 'Listado completo',
                         onTap: () {
-                          navigateWithTransition(
-                            context: context,
-                            destination: const TotalInvScreen(),
-                            transition: TransitionType.fade,
-                            replace: false,
-                          );
+                          _navegarConFade(context, const TotalInvDeskScreen());
                         },
                       ),
                       const SizedBox(height: 20),
@@ -109,11 +114,9 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
                         titulo: 'Inventario en Fundición',
                         subtitulo: 'Registro de fundición',
                         onTap: () {
-                          navigateWithTransition(
-                            context: context,
-                            destination: const InventarioFundicionScreen(),
-                            transition: TransitionType.fade,
-                            replace: false,
+                          _navegarConFade(
+                            context,
+                            const InventarioFundicionDeskScreen(),
                           );
                         },
                       ),
@@ -123,11 +126,9 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
                         titulo: 'Inventario en Pintura',
                         subtitulo: 'Registro de pintura',
                         onTap: () {
-                          navigateWithTransition(
-                            context: context,
-                            destination: const InventarioPinturaScreen(),
-                            transition: TransitionType.fade,
-                            replace: false,
+                          _navegarConFade(
+                            context,
+                            const InventarioPinturaDeskScreen(),
                           );
                         },
                       ),
@@ -137,11 +138,9 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
                         titulo: 'Inventario General',
                         subtitulo: 'Suma final de productos',
                         onTap: () {
-                          navigateWithTransition(
-                            context: context,
-                            destination: InventarioGeneralScreen(),
-                            transition: TransitionType.fade,
-                            replace: false,
+                          _navegarConFade(
+                            context,
+                            InventarioGeneralDeskScreen(),
                           );
                         },
                       ),
@@ -151,11 +150,9 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
                         titulo: 'Transporte',
                         subtitulo: 'Tiempos de entrega',
                         onTap: () {
-                          navigateWithTransition(
-                            context: context,
-                            destination: const ReporteTransporteFScreen(),
-                            transition: TransitionType.fade,
-                            replace: false,
+                          _navegarConFade(
+                            context,
+                            const ReporteTransporteDeskScreen(),
                           );
                         },
                       ),
@@ -178,30 +175,45 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Card(
-        color: Colors.white,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 12,
-          ),
-          leading: Icon(icon, color: const Color(0xFF2C3E50), size: 30),
-          title: Text(
-            titulo,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2C3E50),
-              fontSize: 18,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
-          ),
-          subtitle: Text(
-            subtitulo,
-            style: const TextStyle(color: Color(0xFFB0BEC5)),
-          ),
-          trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 32, color: const Color(0xFF2C3E50)),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titulo,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: Color(0xFF2C3E50),
+                  ),
+                ),
+                Text(
+                  subtitulo,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFFB0BEC5),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

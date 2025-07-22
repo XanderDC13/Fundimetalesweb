@@ -26,347 +26,361 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
   @override
   Widget build(BuildContext context) {
     return MainDeskLayout(
-      child: Column(
-        children: [
-          // CABECERA CON Transform.translate
-          Transform.translate(
-            offset: const Offset(-0.5, 0),
-            child: Container(
-              width: double.infinity,
-              color: const Color(0xFF2C3E50),
-              padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 38),
-              child: Stack(
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios,
-                        color: Colors.white,
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ),
-                  const Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Carrito',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Expanded(
-            child: Consumer<CarritoController>(
-              builder: (context, carrito, _) {
-                final items = carrito.items;
-                final total = carrito.total;
-                final totalConIva = _conIva ? total * 1.15 : total;
-
-                return Column(
+      child: Container(
+        color: const Color(0xFFFFFFFF),
+        child: Column(
+          children: [
+            // CABECERA CON Transform.translate
+            Transform.translate(
+              offset: const Offset(-0.5, 0),
+              child: Container(
+                width: double.infinity,
+                color: const Color(0xFF2C3E50),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 64,
+                  vertical: 38,
+                ),
+                child: Stack(
                   children: [
-                    Expanded(
-                      child:
-                          items.isEmpty
-                              ? const Center(
-                                child: Text('El carrito está vacío'),
-                              )
-                              : ListView.builder(
-                                itemCount: items.length,
-                                itemBuilder: (context, index) {
-                                  final producto = items[index];
-                                  final TextEditingController
-                                  cantidadController = TextEditingController(
-                                    text: producto.cantidad.toString(),
-                                  );
-
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    child: Card(
-                                      color: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      elevation: 0,
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                const CircleAvatar(
-                                                  backgroundColor: Colors.grey,
-                                                  child: Icon(
-                                                    Icons.inventory_2,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: Text(
-                                                    producto.nombre,
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-                                                Text(
-                                                  '\$${producto.precio.toStringAsFixed(2)}',
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    IconButton(
-                                                      icon: const Icon(
-                                                        Icons
-                                                            .remove_circle_outline,
-                                                      ),
-                                                      onPressed:
-                                                          producto.cantidad > 1
-                                                              ? () {
-                                                                carrito.actualizarCantidad(
-                                                                  producto
-                                                                      .referencia,
-                                                                  producto.cantidad -
-                                                                      1,
-                                                                );
-                                                              }
-                                                              : () {
-                                                                carrito.eliminarProducto(
-                                                                  producto
-                                                                      .referencia,
-                                                                );
-                                                              },
-                                                    ),
-                                                    SizedBox(
-                                                      width: 45,
-                                                      child: TextField(
-                                                        controller:
-                                                            cantidadController,
-                                                        keyboardType:
-                                                            TextInputType
-                                                                .number,
-                                                        textAlign:
-                                                            TextAlign.center,
-                                                        onSubmitted: (value) {
-                                                          final parsed =
-                                                              int.tryParse(
-                                                                value,
-                                                              );
-                                                          if (parsed != null &&
-                                                              parsed >= 1 &&
-                                                              parsed <=
-                                                                  producto
-                                                                      .disponibles) {
-                                                            carrito
-                                                                .actualizarCantidad(
-                                                                  producto
-                                                                      .referencia,
-                                                                  parsed,
-                                                                );
-                                                          } else if (parsed !=
-                                                                  null &&
-                                                              parsed >
-                                                                  producto
-                                                                      .disponibles) {
-                                                            carrito.actualizarCantidad(
-                                                              producto
-                                                                  .referencia,
-                                                              producto
-                                                                  .disponibles,
-                                                            );
-                                                          } else {
-                                                            carrito
-                                                                .actualizarCantidad(
-                                                                  producto
-                                                                      .referencia,
-                                                                  1,
-                                                                );
-                                                          }
-                                                        },
-                                                      ),
-                                                    ),
-                                                    IconButton(
-                                                      icon: const Icon(
-                                                        Icons
-                                                            .add_circle_outline,
-                                                      ),
-                                                      onPressed:
-                                                          producto.cantidad <
-                                                                  producto
-                                                                      .disponibles
-                                                              ? () {
-                                                                carrito.actualizarCantidad(
-                                                                  producto
-                                                                      .referencia,
-                                                                  producto.cantidad +
-                                                                      1,
-                                                                );
-                                                              }
-                                                              : null,
-                                                    ),
-                                                  ],
-                                                ),
-                                                Text(
-                                                  '= \$${producto.subtotal.toStringAsFixed(2)}',
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      child: Column(
-                        children: [
-                          TextField(
-                            controller: _clienteController,
-                            style: const TextStyle(
-                              color: Color(0xFF2C3E50),
-                              fontWeight: FontWeight.w500,
-                            ),
-                            decoration: const InputDecoration(
-                              filled: true,
-                              fillColor: Colors.white,
-                              prefixIcon: Icon(
-                                Icons.person,
-                                color: Color(0xFF2C3E50),
-                              ),
-                              labelText: 'Nombre del cliente (opcional)',
-                              labelStyle: TextStyle(color: Color(0xFF2C3E50)),
-                              border: OutlineInputBorder(
-                                borderSide: BorderSide.none,
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  const Text(
-                                    'Total:',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _conIva = !_conIva;
-                                      });
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color:
-                                            _conIva
-                                                ? const Color(0xFF4682B4)
-                                                : Colors.white,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: const Color(0xFF4682B4),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        'IVA',
-                                        style: TextStyle(
-                                          color:
-                                              _conIva
-                                                  ? Colors.white
-                                                  : const Color(0xFF4682B4),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Text(
-                                '\$${totalConIva.toStringAsFixed(2)}',
-                                style: const TextStyle(fontSize: 18),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                        ],
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.arrow_back_ios,
+                          color: Colors.white,
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          icon: const Icon(
-                            Icons.check_circle,
-                            color: Colors.white,
-                          ),
-                          label: const Text(
-                            'CONFIRMAR VENTA',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4682B4),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () {
-                            _mostrarSeleccionMetodoPago(context, totalConIva);
-                          },
+                    const Align(
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Carrito',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ],
-                );
-              },
+                ),
+              ),
             ),
-          ),
-        ],
+            Expanded(
+              child: Consumer<CarritoController>(
+                builder: (context, carrito, _) {
+                  final items = carrito.items;
+                  final total = carrito.total;
+                  final totalConIva = _conIva ? total * 1.15 : total;
+
+                  return Column(
+                    children: [
+                      Expanded(
+                        child:
+                            items.isEmpty
+                                ? const Center(
+                                  child: Text('El carrito está vacío'),
+                                )
+                                : ListView.builder(
+                                  itemCount: items.length,
+                                  itemBuilder: (context, index) {
+                                    final producto = items[index];
+                                    final TextEditingController
+                                    cantidadController = TextEditingController(
+                                      text: producto.cantidad.toString(),
+                                    );
+
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      child: Card(
+                                        color: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        elevation: 0,
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  const CircleAvatar(
+                                                    backgroundColor:
+                                                        Colors.grey,
+                                                    child: Icon(
+                                                      Icons.inventory_2,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: Text(
+                                                      producto.nombre,
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    '\$${producto.precio.toStringAsFixed(2)}',
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      IconButton(
+                                                        icon: const Icon(
+                                                          Icons
+                                                              .remove_circle_outline,
+                                                        ),
+                                                        onPressed:
+                                                            producto.cantidad >
+                                                                    1
+                                                                ? () {
+                                                                  carrito.actualizarCantidad(
+                                                                    producto
+                                                                        .referencia,
+                                                                    producto.cantidad -
+                                                                        1,
+                                                                  );
+                                                                }
+                                                                : () {
+                                                                  carrito.eliminarProducto(
+                                                                    producto
+                                                                        .referencia,
+                                                                  );
+                                                                },
+                                                      ),
+                                                      SizedBox(
+                                                        width: 45,
+                                                        child: TextField(
+                                                          controller:
+                                                              cantidadController,
+                                                          keyboardType:
+                                                              TextInputType
+                                                                  .number,
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                          onSubmitted: (value) {
+                                                            final parsed =
+                                                                int.tryParse(
+                                                                  value,
+                                                                );
+                                                            if (parsed !=
+                                                                    null &&
+                                                                parsed >= 1 &&
+                                                                parsed <=
+                                                                    producto
+                                                                        .disponibles) {
+                                                              carrito.actualizarCantidad(
+                                                                producto
+                                                                    .referencia,
+                                                                parsed,
+                                                              );
+                                                            } else if (parsed !=
+                                                                    null &&
+                                                                parsed >
+                                                                    producto
+                                                                        .disponibles) {
+                                                              carrito.actualizarCantidad(
+                                                                producto
+                                                                    .referencia,
+                                                                producto
+                                                                    .disponibles,
+                                                              );
+                                                            } else {
+                                                              carrito.actualizarCantidad(
+                                                                producto
+                                                                    .referencia,
+                                                                1,
+                                                              );
+                                                            }
+                                                          },
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                        icon: const Icon(
+                                                          Icons
+                                                              .add_circle_outline,
+                                                        ),
+                                                        onPressed:
+                                                            producto.cantidad <
+                                                                    producto
+                                                                        .disponibles
+                                                                ? () {
+                                                                  carrito.actualizarCantidad(
+                                                                    producto
+                                                                        .referencia,
+                                                                    producto.cantidad +
+                                                                        1,
+                                                                  );
+                                                                }
+                                                                : null,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  Text(
+                                                    '= \$${producto.subtotal.toStringAsFixed(2)}',
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        child: Column(
+                          children: [
+                            TextField(
+                              controller: _clienteController,
+                              style: const TextStyle(
+                                color: Color(0xFF2C3E50),
+                                fontWeight: FontWeight.w500,
+                              ),
+                              decoration: const InputDecoration(
+                                filled: true,
+                                fillColor: Colors.white,
+                                prefixIcon: Icon(
+                                  Icons.person,
+                                  color: Color(0xFF2C3E50),
+                                ),
+                                labelText: 'Nombre del cliente (opcional)',
+                                labelStyle: TextStyle(color: Color(0xFF2C3E50)),
+                                border: OutlineInputBorder(
+                                  borderSide: BorderSide.none,
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'Total:',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _conIva = !_conIva;
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              _conIva
+                                                  ? const Color(0xFF4682B4)
+                                                  : Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(0xFF4682B4),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'IVA',
+                                          style: TextStyle(
+                                            color:
+                                                _conIva
+                                                    ? Colors.white
+                                                    : const Color(0xFF4682B4),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  '\$${totalConIva.toStringAsFixed(2)}',
+                                  style: const TextStyle(fontSize: 18),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            icon: const Icon(
+                              Icons.check_circle,
+                              color: Colors.white,
+                            ),
+                            label: const Text(
+                              'CONFIRMAR VENTA',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4682B4),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () {
+                              _mostrarSeleccionMetodoPago(context, totalConIva);
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

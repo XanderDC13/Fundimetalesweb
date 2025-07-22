@@ -122,8 +122,8 @@ class _SettingsDeskScreenState extends State<SettingsDeskScreen>
                       const SizedBox(height: 20),
                       _buildBoton(
                         icon: Icons.person,
-                        titulo: 'Editar perfil',
-                        subtitulo: 'Cambiar datos de usuario',
+                        titulo: 'Enviar feedback',
+                        subtitulo: 'Opinión o sugerencias',
                         onTap: () {
                           _navegarConFade(context, const FeedbackDeskScreen());
                         },
