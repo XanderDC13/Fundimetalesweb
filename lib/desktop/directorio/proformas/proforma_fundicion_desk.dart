@@ -1,22 +1,20 @@
 import 'dart:async';
-import 'dart:typed_data';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:basefundi/settings/navbar_desk.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:io';
 
-class ProformaScreenDesktop extends StatefulWidget {
+class ProformaFundicionDeskScreen extends StatefulWidget {
   @override
-  State<ProformaScreenDesktop> createState() => ProformaScreenDesktopState();
+  _ProformaFundicionDeskScreenState createState() =>
+      _ProformaFundicionDeskScreenState();
 }
 
-class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
-  // Controladores para la información del cliente
+class _ProformaFundicionDeskScreenState
+    extends State<ProformaFundicionDeskScreen> {
   final TextEditingController _clienteController = TextEditingController();
   final TextEditingController _nombreComercialController =
       TextEditingController();
@@ -37,7 +35,6 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
       _mensajeBusqueda = '';
     });
     _debounce = Timer(const Duration(milliseconds: 500), () async {
-      // Simulación de búsqueda en Firestore
       if (value.isEmpty) {
         setState(() {
           _isSearching = false;
@@ -113,10 +110,6 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
   // Lista de items
   List<ItemProforma> items = [ItemProforma()];
 
-  // Imagen del transporte
-  File? _transportImage;
-  final ImagePicker _picker = ImagePicker();
-
   // Estados para la búsqueda
   bool _isSearching = false;
   bool _clienteEncontrado = false;
@@ -124,46 +117,37 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFD6EAF8),
-      body: Column(
+    return MainDeskLayout(
+      child: Column(
         children: [
-          SafeArea(
-            top: true,
-            bottom: false,
+          // ✅ CABECERA CON TRANSFORM
+          Transform.translate(
+            offset: const Offset(-0.5, 0),
             child: Container(
               width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              child: Row(
+              color: const Color(0xFF2C3E50),
+              padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 38),
+              child: Stack(
                 children: [
-                  // FLECHA DE REGRESO
-                  IconButton(
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new,
-                      color: Colors.white,
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_ios,
+                        color: Colors.white,
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
                     ),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(
+                  const Align(
+                    alignment: Alignment.center,
                     child: Text(
-                      'Generar Proforma',
+                      'Proforma de Compras',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 22,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -173,31 +157,51 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
             ),
           ),
 
+          // ✅ CONTENIDO CON FONDO BLANCO
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildCompactHeader(),
-                  const SizedBox(height: 16),
-                  _buildMobileClienteSection(),
-                  const SizedBox(height: 16),
-                  _buildMobileEnvioSection(),
-                  const SizedBox(height: 16),
-                  _buildMobileItemsSection(),
-                  const SizedBox(height: 16),
-                  _buildMobileTotalesSection(),
-                  const SizedBox(height: 16),
-                  _buildMobileCondicionesSection(),
-                  const SizedBox(height: 20), // espacio para botones flotantes
-                ],
+            child: Container(
+              color: Colors.white,
+              child: SafeArea(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1200),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildCompactHeader(),
+                                const SizedBox(height: 16),
+                                _buildMobileClienteSection(),
+                                const SizedBox(height: 16),
+                                _buildMobileEnvioSection(),
+                                const SizedBox(height: 16),
+                                _buildMobileItemsSection(),
+                                const SizedBox(height: 16),
+                                _buildMobileTotalesSection(),
+                                const SizedBox(height: 20),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Action bar dentro del contenido
+                        Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: _buildMobileActionBar(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
         ],
       ),
-      bottomNavigationBar: _buildMobileActionBar(),
     );
   }
 
@@ -227,16 +231,16 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
   @override
   void initState() {
     super.initState();
-    _generarNumeroProforma(); // 👉 Llama la función que SÍ genera el número correctamente
+    _previsualizarNumeroProforma();
   }
 
-  Future<void> _generarNumeroProforma() async {
+  Future<void> _previsualizarNumeroProforma() async {
     final fechaHoy = DateTime.now();
     final fechaFormateada =
         "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
 
     final counterRef = FirebaseFirestore.instance
-        .collection('proformas_counters')
+        .collection('proformas_compras_counter')
         .doc(fechaFormateada);
 
     final counterDoc = await counterRef.get();
@@ -245,9 +249,6 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
 
     if (counterDoc.exists) {
       numero = counterDoc['contador'] + 1;
-      await counterRef.update({'contador': numero});
-    } else {
-      await counterRef.set({'contador': numero});
     }
 
     setState(() {
@@ -575,87 +576,6 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
             ],
           ),
           SizedBox(height: 16),
-          _buildMobileImageUpload(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMobileImageUpload() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
-      ),
-      child: Column(
-        children: [
-          if (_transportImage == null) ...[
-            Icon(Icons.upload_file, size: 48, color: Colors.grey[400]),
-            SizedBox(height: 8),
-            Text(
-              'Imagen del Transporte',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[600],
-              ),
-            ),
-            SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: _pickImage,
-              icon: Icon(Icons.add_photo_alternate),
-              label: Text('Subir Imagen'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[600],
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ] else ...[
-            Container(
-              width: double.infinity,
-              height: 120,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                image: DecorationImage(
-                  image: FileImage(_transportImage!),
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.check_circle, color: Colors.green[600], size: 16),
-                SizedBox(width: 4),
-                Text(
-                  'Imagen cargada',
-                  style: TextStyle(
-                    color: Colors.green[600],
-                    fontWeight: FontWeight.w500,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 8),
-            TextButton.icon(
-              onPressed: () {
-                setState(() {
-                  _transportImage = null;
-                });
-              },
-              icon: Icon(Icons.delete, size: 16),
-              label: Text('Eliminar'),
-              style: TextButton.styleFrom(foregroundColor: Colors.red[600]),
-            ),
-          ],
         ],
       ),
     );
@@ -952,91 +872,9 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
     );
   }
 
-  Widget _buildMobileCondicionesSection() {
-    return _buildMobileSection(
-      title: 'Condiciones',
-      icon: Icons.assignment_outlined,
-      color: Colors.grey[800]!,
-      child: Column(
-        children: [
-          _buildStyledTextField(
-            controller: _validezController,
-            label: 'Validez de la Oferta',
-            icon: Icons.schedule,
-          ),
-          SizedBox(height: 12),
-          _buildStyledTextField(
-            controller: _saldoController,
-            label: 'Forma de Pago',
-            icon: Icons.payment,
-            maxLines: 2,
-          ),
-          SizedBox(height: 12),
-          _buildStyledTextField(
-            controller: _entregaController,
-            label: 'Plazo de Entrega',
-            icon: Icons.delivery_dining,
-          ),
-          SizedBox(height: 12),
-          _buildStyledTextField(
-            controller: _lugarController,
-            label: 'Lugar de Entrega',
-            icon: Icons.location_on,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStyledTextField({
-    required TextEditingController controller,
-    required String label,
-    IconData? icon,
-    int maxLines = 1,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.normal,
-            color: Colors.grey[800],
-          ),
-        ),
-        SizedBox(height: 6),
-        Container(
-          height: maxLines == 1 ? 48 : null,
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          child: TextField(
-            controller: controller,
-            maxLines: maxLines,
-            decoration: InputDecoration(
-              prefixIcon:
-                  icon != null ? Icon(icon, color: Colors.grey[600]) : null,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
-            ),
-            style: TextStyle(fontSize: 16),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildMobileActionBar() {
     return Padding(
-      padding: const EdgeInsets.all(
-        16,
-      ), // Margen para que no pegue a los bordes
+      padding: const EdgeInsets.all(16),
       child: SafeArea(
         child: Row(
           children: [
@@ -1288,15 +1126,6 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
     );
   }
 
-  void _pickImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      setState(() {
-        _transportImage = File(image.path);
-      });
-    }
-  }
-
   void _agregarItem() {
     setState(() {
       items.add(ItemProforma());
@@ -1405,13 +1234,6 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
   Future<pw.Document> _generarPDF() async {
     final pdf = pw.Document();
 
-    // Convertir imagen del transporte a formato PDF si existe
-    pw.ImageProvider? transportImageProvider;
-    if (_transportImage != null) {
-      final imageBytes = await _transportImage!.readAsBytes();
-      transportImageProvider = pw.MemoryImage(imageBytes);
-    }
-
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -1437,20 +1259,6 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
                   ],
                 ),
               ),
-
-              // Imagen del comprobante SIEMPRE al final
-              if (transportImageProvider != null) ...[
-                pw.SizedBox(height: 20),
-                pw.Text(
-                  'COMPROBANTE',
-                  style: pw.TextStyle(
-                    fontSize: 10,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-                pw.SizedBox(height: 6),
-                _buildPDFComprobante(transportImageProvider),
-              ],
             ],
           );
         },
@@ -1872,27 +1680,6 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
     );
   }
 
-  pw.Widget _buildPDFComprobante(pw.ImageProvider? transportImageProvider) {
-    if (transportImageProvider == null) {
-      return pw.Container();
-    }
-    return pw.Center(
-      child: pw.Container(
-        width: double.infinity,
-        height: 250,
-        decoration: pw.BoxDecoration(
-          border: pw.Border.all(color: PdfColors.grey300),
-          borderRadius: pw.BorderRadius.circular(6),
-        ),
-        child: pw.Image(
-          transportImageProvider,
-          fit: pw.BoxFit.contain,
-          alignment: pw.Alignment.center,
-        ),
-      ),
-    );
-  }
-
   void _mostrarOpcionesGuardar() async {
     // Generar el PDF una sola vez
     final pdf = await _generarPDF();
@@ -1917,70 +1704,35 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
                   ElevatedButton.icon(
                     onPressed: () async {
                       try {
-                        // 1. Generar número de proforma
-                        await _generarNumeroProforma();
+                        // 👉 1. Generar y reservar número real de proforma (incrementar contador aquí)
+                        final fechaHoy = DateTime.now();
+                        final fechaFormateada =
+                            "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
+
+                        final counterRef = FirebaseFirestore.instance
+                            .collection('proformas_counters')
+                            .doc(fechaFormateada);
+
+                        final counterDoc = await counterRef.get();
+
+                        int numero = 1;
+                        if (counterDoc.exists) {
+                          numero = counterDoc['contador'] + 1;
+                          await counterRef.update({'contador': numero});
+                        } else {
+                          await counterRef.set({'contador': numero});
+                        }
+
+                        final numeroProformaFinal =
+                            "PROFORMA N-$fechaFormateada-$numero";
+
                         print(
-                          '✅ Número de proforma generado: $_numeroProforma',
+                          '✅ Número de proforma reservado: $numeroProformaFinal',
                         );
 
-                        // 2. Verificar conexión a Firebase
-                        try {
-                          await FirebaseStorage.instance
-                              .ref()
-                              .child('test')
-                              .putData(Uint8List.fromList([1, 2, 3]));
-                          print('✅ Conexión a Firebase Storage OK');
-                        } catch (testError) {
-                          print(
-                            '❌ Error de conexión a Firebase Storage: $testError',
-                          );
-                          throw Exception(
-                            'Error de conexión a Firebase Storage',
-                          );
-                        }
-
-                        // 3. Crear nombre único para el PDF
-                        final fileName =
-                            'proforma_${_numeroProforma}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-                        print('✅ Nombre del archivo: $fileName');
-
-                        // 4. Crear referencia al bucket principal (sin subcarpetas primero)
-                        final storageRef = FirebaseStorage.instance.ref();
-                        final pdfRef = storageRef.child(fileName);
-
-                        print('✅ Referencia creada: ${pdfRef.fullPath}');
-
-                        // 5. Subir PDF con retry y configuración específica
-                        int maxRetries = 3;
-
-                        for (int i = 0; i < maxRetries; i++) {
-                          try {
-                            print('📤 Intento ${i + 1} de subida del PDF...');
-
-                            print('✅ PDF subido exitosamente');
-                            break;
-                          } catch (uploadError) {
-                            print('❌ Error en intento ${i + 1}: $uploadError');
-                            if (i == maxRetries - 1) {
-                              throw uploadError;
-                            }
-                            await Future.delayed(Duration(seconds: 2));
-                          }
-                        }
-
-                        // 6. Obtener URL de descarga
-                        String pdfUrl;
-                        try {
-                          pdfUrl = await pdfRef.getDownloadURL();
-                          print('✅ URL obtenida: $pdfUrl');
-                        } catch (urlError) {
-                          print('❌ Error al obtener URL: $urlError');
-                          throw Exception('Error al obtener URL de descarga');
-                        }
-
-                        // 7. Preparar datos para Firestore
+                        // 👉 2. Preparar datos SIN PDF
                         final proformaData = {
-                          'numero': _numeroProforma,
+                          'numero': numeroProformaFinal,
                           'cliente': _clienteController.text,
                           'ruc': _rucController.text,
                           'telefono': _telefonoController.text,
@@ -1998,21 +1750,18 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
                                   )
                                   .toList(),
                           'fecha': Timestamp.now(),
-                          'pdfUrl': pdfUrl,
-                          'pdfFileName': fileName,
-                          'pdfPath': pdfRef.fullPath,
                         };
 
-                        // 8. Guardar en Firestore
+                        // 👉 3. Guardar en Firestore
                         await FirebaseFirestore.instance
                             .collection('proformas')
                             .add(proformaData);
 
                         print(
-                          '✅ Proforma guardada en Firestore: $_numeroProforma',
+                          '✅ Proforma guardada en Firestore: $numeroProformaFinal',
                         );
 
-                        // 9. Limpiar campos
+                        // 👉 4. Limpiar campos
                         _clienteController.clear();
                         _rucController.clear();
                         _telefonoController.clear();
@@ -2032,9 +1781,7 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
                           ),
                         );
                       } catch (e) {
-                        print('❌ Error completo al guardar proforma: $e');
-                        print('❌ Stack trace: ${StackTrace.current}');
-
+                        print('❌ Error al guardar proforma: $e');
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -2047,6 +1794,7 @@ class ProformaScreenDesktopState extends State<ProformaScreenDesktop> {
                         );
                       }
                     },
+
                     icon: const Icon(Icons.save),
                     label: const Text('Guardar'),
                     style: ElevatedButton.styleFrom(

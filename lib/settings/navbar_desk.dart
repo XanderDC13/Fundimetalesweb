@@ -2,6 +2,21 @@ import 'package:basefundi/auth/login.dart';
 import 'package:basefundi/desktop/ajustes/editperfil_desk.dart';
 import 'package:basefundi/desktop/ajustes/feedback_desk.dart';
 import 'package:basefundi/desktop/dashboard_desk.dart';
+import 'package:basefundi/desktop/directorio/clientes_desk.dart';
+import 'package:basefundi/desktop/directorio/proformas_desk.dart';
+import 'package:basefundi/desktop/directorio/proveedores_desk.dart';
+import 'package:basefundi/desktop/inventario/inventario_fundicion_desk.dart';
+import 'package:basefundi/desktop/inventario/inventario_general_desk.dart';
+import 'package:basefundi/desktop/inventario/inventario_pintura_desk.dart';
+import 'package:basefundi/desktop/inventario/productos_desk.dart';
+import 'package:basefundi/desktop/inventario/transporte_desk.dart';
+import 'package:basefundi/desktop/personal/empleados/empleados_registro_desk.dart';
+import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
+import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
+import 'package:basefundi/desktop/reportes/auditoria_desk.dart';
+import 'package:basefundi/desktop/reportes/reporte_inv_desk.dart';
+import 'package:basefundi/desktop/reportes/reporte_transporte_desk.dart';
+import 'package:basefundi/desktop/reportes/reporte_ventas_desk.dart';
 import 'package:basefundi/desktop/ventas/modificar_ventas_desk.dart';
 import 'package:basefundi/desktop/ventas/realizar_venta_desk.dart';
 import 'package:basefundi/desktop/ventas/ventas_totales_desk.dart';
@@ -122,29 +137,47 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
                         menuKey: 'inventario',
                         subItems: [
                           _buildSubItem(
+                            label: 'Productos',
+                            onTap: () {
+                              _navegarConFade(
+                                context,
+                                const TotalInvDeskScreen(),
+                              );
+                            },
+                          ),
+                          _buildSubItem(
                             label: 'General',
                             onTap: () {
-                              Navigator.pushNamed(
+                              _navegarConFade(
                                 context,
-                                '/inventario_general_desk',
+                                const InventarioGeneralDeskScreen(),
                               );
                             },
                           ),
                           _buildSubItem(
                             label: 'Fundición',
                             onTap: () {
-                              Navigator.pushNamed(
+                              _navegarConFade(
                                 context,
-                                '/inventario_fundicion_desk',
+                                const InventarioFundicionDeskScreen(),
                               );
                             },
                           ),
                           _buildSubItem(
                             label: 'Pintura',
                             onTap: () {
-                              Navigator.pushNamed(
+                              _navegarConFade(
                                 context,
-                                '/inventario_pintura_desk',
+                                const InventarioPinturaDeskScreen(),
+                              );
+                            },
+                          ),
+                          _buildSubItem(
+                            label: 'Transporte',
+                            onTap: () {
+                              _navegarConFade(
+                                context,
+                                const TransporteDeskScreen(),
                               );
                             },
                           ),
@@ -158,13 +191,28 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
                           _buildSubItem(
                             label: 'Empleados',
                             onTap: () {
-                              Navigator.pushNamed(context, '/personal_desk');
+                              _navegarConFade(
+                                context,
+                                const EmpleadosPendientesDeskScreen(),
+                              );
                             },
                           ),
                           _buildSubItem(
                             label: 'Funciones',
                             onTap: () {
-                              Navigator.pushNamed(context, '/funciones_desk');
+                              _navegarConFade(
+                                context,
+                                const FuncionesDeskScreen(),
+                              );
+                            },
+                          ),
+                          _buildSubItem(
+                            label: 'Insumos',
+                            onTap: () {
+                              _navegarConFade(
+                                context,
+                                const InsumosDeskScreen(),
+                              );
                             },
                           ),
                         ],
@@ -177,27 +225,36 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
                           _buildSubItem(
                             label: 'Ventas',
                             onTap: () {
-                              Navigator.pushNamed(
+                              _navegarConFade(
                                 context,
-                                '/reporte_ventas_desk',
+                                const ReporteVentasDeskScreen(),
                               );
                             },
                           ),
                           _buildSubItem(
                             label: 'Inventario',
                             onTap: () {
-                              Navigator.pushNamed(
+                              _navegarConFade(
                                 context,
-                                '/reporte_inventario_desk',
+                                const ReporteInventarioDeskScreen(),
                               );
                             },
                           ),
                           _buildSubItem(
                             label: 'Transporte',
                             onTap: () {
-                              Navigator.pushNamed(
+                              _navegarConFade(
                                 context,
-                                '/reporte_transporte_desk',
+                                const ReporteTransporteDeskScreen(),
+                              );
+                            },
+                          ),
+                          _buildSubItem(
+                            label: 'Auditoría',
+                            onTap: () {
+                              _navegarConFade(
+                                context,
+                                const AuditoriaDeskScreen(),
                               );
                             },
                           ),
@@ -209,15 +266,30 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
                         menuKey: 'directorio',
                         subItems: [
                           _buildSubItem(
+                            label: 'Proformas',
+                            onTap: () {
+                              _navegarConFade(
+                                context,
+                                const OpcionesProformasDeskScreen(),
+                              );
+                            },
+                          ),
+                          _buildSubItem(
                             label: 'Clientes',
                             onTap: () {
-                              Navigator.pushNamed(context, '/clientes_desk');
+                              _navegarConFade(
+                                context,
+                                const ClientesDeskScreen(),
+                              );
                             },
                           ),
                           _buildSubItem(
                             label: 'Proveedores',
                             onTap: () {
-                              Navigator.pushNamed(context, '/proveedores_desk');
+                              _navegarConFade(
+                                context,
+                                const ProveedoresDeskScreen(),
+                              );
                             },
                           ),
                         ],

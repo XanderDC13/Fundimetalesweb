@@ -1,13 +1,8 @@
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
+import 'package:basefundi/desktop/directorio/proformas/proforma_fundicion_desk.dart';
+import 'package:basefundi/desktop/directorio/proformas/proforma_ventas_desk.dart';
 import 'package:flutter/material.dart';
-
-import 'package:basefundi/movil/directorio/proformas/proforma_ventas_movil.dart';
-import 'package:basefundi/movil/directorio/proformas/proformas_guardadas_movil.dart';
-import 'package:basefundi/movil/directorio/proformas/proforma_fundicion_movil.dart';
-import 'package:basefundi/desktop/directorio/proformas/proforfun.dart'; // desktop version
-import 'package:basefundi/desktop/directorio/proformas/profventas.dart';
-import 'package:basefundi/settings/navbar_desk.dart'; // Asegúrate de importar tu layout
+import 'package:basefundi/desktop/directorio/proformas/proforma_guardadas_desk.dart';
+import 'package:basefundi/settings/navbar_desk.dart';
 
 class OpcionesProformasDeskScreen extends StatefulWidget {
   const OpcionesProformasDeskScreen({super.key});
@@ -53,23 +48,15 @@ class _OpcionesProformasDeskScreenState
   }
 
   Widget _getProformaFundicionScreen() {
-    if (defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.linux) {
-      return const ProformaCompraScreenDesktop();
-    } else {
-      return const ProformaCompraScreen();
-    }
+    return ProformaFundicionDeskScreen();
   }
 
   Widget _getProformaVentasScreen() {
-    if (defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.linux) {
-      return ProformaScreenDesktop();
-    } else {
-      return ProformaScreen();
-    }
+    return ProformaVentasDeskScreen();
+  }
+
+  Widget _getProformaGuardadasScreen() {
+    return ProformasGuardadasDeskScreen();
   }
 
   @override
@@ -77,7 +64,7 @@ class _OpcionesProformasDeskScreenState
     return MainDeskLayout(
       child: Column(
         children: [
-          // ✅ CABECERA CON Transform.translate
+          // ✅ CABECERA
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
@@ -114,7 +101,7 @@ class _OpcionesProformasDeskScreenState
             ),
           ),
 
-          // ✅ CONTENIDO PRINCIPAL CON FADE
+          // ✅ CONTENIDO PRINCIPAL
           Expanded(
             child: Container(
               color: Colors.white,
@@ -142,7 +129,7 @@ class _OpcionesProformasDeskScreenState
                         icono: Icons.list_alt_outlined,
                         titulo: 'Ver Proformas Guardadas',
                         subtitulo: 'Consulta todas las proformas registradas',
-                        destino: const ProformasGuardadasScreen(),
+                        destino: _getProformaGuardadasScreen(),
                       ),
                     ],
                   ),

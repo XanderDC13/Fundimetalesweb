@@ -3,16 +3,14 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:basefundi/settings/navbar_desk.dart'; // Usa tu MainDeskLayout
 
-class ReporteTransporteDeskScreen extends StatefulWidget {
-  const ReporteTransporteDeskScreen({super.key});
+class TransporteDeskScreen extends StatefulWidget {
+  const TransporteDeskScreen({super.key});
 
   @override
-  State<ReporteTransporteDeskScreen> createState() =>
-      _ReporteTransporteDeskScreenState();
+  State<TransporteDeskScreen> createState() => _TransporteDeskScreenState();
 }
 
-class _ReporteTransporteDeskScreenState
-    extends State<ReporteTransporteDeskScreen>
+class _TransporteDeskScreenState extends State<TransporteDeskScreen>
     with SingleTickerProviderStateMixin {
   TimeOfDay? salidaSede;
   TimeOfDay? llegadaFabrica;

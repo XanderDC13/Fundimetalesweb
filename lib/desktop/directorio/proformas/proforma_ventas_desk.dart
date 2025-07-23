@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:basefundi/settings/navbar_desk.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -8,12 +9,13 @@ import 'package:printing/printing.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 
-class ProformaScreen extends StatefulWidget {
+class ProformaVentasDeskScreen extends StatefulWidget {
   @override
-  _ProformaScreenState createState() => _ProformaScreenState();
+  _ProformaVentasDeskScreenState createState() =>
+      _ProformaVentasDeskScreenState();
 }
 
-class _ProformaScreenState extends State<ProformaScreen> {
+class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
   final TextEditingController _clienteController = TextEditingController();
   final TextEditingController _nombreComercialController =
       TextEditingController();
@@ -121,65 +123,93 @@ class _ProformaScreenState extends State<ProformaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFD6EAF8),
-      body: Column(
+    return MainDeskLayout(
+      child: Column(
         children: [
-          SafeArea(
-            top: true,
-            bottom: false,
+          // ✅ CABECERA CON TRANSFORM
+          Transform.translate(
+            offset: const Offset(-0.5, 0),
             child: Container(
               width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF4682B4), Color(0xFF4682B4)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
+              color: const Color(0xFF2C3E50),
+              padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 38),
+              child: Stack(
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_ios,
+                        color: Colors.white,
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ),
+                  const Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Proforma de Ventas',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              child: const Center(
-                child: Text(
-                  'Generar Proforma',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          // ✅ CONTENIDO CON FONDO BLANCO
+          Expanded(
+            child: Container(
+              color: Colors.white,
+              child: SafeArea(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1200),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildCompactHeader(),
+                                const SizedBox(height: 16),
+                                _buildMobileClienteSection(),
+                                const SizedBox(height: 16),
+                                _buildMobileEnvioSection(),
+                                const SizedBox(height: 16),
+                                _buildMobileItemsSection(),
+                                const SizedBox(height: 16),
+                                _buildMobileTotalesSection(),
+                                const SizedBox(height: 16),
+                                _buildMobileCondicionesSection(),
+                                const SizedBox(height: 20),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Action bar dentro del contenido
+                        Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: _buildMobileActionBar(),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildCompactHeader(),
-                  const SizedBox(height: 16),
-                  _buildMobileClienteSection(),
-                  const SizedBox(height: 16),
-                  _buildMobileEnvioSection(),
-                  const SizedBox(height: 16),
-                  _buildMobileItemsSection(),
-                  const SizedBox(height: 16),
-                  _buildMobileTotalesSection(),
-                  const SizedBox(height: 16),
-                  _buildMobileCondicionesSection(),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
-      bottomNavigationBar: _buildMobileActionBar(),
     );
   }
 
@@ -218,7 +248,7 @@ class _ProformaScreenState extends State<ProformaScreen> {
         "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
 
     final counterRef = FirebaseFirestore.instance
-        .collection('proformas_counters')
+        .collection('proformas_ventas_counter')
         .doc(fechaFormateada);
 
     final counterDoc = await counterRef.get();

@@ -1,37 +1,10 @@
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
-
 import 'package:basefundi/movil/directorio/proformas/proforma_ventas_movil.dart';
 import 'package:basefundi/movil/directorio/proformas/proformas_guardadas_movil.dart';
 import 'package:basefundi/movil/directorio/proformas/proforma_fundicion_movil.dart';
-import 'package:basefundi/desktop/directorio/proformas/proforfun.dart'; // desktop version
-import 'package:basefundi/desktop/directorio/proformas/profventas.dart';
 
 class OpcionesProformasScreen extends StatelessWidget {
   const OpcionesProformasScreen({super.key});
-
-  // Método para decidir qué pantalla abrir según plataforma para Proforma Fundición
-  Widget _getProformaFundicionScreen() {
-    if (defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.linux) {
-      return const ProformaCompraScreenDesktop();
-    } else {
-      return const ProformaCompraScreen();
-    }
-  }
-
-  // Método para decidir qué pantalla abrir según plataforma para Proforma Ventas (ejemplo)
-  Widget _getProformaVentasScreen() {
-    if (defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.linux) {
-      return ProformaScreenDesktop(); // Si tienes versión desktop
-    } else {
-      return ProformaScreen();
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +20,7 @@ class OpcionesProformasScreen extends StatelessWidget {
               title: 'Proforma Ventas',
               subtitle: 'Genera una proforma y guárdala',
               icon: Icons.add_circle_outline,
-              destination: _getProformaVentasScreen(),
+              destination: ProformaScreen(),
             ),
             const SizedBox(height: 12),
             _buildCard(
@@ -55,7 +28,7 @@ class OpcionesProformasScreen extends StatelessWidget {
               title: 'Proforma Fundición',
               subtitle: 'Genera una proforma compra de hierro',
               icon: Icons.add_circle_outline,
-              destination: _getProformaFundicionScreen(),
+              destination: const ProformaCompraScreen(),
             ),
             const SizedBox(height: 12),
             _buildCard(
