@@ -47,7 +47,6 @@ app.*.map.json
 
 # ------------------------------
 # ✅ Builds Windows/macOS/Linux
-/build/
 windows/runner/Debug/
 windows/runner/Release/
 windows/runner/Profile/
@@ -60,6 +59,3 @@ windows/runner/*.lib
 build/windows/x64/firebase_cpp_sdk_windows_*.zip
 build/windows/x64/extracted/
 
-# ------------------------------
-# ✅ Otras carpetas grandes
-# Si usas web: build/web/
