@@ -1,45 +1,65 @@
-# Miscellaneous
+# ------------------------------
+# ✅ Común
 *.class
 *.log
 *.pyc
 *.swp
 .DS_Store
 .atom/
-.build/
-.buildlog/
 .history
 .svn/
-.swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# ------------------------------
+# ✅ IDEs
+.idea/
 *.iml
 *.ipr
 *.iws
-.idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# VSCode (opcional: destapa si quieres ignorar configs locales)
+# .vscode/
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# ------------------------------
+# ✅ Flutter & Dart
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
-/build/
 
-# Symbolication related
+# Documentación generada
+**/doc/api/
+
+# Obfuscation y symbolication
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Último ID de build (iOS)
+**/ios/Flutter/.last_build_id
+
+# ------------------------------
+# ✅ Builds Android
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ------------------------------
+# ✅ Builds Windows/macOS/Linux
+/build/
+windows/runner/Debug/
+windows/runner/Release/
+windows/runner/Profile/
+windows/runner/*.ilk
+windows/runner/*.pdb
+windows/runner/*.exe
+windows/runner/*.lib
+
+# Firebase SDK grande descargado
+build/windows/x64/firebase_cpp_sdk_windows_*.zip
+build/windows/x64/extracted/
+
+# ------------------------------
+# ✅ Otras carpetas grandes
+# Si usas web: build/web/

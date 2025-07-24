@@ -1255,7 +1255,6 @@ class _ProformaFundicionDeskScreenState
                     pw.SizedBox(height: 10),
                     _buildPDFTotales(),
                     pw.SizedBox(height: 10),
-                    _buildPDFCondiciones(),
                   ],
                 ),
               ),
@@ -1627,59 +1626,6 @@ class _ProformaFundicionDeskScreenState
     );
   }
 
-  pw.Widget _buildPDFCondiciones() {
-    return pw.Center(
-      child: pw.Container(
-        padding: pw.EdgeInsets.all(6),
-        decoration: pw.BoxDecoration(
-          border: pw.Border.all(color: PdfColors.grey300),
-          borderRadius: pw.BorderRadius.circular(6),
-        ),
-        width: 350,
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.center,
-          children: [
-            pw.Text(
-              'CONDICIONES GENERALES DE LA OFERTA',
-              style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 3),
-            pw.Row(
-              children: [
-                pw.Expanded(
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        'Validez de la oferta: ${_validezController.text}',
-                        style: pw.TextStyle(fontSize: 7),
-                      ),
-                      pw.SizedBox(height: 2),
-                      pw.Text(
-                        'Forma de pago: ${_saldoController.text}',
-                        style: pw.TextStyle(fontSize: 7),
-                      ),
-                      pw.SizedBox(height: 2),
-                      pw.Text(
-                        'Plazo de entrega: ${_entregaController.text}',
-                        style: pw.TextStyle(fontSize: 7),
-                      ),
-                      pw.SizedBox(height: 2),
-                      pw.Text(
-                        'Lugar de entrega: ${_lugarController.text}',
-                        style: pw.TextStyle(fontSize: 7),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _mostrarOpcionesGuardar() async {
     // Generar el PDF una sola vez
     final pdf = await _generarPDF();
@@ -1704,7 +1650,6 @@ class _ProformaFundicionDeskScreenState
                   ElevatedButton.icon(
                     onPressed: () async {
                       try {
-                        // 👉 1. Generar y reservar número real de proforma (incrementar contador aquí)
                         final fechaHoy = DateTime.now();
                         final fechaFormateada =
                             "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
@@ -1754,7 +1699,7 @@ class _ProformaFundicionDeskScreenState
 
                         // 👉 3. Guardar en Firestore
                         await FirebaseFirestore.instance
-                            .collection('proformas')
+                            .collection('proformasfundicion')
                             .add(proformaData);
 
                         print(
