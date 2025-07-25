@@ -15,7 +15,6 @@ class VerCarritoDeskScreen extends StatefulWidget {
 class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
   final TextEditingController _clienteController = TextEditingController();
   String metodoSeleccionado = 'Efectivo';
-  bool _conIva = false;
 
   @override
   void dispose() {
@@ -73,8 +72,6 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
               child: Consumer<CarritoController>(
                 builder: (context, carrito, _) {
                   final items = carrito.items;
-                  final total = carrito.total;
-                  final totalConIva = _conIva ? total * 1.15 : total;
 
                   return Column(
                     children: [
@@ -117,26 +114,94 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                                             children: [
                                               Row(
                                                 children: [
-                                                  const CircleAvatar(
+                                                  CircleAvatar(
                                                     backgroundColor:
-                                                        Colors.grey,
+                                                        producto.exentoIva
+                                                            ? Colors.green
+                                                            : Colors.grey,
                                                     child: Icon(
-                                                      Icons.inventory_2,
+                                                      producto.exentoIva
+                                                          ? Icons.local_shipping
+                                                          : Icons.inventory_2,
                                                       color: Colors.white,
                                                     ),
                                                   ),
                                                   const SizedBox(width: 12),
                                                   Expanded(
-                                                    child: Text(
-                                                      producto.nombre,
-                                                      style: const TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          producto.nombre,
+                                                          style:
+                                                              const TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                        ),
+                                                        if (producto.exentoIva)
+                                                          Container(
+                                                            margin:
+                                                                const EdgeInsets.only(
+                                                                  top: 2,
+                                                                ),
+                                                            padding:
+                                                                const EdgeInsets.symmetric(
+                                                                  horizontal: 6,
+                                                                  vertical: 2,
+                                                                ),
+                                                            decoration: BoxDecoration(
+                                                              color:
+                                                                  Colors
+                                                                      .green
+                                                                      .shade100,
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    4,
+                                                                  ),
+                                                            ),
+                                                            child: const Text(
+                                                              'EXENTO IVA',
+                                                              style: TextStyle(
+                                                                fontSize: 10,
+                                                                color:
+                                                                    Colors
+                                                                        .green,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                      ],
                                                     ),
                                                   ),
-                                                  Text(
-                                                    '\$${producto.precio.toStringAsFixed(2)}',
+                                                  Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment.end,
+                                                    children: [
+                                                      Text(
+                                                        '\$${producto.precio.toStringAsFixed(2)}',
+                                                        style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      if (!producto.exentoIva &&
+                                                          carrito.ivaActivado)
+                                                        Text(
+                                                          '+ IVA: \$${producto.montoIvaUnitario(carrito.ivaActivado).toStringAsFixed(2)}',
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 11,
+                                                                color:
+                                                                    Colors.grey,
+                                                              ),
+                                                        ),
+                                                    ],
                                                   ),
                                                 ],
                                               ),
@@ -188,26 +253,34 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                                                                 );
                                                             if (parsed !=
                                                                     null &&
-                                                                parsed >= 1 &&
-                                                                parsed <=
+                                                                parsed >= 1) {
+                                                              // Para productos de transporte, permitir cualquier cantidad
+                                                              if (producto
+                                                                  .exentoIva) {
+                                                                carrito.actualizarCantidad(
+                                                                  producto
+                                                                      .referencia,
+                                                                  parsed,
+                                                                );
+                                                              } else {
+                                                                // Para productos normales, respetar disponibles
+                                                                if (parsed <=
                                                                     producto
                                                                         .disponibles) {
-                                                              carrito.actualizarCantidad(
-                                                                producto
-                                                                    .referencia,
-                                                                parsed,
-                                                              );
-                                                            } else if (parsed !=
-                                                                    null &&
-                                                                parsed >
+                                                                  carrito.actualizarCantidad(
                                                                     producto
-                                                                        .disponibles) {
-                                                              carrito.actualizarCantidad(
-                                                                producto
-                                                                    .referencia,
-                                                                producto
-                                                                    .disponibles,
-                                                              );
+                                                                        .referencia,
+                                                                    parsed,
+                                                                  );
+                                                                } else {
+                                                                  carrito.actualizarCantidad(
+                                                                    producto
+                                                                        .referencia,
+                                                                    producto
+                                                                        .disponibles,
+                                                                  );
+                                                                }
+                                                              }
                                                             } else {
                                                               carrito.actualizarCantidad(
                                                                 producto
@@ -224,9 +297,10 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                                                               .add_circle_outline,
                                                         ),
                                                         onPressed:
-                                                            producto.cantidad <
-                                                                    producto
-                                                                        .disponibles
+                                                            producto.exentoIva ||
+                                                                    producto.cantidad <
+                                                                        producto
+                                                                            .disponibles
                                                                 ? () {
                                                                   carrito.actualizarCantidad(
                                                                     producto
@@ -240,7 +314,12 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                                                     ],
                                                   ),
                                                   Text(
-                                                    '= \$${producto.subtotal.toStringAsFixed(2)}',
+                                                    '= \$${producto.totalConIva(carrito.ivaActivado).toStringAsFixed(2)}',
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Color(0xFF2C3E50),
+                                                    ),
                                                   ),
                                                 ],
                                               ),
@@ -283,63 +362,154 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Text(
-                                      'Total:',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+
+                            // NUEVO: Resumen detallado de totales
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: Column(
+                                children: [
+                                  // Subtotal productos exentos
+                                  if (carrito.tieneProductosExentos)
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text('Subtotal (Exento IVA):'),
+                                        Text(
+                                          '\$${carrito.subtotalExento.toStringAsFixed(2)}',
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 12),
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _conIva = !_conIva;
-                                        });
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 8,
+
+                                  // Subtotal productos gravables
+                                  if (carrito.tieneProductosGravables)
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text('Subtotal (Gravable):'),
+                                        Text(
+                                          '\$${carrito.subtotalGravable.toStringAsFixed(2)}',
                                         ),
-                                        decoration: BoxDecoration(
-                                          color:
-                                              _conIva
-                                                  ? const Color(0xFF4682B4)
-                                                  : Colors.white,
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          border: Border.all(
-                                            color: const Color(0xFF4682B4),
-                                            width: 1,
-                                          ),
+                                      ],
+                                    ),
+
+                                  // IVA (solo si está activado y hay productos gravables)
+                                  if (carrito.ivaActivado &&
+                                      carrito.totalIva > 0) ...[
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text('IVA (15%):'),
+                                        Text(
+                                          '\$${carrito.totalIva.toStringAsFixed(2)}',
                                         ),
-                                        child: Text(
-                                          'IVA',
-                                          style: TextStyle(
-                                            color:
-                                                _conIva
-                                                    ? Colors.white
-                                                    : const Color(0xFF4682B4),
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                      ),
+                                      ],
                                     ),
                                   ],
-                                ),
-                                Text(
-                                  '\$${totalConIva.toStringAsFixed(2)}',
-                                  style: const TextStyle(fontSize: 18),
-                                ),
-                              ],
+
+                                  const Divider(height: 16),
+
+                                  // Botón de IVA y total
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Text(
+                                            'Total:',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          GestureDetector(
+                                            onTap:
+                                                carrito.tieneProductosGravables
+                                                    ? () {
+                                                      carrito.toggleIva();
+                                                    }
+                                                    : null,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 16,
+                                                    vertical: 8,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    carrito.ivaActivado
+                                                        ? const Color(
+                                                          0xFF4682B4,
+                                                        )
+                                                        : Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color:
+                                                      carrito.tieneProductosGravables
+                                                          ? const Color(
+                                                            0xFF4682B4,
+                                                          )
+                                                          : Colors.grey,
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                carrito.ivaActivado
+                                                    ? 'IVA ✓'
+                                                    : 'IVA',
+                                                style: TextStyle(
+                                                  color:
+                                                      carrito.ivaActivado
+                                                          ? Colors.white
+                                                          : carrito
+                                                              .tieneProductosGravables
+                                                          ? const Color(
+                                                            0xFF4682B4,
+                                                          )
+                                                          : Colors.grey,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          if (!carrito.tieneProductosGravables)
+                                            const Padding(
+                                              padding: EdgeInsets.only(left: 8),
+                                              child: Text(
+                                                '(Solo productos exentos)',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey,
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      Text(
+                                        '\$${carrito.total.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF2C3E50),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                             const SizedBox(height: 20),
                           ],
@@ -369,7 +539,7 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                               ),
                             ),
                             onPressed: () {
-                              _mostrarSeleccionMetodoPago(context, totalConIva);
+                              _mostrarSeleccionMetodoPago(context, carrito);
                             },
                           ),
                         ),
@@ -385,8 +555,10 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
     );
   }
 
-  void _mostrarSeleccionMetodoPago(BuildContext context, double totalConIva) {
-    final carrito = Provider.of<CarritoController>(context, listen: false);
+  void _mostrarSeleccionMetodoPago(
+    BuildContext context,
+    CarritoController carrito,
+  ) {
     final cliente = _clienteController.text.trim();
     final productos = carrito.items;
     final usuario = FirebaseAuth.instance.currentUser;
@@ -429,7 +601,66 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  /// 🔑 NUEVO: Mostrar vendedor autenticado
+                  // Resumen de la venta
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        if (carrito.tieneProductosExentos)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Exento IVA:'),
+                              Text(
+                                '\$${carrito.subtotalExento.toStringAsFixed(2)}',
+                              ),
+                            ],
+                          ),
+                        if (carrito.tieneProductosGravables)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Gravable:'),
+                              Text(
+                                '\$${carrito.subtotalGravable.toStringAsFixed(2)}',
+                              ),
+                            ],
+                          ),
+                        if (carrito.ivaActivado && carrito.totalIva > 0)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('IVA (15%):'),
+                              Text('\$${carrito.totalIva.toStringAsFixed(2)}'),
+                            ],
+                          ),
+                        const Divider(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'TOTAL:',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              '\$${carrito.total.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  /// 🔑 Mostrar vendedor autenticado
                   FutureBuilder<DocumentSnapshot>(
                     future:
                         FirebaseFirestore.instance
@@ -480,10 +711,9 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                               : () async {
                                 await _guardarVentaEnFirebase(
                                   productos,
-                                  totalConIva,
+                                  carrito,
                                   cliente,
                                   metodoSeleccionado,
-                                  _conIva,
                                 );
                                 carrito.limpiarCarrito();
                                 Navigator.pop(context);
@@ -548,10 +778,9 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
 
   Future<void> _guardarVentaEnFirebase(
     List productos,
-    double total,
+    CarritoController carrito,
     String cliente,
     String metodoPago,
-    bool conIva,
   ) async {
     final currentUser = FirebaseAuth.instance.currentUser;
 
@@ -568,6 +797,8 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
     final nombreUsuario =
         userDoc.data()?['nombre'] ?? currentUser.email ?? '---';
 
+    // Determinar tipo de comprobante basado en si hay IVA
+    final conIva = carrito.ivaActivado && carrito.totalIva > 0;
     final tipoComprobante = conIva ? 'Factura' : 'Nota de Venta';
     final prefijo = conIva ? 'FAC' : 'NV';
     final tipoClave = conIva ? 'factura' : 'nota_venta';
@@ -598,7 +829,10 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
     final venta = {
       'codigo_comprobante': codigoComprobante,
       'cliente': cliente.isNotEmpty ? cliente : null,
-      'total': total,
+      'subtotal_exento': carrito.subtotalExento,
+      'subtotal_gravable': carrito.subtotalGravable,
+      'total_iva': carrito.totalIva,
+      'total': carrito.total,
       'metodoPago': metodoPago,
       'tipoComprobante': tipoComprobante,
       'conIva': conIva,
@@ -614,6 +848,11 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                   'cantidad': p.cantidad,
                   'precio': p.precio,
                   'subtotal': p.subtotal,
+                  'exento_iva': p.exentoIva,
+                  'precio_con_iva': p.precioConIva(carrito.ivaActivado),
+                  'total_con_iva': p.totalConIva(carrito.ivaActivado),
+                  'iva_unitario': p.montoIvaUnitario(carrito.ivaActivado),
+                  'total_iva': p.totalIva(carrito.ivaActivado),
                 },
               )
               .toList(),
@@ -626,8 +865,7 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
     await FirebaseFirestore.instance.collection('auditoria_general').add({
       'accion': 'Registro de Venta',
       'detalle':
-          'Comprobante: $codigoComprobante | Total: \$${total.toStringAsFixed(2)} | Método: $metodoPago | IVA: ${conIva ? 'Sí' : 'No'} | Tipo: $tipoComprobante',
-
+          'Comprobante: $codigoComprobante | Total: \$${carrito.total.toStringAsFixed(2)} | Método: $metodoPago | IVA: ${conIva ? 'Sí (\$${carrito.totalIva.toStringAsFixed(2)})' : 'No'} | Tipo: $tipoComprobante',
       'fecha': DateTime.now(),
       'referencia_venta': ventaRef.id,
       'usuario_uid': currentUser.uid,

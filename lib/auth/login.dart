@@ -1,11 +1,12 @@
-import 'package:basefundi/settings/auth_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
-import 'package:basefundi/movil/dashboard_movil.dart'; // 📱 Dashboard móvil
-import 'package:basefundi/desktop/dashboard_desk.dart'; // 💻 Dashboard escritorio
+
+import 'package:basefundi/settings/auth_service.dart';
+import 'package:basefundi/movil/dashboard_movil.dart'; // 📱 Móvil
+import 'package:basefundi/desktop/dashboard_desk.dart'; // 💻 Escritorio
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,6 +30,24 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // Función robusta para detectar la plataforma
+  bool get _isMobilePlatform {
+    // Si estamos en web, definitivamente NO es móvil
+    if (kIsWeb) {
+      return false;
+    }
+
+    // Intentamos detectar la plataforma nativa
+    try {
+      bool isAndroid = Platform.isAndroid;
+      bool isIOS = Platform.isIOS;
+
+      return isAndroid || isIOS;
+    } catch (e) {
+      return true;
+    }
+  }
+
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       try {
@@ -45,18 +64,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   .get();
 
           if (doc.exists) {
-            bool isDesktop =
-                defaultTargetPlatform == TargetPlatform.windows ||
-                defaultTargetPlatform == TargetPlatform.macOS ||
-                defaultTargetPlatform == TargetPlatform.linux;
+            // FORZAR MÓVIL temporalmente para debug
+            const bool FORCE_MOBILE =
+                true; // 🚨 Cambiar a false cuando funcione
 
-            Widget destino =
-                isDesktop
-                    ? const DashboardDeskScreen()
-                    : const DashboardScreen();
+            Widget destino;
+            if (FORCE_MOBILE) {
+              destino = const DashboardScreen();
+              // ignore: dead_code
+            } else {
+              destino =
+                  _isMobilePlatform
+                      ? const DashboardScreen() // 👉 móvil (Android/iOS)
+                      : const DashboardDeskScreen(); // 👉 web/desktop
+            }
 
+            if (!mounted) return;
             Navigator.pushReplacement(
-              // ignore: use_build_context_synchronously
               context,
               MaterialPageRoute(builder: (context) => destino),
             );
@@ -128,7 +152,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                // ignore: deprecated_member_use
                                 color: Colors.black.withOpacity(0.1),
                                 blurRadius: 10,
                                 offset: const Offset(0, 5),
@@ -157,9 +180,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                     color: Colors.black54,
                                   ),
                                 ),
+                                // Debug: Mostrar qué plataforma se detecta
+                                if (kDebugMode)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Column(children: [
+                                        
+                                      ],
+                                    ),
+                                  ),
                                 const SizedBox(height: 32),
-
-                                // Correo
                                 TextFormField(
                                   controller: _usernameController,
                                   decoration: _inputDecoration(
@@ -174,8 +204,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                   },
                                 ),
                                 const SizedBox(height: 20),
-
-                                // Contraseña
                                 TextFormField(
                                   controller: _passwordController,
                                   obscureText: _obscurePassword,
@@ -206,7 +234,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                     return null;
                                   },
                                 ),
-
                                 const SizedBox(height: 20),
                                 if (_errorMessage != null)
                                   Padding(
@@ -219,7 +246,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                     ),
                                   ),
-
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton(
@@ -243,7 +269,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                 ),
-
                                 const SizedBox(height: 16),
                                 TextButton(
                                   onPressed: () {

@@ -1,3 +1,4 @@
+import 'package:basefundi/desktop/ventas/editar_ventas_desk.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -384,15 +385,16 @@ class _ModificarVentaDeskScreenState extends State<ModificarVentaDeskScreen>
                                 color: Color(0xFF4682B4),
                               ),
                               onPressed: () {
-                                //Navigator.push(
-                                //  context,
-                                //  MaterialPageRoute(
-                                //    builder: (context) => EditarVentaScreen(
-                                //      ventaId: venta.id,
-                                //      datosVenta: data,
-                                //    ),
-                                //  ),
-                                //);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => EditarVentaDeskScreen(
+                                          ventaId: venta.id,
+                                          datosVenta: data,
+                                        ),
+                                  ),
+                                );
                               },
                             ),
                             IconButton(

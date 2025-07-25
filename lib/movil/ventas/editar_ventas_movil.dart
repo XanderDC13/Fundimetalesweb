@@ -39,6 +39,10 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
     _cargarDisponibles();
   }
 
+  bool _esProductoTransporte(String? categoria) {
+    return categoria?.toUpperCase() == 'TRANSPORTE';
+  }
+
   /// ✅ Corrige cálculo de stock disponible
   Future<void> _cargarDisponibles() async {
     final historialSnapshot =
@@ -95,19 +99,35 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
 
   /// ✅ Calcula total, con IVA si corresponde
   double _calcularTotal() {
-    double subtotal = _productos.fold(0.0, (suma, prod) {
+    double subtotalNormal = 0.0; // Productos que pueden tener IVA
+    double subtotalTransporte = 0.0; // Transporte (sin IVA)
+
+    for (var prod in _productos) {
       final precio = prod['precio'] ?? 0.0;
       final cantidad = prod['cantidad'] ?? 0;
-      return suma + (precio * cantidad);
-    });
+      final referencia = (prod['referencia'] ?? '').toString().toUpperCase();
+      final subtotalProducto = precio * cantidad;
 
-    if (_usarIva) {
-      return subtotal * 1.15;
+      if (referencia == 'TRANSPORTE') {
+        // Transporte siempre sin IVA
+        subtotalTransporte += subtotalProducto;
+      } else {
+        // Otros productos sí aplican IVA
+        subtotalNormal += subtotalProducto;
+      }
     }
-    return subtotal;
+
+    double total = subtotalTransporte; // Transporte sin IVA
+    if (_usarIva) {
+      total += subtotalNormal * 1.15; // Solo los productos normales con IVA
+    } else {
+      total += subtotalNormal; // Si no se aplica IVA, se suman directo
+    }
+
+    return total;
   }
 
-  /// ✅ Selector de productos con diseño elegante
+  /// ✅ Selector de productos con diseño elegante - Cuadro más ancho
   Future<void> _agregarProducto() async {
     final snapshot =
         await FirebaseFirestore.instance.collection('inventario_general').get();
@@ -120,6 +140,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
             'nombre': data['nombre'],
             'precios': data['precios'],
             'referencia': data['referencia'],
+            'categoria': data['categoria'], // ✅ Agregamos categoría
           };
         }).toList();
 
@@ -148,8 +169,8 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
             return Dialog(
               backgroundColor: Colors.transparent,
               child: Container(
-                width: MediaQuery.of(context).size.width * 0.9,
-                height: MediaQuery.of(context).size.height * 0.8,
+                width: MediaQuery.of(context).size.width * 0.99,
+                height: MediaQuery.of(context).size.height * 0.99,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -168,7 +189,7 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                       padding: const EdgeInsets.all(20),
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Color(0xFF4682B4), Color(0xFF5A9BD4)],
+                          colors: [Color(0xFF2C3E50), Color(0xFF34495E)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -275,12 +296,23 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                           final producto = filtrados[index];
                                           final referencia =
                                               producto['referencia'];
+                                          final categoria =
+                                              producto['categoria'];
                                           final yaExiste = _productos.any(
                                             (p) =>
                                                 p['referencia'] == referencia,
                                           );
                                           final disponibles =
                                               _disponibles[referencia] ?? 0;
+
+                                          // ✅ Los productos de transporte siempre se pueden agregar
+                                          final esTransporte =
+                                              _esProductoTransporte(categoria);
+                                          final puedeAgregar =
+                                              yaExiste
+                                                  ? false
+                                                  : (esTransporte ||
+                                                      disponibles > 0);
 
                                           return Container(
                                             margin: const EdgeInsets.only(
@@ -294,9 +326,9 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                                 color:
                                                     yaExiste
                                                         ? Colors.grey[300]!
-                                                        : disponibles > 0
+                                                        : puedeAgregar
                                                         ? const Color(
-                                                          0xFF4682B4,
+                                                          0xFF2C3E50,
                                                         ).withOpacity(0.2)
                                                         : Colors.red
                                                             .withOpacity(0.2),
@@ -321,10 +353,17 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                                   color:
                                                       yaExiste
                                                           ? Colors.grey[100]
-                                                          : disponibles > 0
-                                                          ? const Color(
-                                                            0xFF4682B4,
-                                                          ).withOpacity(0.1)
+                                                          : puedeAgregar
+                                                          ? (esTransporte
+                                                              ? Colors.orange
+                                                                  .withOpacity(
+                                                                    0.1,
+                                                                  )
+                                                              : const Color(
+                                                                0xFF2C3E50,
+                                                              ).withOpacity(
+                                                                0.1,
+                                                              ))
                                                           : Colors.red
                                                               .withOpacity(0.1),
                                                   borderRadius:
@@ -333,15 +372,19 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                                 child: Icon(
                                                   yaExiste
                                                       ? Icons.check_circle
-                                                      : disponibles > 0
+                                                      : esTransporte
+                                                      ? Icons.local_shipping
+                                                      : puedeAgregar
                                                       ? Icons.inventory_2
                                                       : Icons.remove_circle,
                                                   color:
                                                       yaExiste
                                                           ? Colors.grey[600]
-                                                          : disponibles > 0
+                                                          : esTransporte
+                                                          ? Colors.orange
+                                                          : puedeAgregar
                                                           ? const Color(
-                                                            0xFF4682B4,
+                                                            0xFF2C3E50,
                                                           )
                                                           : Colors.red,
                                                 ),
@@ -349,11 +392,10 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                               title: Text(
                                                 producto['nombre'],
                                                 style: TextStyle(
-                                                  fontSize: 11,
+                                                  fontSize: 14,
                                                   fontWeight: FontWeight.w600,
                                                   color:
-                                                      yaExiste ||
-                                                              disponibles <= 0
+                                                      yaExiste || !puedeAgregar
                                                           ? Colors.grey[600]
                                                           : Colors.black87,
                                                 ),
@@ -381,7 +423,14 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                                             ),
                                                         decoration: BoxDecoration(
                                                           color:
-                                                              disponibles > 0
+                                                              esTransporte
+                                                                  ? Colors
+                                                                      .orange
+                                                                      .withOpacity(
+                                                                        0.1,
+                                                                      )
+                                                                  : disponibles >
+                                                                      0
                                                                   ? Colors.green
                                                                       .withOpacity(
                                                                         0.1,
@@ -396,11 +445,17 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                                               ),
                                                         ),
                                                         child: Text(
-                                                          'Stock: $disponibles',
+                                                          esTransporte
+                                                              ? 'Servicio'
+                                                              : 'Stock: $disponibles',
                                                           style: TextStyle(
                                                             fontSize: 11,
                                                             color:
-                                                                disponibles > 0
+                                                                esTransporte
+                                                                    ? Colors
+                                                                        .orange[700]
+                                                                    : disponibles >
+                                                                        0
                                                                     ? Colors
                                                                         .green[700]
                                                                     : Colors
@@ -420,12 +475,13 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                                 height: 40,
                                                 decoration: BoxDecoration(
                                                   color:
-                                                      yaExiste ||
-                                                              disponibles <= 0
+                                                      yaExiste || !puedeAgregar
                                                           ? Colors.grey[200]
-                                                          : const Color(
-                                                            0xFF4682B4,
-                                                          ),
+                                                          : (esTransporte
+                                                              ? Colors.orange
+                                                              : const Color(
+                                                                0xFF2C3E50,
+                                                              )),
                                                   borderRadius:
                                                       BorderRadius.circular(10),
                                                 ),
@@ -434,14 +490,13 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                                       ? Icons.check
                                                       : Icons.add,
                                                   color:
-                                                      yaExiste ||
-                                                              disponibles <= 0
+                                                      yaExiste || !puedeAgregar
                                                           ? Colors.grey[600]
                                                           : Colors.white,
                                                 ),
                                               ),
                                               onTap:
-                                                  yaExiste || disponibles <= 0
+                                                  !puedeAgregar
                                                       ? null
                                                       : () async {
                                                         final precios = List<
@@ -469,41 +524,160 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
                                                           context: context,
                                                           builder: (context) {
                                                             return AlertDialog(
+                                                              backgroundColor:
+                                                                  Colors
+                                                                      .white, // 👉 Forzamos fondo blanco
                                                               title: const Text(
                                                                 'Selecciona el PVP',
                                                               ),
-                                                              content: Column(
-                                                                mainAxisSize:
-                                                                    MainAxisSize
-                                                                        .min,
-                                                                children: List.generate(
-                                                                  precios
-                                                                      .length,
-                                                                  (index) {
-                                                                    final precioPvp =
-                                                                        precios[index];
-                                                                    final precioFinal =
-                                                                        _usarIva
-                                                                            ? precioPvp *
-                                                                                1.15
-                                                                            : precioPvp;
-                                                                    return ListTile(
-                                                                      title: Text(
-                                                                        'PVP ${index + 1}',
-                                                                      ),
-                                                                      subtitle:
-                                                                          Text(
-                                                                            '\$${precioFinal.toStringAsFixed(2)}',
+                                                              content: StatefulBuilder(
+                                                                builder: (
+                                                                  context,
+                                                                  setState,
+                                                                ) {
+                                                                  final TextEditingController
+                                                                  _precioPersonalizadoController =
+                                                                      TextEditingController();
+
+                                                                  return SingleChildScrollView(
+                                                                    child: Column(
+                                                                      mainAxisSize:
+                                                                          MainAxisSize
+                                                                              .min,
+                                                                      children: [
+                                                                        ...List.generate(
+                                                                          precios
+                                                                              .length,
+                                                                          (
+                                                                            index,
+                                                                          ) {
+                                                                            final precioPvp =
+                                                                                precios[index];
+
+                                                                            final precioFinal =
+                                                                                (esTransporte ||
+                                                                                        !_usarIva)
+                                                                                    ? precioPvp
+                                                                                    : precioPvp *
+                                                                                        1.15;
+
+                                                                            return Card(
+                                                                              color:
+                                                                                  Colors.white, // 👉 Fondo blanco en cada item
+                                                                              child: ListTile(
+                                                                                title: Text(
+                                                                                  'PVP ${index + 1}',
+                                                                                ),
+                                                                                subtitle: Text(
+                                                                                  '\$${precioFinal.toStringAsFixed(2)}'
+                                                                                  '${esTransporte ? ' (Sin IVA)' : ''}',
+                                                                                ),
+                                                                                onTap: () {
+                                                                                  Navigator.pop(
+                                                                                    context,
+                                                                                    precioFinal,
+                                                                                  );
+                                                                                },
+                                                                              ),
+                                                                            );
+                                                                          },
+                                                                        ),
+
+                                                                        const Divider(
+                                                                          height:
+                                                                              32,
+                                                                        ),
+
+                                                                        // 🔵 Campo para precio modificado
+                                                                        TextField(
+                                                                          controller:
+                                                                              _precioPersonalizadoController,
+                                                                          keyboardType: const TextInputType.numberWithOptions(
+                                                                            decimal:
+                                                                                true,
                                                                           ),
-                                                                      onTap: () {
-                                                                        Navigator.pop(
-                                                                          context,
-                                                                          precioFinal,
-                                                                        );
-                                                                      },
-                                                                    );
-                                                                  },
-                                                                ),
+                                                                          decoration: const InputDecoration(
+                                                                            labelText:
+                                                                                'Agregar precio modificado',
+                                                                            prefixIcon: Icon(
+                                                                              Icons.edit,
+                                                                            ),
+                                                                            border:
+                                                                                OutlineInputBorder(),
+                                                                            filled:
+                                                                                true,
+                                                                            fillColor:
+                                                                                Colors.white, // 👉 Fondo blanco dentro del campo
+                                                                          ),
+                                                                        ),
+
+                                                                        const SizedBox(
+                                                                          height:
+                                                                              16,
+                                                                        ),
+
+                                                                        SizedBox(
+                                                                          width:
+                                                                              double.infinity,
+                                                                          child: ElevatedButton.icon(
+                                                                            onPressed: () {
+                                                                              final input =
+                                                                                  _precioPersonalizadoController.text.trim();
+                                                                              final valor = double.tryParse(
+                                                                                input,
+                                                                              );
+
+                                                                              if (valor ==
+                                                                                      null ||
+                                                                                  valor <=
+                                                                                      0) {
+                                                                                ScaffoldMessenger.of(
+                                                                                  context,
+                                                                                ).showSnackBar(
+                                                                                  const SnackBar(
+                                                                                    content: Text(
+                                                                                      'Ingresa un precio válido',
+                                                                                    ),
+                                                                                    duration: Duration(
+                                                                                      seconds:
+                                                                                          2,
+                                                                                    ),
+                                                                                  ),
+                                                                                );
+                                                                                return;
+                                                                              }
+
+                                                                              final precioFinal =
+                                                                                  (esTransporte ||
+                                                                                          !_usarIva)
+                                                                                      ? valor
+                                                                                      : valor *
+                                                                                          1.15;
+
+                                                                              Navigator.pop(
+                                                                                context,
+                                                                                precioFinal,
+                                                                              );
+                                                                            },
+                                                                            icon: const Icon(
+                                                                              Icons.check,
+                                                                            ),
+                                                                            label: const Text(
+                                                                              'Aceptar precio modificado',
+                                                                            ),
+                                                                            style: ElevatedButton.styleFrom(
+                                                                              backgroundColor: const Color(
+                                                                                0xFF4682B4,
+                                                                              ),
+                                                                              foregroundColor:
+                                                                                  Colors.white,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  );
+                                                                },
                                                               ),
                                                             );
                                                           },
@@ -511,15 +685,27 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
 
                                                         if (precioSeleccionado !=
                                                             null) {
+                                                          final int cantidad =
+                                                              1; // cantidad inicial
+                                                          final double
+                                                          subtotal =
+                                                              precioSeleccionado *
+                                                              cantidad; // CALCULAR SUBTOTAL
+
                                                           setState(() {
                                                             _productos.add({
                                                               'nombre':
                                                                   producto['nombre'],
                                                               'precio':
                                                                   precioSeleccionado,
-                                                              'cantidad': 1,
+                                                              'cantidad':
+                                                                  cantidad,
                                                               'referencia':
                                                                   referencia,
+                                                              'categoria':
+                                                                  categoria, // ✅ Guardamos la categoría
+                                                              'subtotal':
+                                                                  subtotal,
                                                             });
                                                           });
                                                           Navigator.pop(
@@ -551,16 +737,22 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
     for (var producto in _productos) {
       final referencia = producto['referencia'];
       final cantidad = producto['cantidad'] ?? 0;
-      final disponible = _disponibles[referencia] ?? 0;
-      if (cantidad > disponible) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Cantidad de "${producto['nombre']}" excede stock disponible.',
+
+      // Toma categoría o referencia como posible indicador de transporte
+      final categoria = producto['categoria'] ?? producto['referencia'];
+
+      if (!_esProductoTransporte(categoria)) {
+        final disponible = _disponibles[referencia] ?? 0;
+        if (cantidad > disponible) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Cantidad de "${producto['nombre']}" excede stock disponible.',
+              ),
             ),
-          ),
-        );
-        return;
+          );
+          return;
+        }
       }
     }
 
@@ -830,17 +1022,6 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
               ),
               const SizedBox(height: 8),
 
-              // Información del stock
-              Text(
-                'Stock disponible: $disponibles',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: disponibles > 0 ? Colors.green[700] : Colors.red[700],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 12),
-
               // Controles de cantidad centrados
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -939,16 +1120,28 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
     ];
   }
 
-  // ✅ Widget del total con switch de IVA integrado
   Widget _buildTotalConIva() {
-    double subtotal = _productos.fold(0.0, (suma, prod) {
+    double subtotalSinTransporte = 0.0;
+    double subtotalTransporte = 0.0;
+
+    for (var prod in _productos) {
       final precio = prod['precio'] ?? 0.0;
       final cantidad = prod['cantidad'] ?? 0;
-      return suma + (precio * cantidad);
-    });
+      final categoria =
+          (prod['categoria'] ?? prod['referencia'] ?? '')
+              .toString()
+              .trim()
+              .toUpperCase();
 
-    double iva = _usarIva ? subtotal * 0.15 : 0.0;
-    double total = subtotal + iva;
+      if (categoria == 'TRANSPORTE') {
+        subtotalTransporte += precio * cantidad;
+      } else {
+        subtotalSinTransporte += precio * cantidad;
+      }
+    }
+
+    double iva = _usarIva ? subtotalSinTransporte * 0.15 : 0.0;
+    double total = subtotalSinTransporte + iva + subtotalTransporte;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -994,18 +1187,34 @@ class _EditarVentaScreenState extends State<EditarVentaScreen> {
 
           const SizedBox(height: 16),
 
-          // Desglose de totales
+          // Subtotal productos normales
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Subtotal:', style: TextStyle(fontSize: 16)),
+              const Text('Subtotal productos:', style: TextStyle(fontSize: 16)),
               Text(
-                '\$${subtotal.toStringAsFixed(2)}',
+                '\$${subtotalSinTransporte.toStringAsFixed(2)}',
                 style: const TextStyle(fontSize: 16),
               ),
             ],
           ),
 
+          // Subtotal transporte, solo si hay
+          if (subtotalTransporte > 0) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Transporte:', style: TextStyle(fontSize: 16)),
+                Text(
+                  '\$${subtotalTransporte.toStringAsFixed(2)}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+          ],
+
+          // IVA
           if (_usarIva) ...[
             const SizedBox(height: 8),
             Row(

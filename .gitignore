@@ -1,5 +1,9 @@
 # ------------------------------
-# ✅ Común
+# ✅ Ignorar todo build excepto build/web
+build/*
+!build/web/
+
+# ✅ Archivos comunes
 *.class
 *.log
 *.pyc
@@ -44,7 +48,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-
+/android/app/outputs
+build/app/outputs/apk/debug/app-debug.apk
+build/app/intermediates/
 # ------------------------------
 # ✅ Builds Windows/macOS/Linux
 windows/runner/Debug/
@@ -59,3 +65,13 @@ windows/runner/*.lib
 build/windows/x64/firebase_cpp_sdk_windows_*.zip
 build/windows/x64/extracted/
 
+# ------------------------------
+# ✅ Ignorar todo build/ excepto build/web
+build/*
+!build/web/
+
+# ✅ Opcional: Ignorar otras plataformas si usas web y móvil solamente
+linux/
+macos/
+windows/
+.vercel
