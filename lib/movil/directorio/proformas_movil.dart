@@ -28,7 +28,7 @@ class OpcionesProformasScreen extends StatelessWidget {
               title: 'Proforma Fundición',
               subtitle: 'Genera una proforma compra de hierro',
               icon: Icons.add_circle_outline,
-              destination: const ProformaCompraScreen(),
+              destination: ProformaFundicionScreen(),
             ),
             const SizedBox(height: 12),
             _buildCard(
