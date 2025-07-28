@@ -14,6 +14,7 @@ import 'package:basefundi/desktop/personal/empleados/empleados_registro_desk.dar
 import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
 import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
 import 'package:basefundi/desktop/reportes/auditoria_desk.dart';
+import 'package:basefundi/desktop/reportes/reporte_compras_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_inv_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_transporte_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_ventas_desk.dart';
@@ -237,6 +238,15 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
                               _navegarConFade(
                                 context,
                                 const ReporteInventarioDeskScreen(),
+                              );
+                            },
+                          ),
+                          _buildSubItem(
+                            label: 'Compras',
+                            onTap: () {
+                              _navegarConFade(
+                                context,
+                                const ReporteComprasDeskScreen(),
                               );
                             },
                           ),
