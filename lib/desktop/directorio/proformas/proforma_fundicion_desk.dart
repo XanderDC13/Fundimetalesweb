@@ -7,7 +7,10 @@ import 'package:printing/printing.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProformaFundicionDeskScreen extends StatefulWidget {
+  const ProformaFundicionDeskScreen({super.key});
+
   @override
+  // ignore: library_private_types_in_public_api
   _ProformaFundicionDeskScreenState createState() =>
       _ProformaFundicionDeskScreenState();
 }
@@ -883,7 +886,7 @@ class _ProformaFundicionDeskScreenState
                   pw.Expanded(
                     flex: 4,
                     child: pw.Text(
-                      item.descripcionController.text.toUpperCase(), // 👈 AQUI
+                      item.descripcionController.text.toUpperCase(),
                       style: pw.TextStyle(fontSize: 8),
                     ),
                   ),

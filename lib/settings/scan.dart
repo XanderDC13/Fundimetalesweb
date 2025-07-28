@@ -13,6 +13,7 @@ class ScanButton extends StatelessWidget {
         var res = await Navigator.push(
           context,
           MaterialPageRoute(
+            // ignore: deprecated_member_use
             builder: (context) => const SimpleBarcodeScannerPage(),
           ),
         );

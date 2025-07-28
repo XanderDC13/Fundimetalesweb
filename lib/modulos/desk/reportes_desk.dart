@@ -1,4 +1,5 @@
 import 'package:basefundi/desktop/reportes/auditoria_desk.dart';
+import 'package:basefundi/desktop/reportes/reporte_compras_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_inv_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_transporte_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_ventas_desk.dart';
@@ -124,6 +125,18 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
                           _navegarConFade(
                             context,
                             const ReporteVentasDeskScreen(),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      _buildBoton(
+                        icon: LucideIcons.clipboardList,
+                        titulo: 'Reporte de Compras',
+                        subtitulo: 'Compra de materia prima',
+                        onTap: () {
+                          _navegarConFade(
+                            context,
+                            const ReporteComprasDeskScreen(),
                           );
                         },
                       ),

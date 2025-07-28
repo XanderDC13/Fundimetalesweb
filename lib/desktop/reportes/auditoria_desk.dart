@@ -379,111 +379,124 @@ class _AuditoriaDeskScreenState extends State<AuditoriaDeskScreen> {
                           );
                         }
 
-                        return SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              headingRowColor: MaterialStateProperty.all(
-                                const Color(0xFF4682B4),
-                              ),
-                              headingTextStyle: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              columnSpacing: 12,
-                              columns: const [
-                                DataColumn(
-                                  label: SizedBox(
-                                    width: 110,
-                                    child: Center(child: Text('Fecha')),
-                                  ),
+                        return LayoutBuilder(
+                          builder: (context, constraints) {
+                            return SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minWidth: constraints.maxWidth,
                                 ),
-                                DataColumn(
-                                  label: SizedBox(
-                                    width: 150,
-                                    child: Center(child: Text('Usuario')),
-                                  ),
-                                ),
-                                DataColumn(
-                                  label: SizedBox(
-                                    width: 150,
-                                    child: Center(child: Text('Acción')),
-                                  ),
-                                ),
-                                DataColumn(
-                                  label: SizedBox(
-                                    width: 350,
-                                    child: Text('Detalle'),
-                                  ),
-                                ),
-                              ],
-                              rows:
-                                  registrosFiltrados.map((doc) {
-                                    final data =
-                                        doc.data() as Map<String, dynamic>;
-                                    final fecha =
-                                        (data['fecha'] as Timestamp?)
-                                            ?.toDate() ??
-                                        DateTime.now();
-                                    final fechaStr = DateFormat(
-                                      'dd/MM/yyyy HH:mm',
-                                    ).format(fecha);
-                                    final usuario =
-                                        data['usuario_nombre'] ?? '---';
-                                    final accion = data['accion'] ?? '---';
-                                    final detalle = data['detalle'] ?? '';
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.vertical,
+                                  child: DataTable(
+                                    headingRowColor: MaterialStateProperty.all(
+                                      const Color(0xFF4682B4),
+                                    ),
+                                    headingTextStyle: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    columnSpacing: 12,
+                                    columns: const [
+                                      DataColumn(
+                                        label: SizedBox(
+                                          width: 110,
+                                          child: Center(child: Text('Fecha')),
+                                        ),
+                                      ),
+                                      DataColumn(
+                                        label: SizedBox(
+                                          width: 150,
+                                          child: Center(child: Text('Usuario')),
+                                        ),
+                                      ),
+                                      DataColumn(
+                                        label: SizedBox(
+                                          width: 150,
+                                          child: Center(child: Text('Acción')),
+                                        ),
+                                      ),
+                                      DataColumn(
+                                        label: SizedBox(
+                                          width: 350,
+                                          child: Text('Detalle'),
+                                        ),
+                                      ),
+                                    ],
+                                    rows:
+                                        registrosFiltrados.map((doc) {
+                                          final data =
+                                              doc.data()
+                                                  as Map<String, dynamic>;
+                                          final fecha =
+                                              (data['fecha'] as Timestamp?)
+                                                  ?.toDate() ??
+                                              DateTime.now();
+                                          final fechaStr = DateFormat(
+                                            'dd/MM/yyyy HH:mm',
+                                          ).format(fecha);
+                                          final usuario =
+                                              data['usuario_nombre'] ?? '---';
+                                          final accion =
+                                              data['accion'] ?? '---';
+                                          final detalle = data['detalle'] ?? '';
 
-                                    return DataRow(
-                                      cells: [
-                                        DataCell(
-                                          Center(
-                                            child: Text(
-                                              fechaStr,
-                                              style: const TextStyle(
-                                                fontSize: 12,
+                                          return DataRow(
+                                            cells: [
+                                              DataCell(
+                                                Center(
+                                                  child: Text(
+                                                    fechaStr,
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                ),
                                               ),
-                                            ),
-                                          ),
-                                        ),
-                                        DataCell(
-                                          Center(
-                                            child: Text(
-                                              usuario,
-                                              style: const TextStyle(
-                                                fontSize: 12,
+                                              DataCell(
+                                                Center(
+                                                  child: Text(
+                                                    usuario,
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                ),
                                               ),
-                                            ),
-                                          ),
-                                        ),
-                                        DataCell(
-                                          Center(
-                                            child: Text(
-                                              accion,
-                                              style: const TextStyle(
-                                                fontSize: 12,
+                                              DataCell(
+                                                Center(
+                                                  child: Text(
+                                                    accion,
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                ),
                                               ),
-                                            ),
-                                          ),
-                                        ),
-                                        DataCell(
-                                          SizedBox(
-                                            width: 350,
-                                            child: Text(
-                                              detalle,
-                                              style: const TextStyle(
-                                                fontSize: 12,
+                                              DataCell(
+                                                SizedBox(
+                                                  width: 350,
+                                                  child: Text(
+                                                    detalle,
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                    ),
+                                                    softWrap: true,
+                                                    maxLines: 8,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
                                               ),
-                                              softWrap: true,
-                                              maxLines: 8,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  }).toList(),
-                            ),
-                          ),
+                                            ],
+                                          );
+                                        }).toList(),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         );
                       },
                     ),

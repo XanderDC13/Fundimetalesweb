@@ -707,7 +707,7 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
             int index = entry.key;
             ItemProforma item = entry.value;
             return _buildMobileItemCard(index, item);
-          }).toList(),
+          }),
         ],
       ),
     );

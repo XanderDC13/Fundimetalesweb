@@ -189,18 +189,28 @@ class _InventarioInsumosDeskScreenState
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
-            top: 24,
-            left: 16,
-            right: 16,
           ),
-          child: _AgregarInsumoForm(onGuardado: _registrarAuditoriaNuevo),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: Material(
+                elevation: 10,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                color: Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                  child: _AgregarInsumoForm(
+                    onGuardado: _registrarAuditoriaNuevo,
+                  ),
+                ),
+              ),
+            ),
+          ),
         );
       },
     );
@@ -250,47 +260,121 @@ class _InventarioInsumosDeskScreenState
 
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('Agregar stock a: $nombreInsumo'),
-            content: TextField(
-              controller: cantidadAgregarCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Cantidad a agregar',
+      builder: (context) {
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              elevation: 15,
+              backgroundColor: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 24,
+                  horizontal: 32,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Agregar stock a:',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      nombreInsumo,
+                      style: Theme.of(context).textTheme.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    TextField(
+                      controller: cantidadAgregarCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Cantidad a agregar',
+                        hintText: 'Ej: 5',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Cancelar'),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final cantidadAgregar =
+                                int.tryParse(cantidadAgregarCtrl.text.trim()) ??
+                                0;
+                            if (cantidadAgregar <= 0) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Ingresa una cantidad válida'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final docRef = FirebaseFirestore.instance
+                                .collection('inventario_insumos')
+                                .doc(insumoId);
+
+                            try {
+                              await FirebaseFirestore.instance.runTransaction((
+                                transaction,
+                              ) async {
+                                final snapshot = await transaction.get(docRef);
+                                final stock =
+                                    (snapshot['cantidad'] ?? 0) as int;
+
+                                transaction.update(docRef, {
+                                  'cantidad': stock + cantidadAgregar,
+                                });
+                              });
+
+                              await _registrarAuditoria(
+                                accion: 'Agregar Stock',
+                                detalle:
+                                    'Insumo: $nombreInsumo, Cantidad agregada: $cantidadAgregar',
+                              );
+
+                              Navigator.of(context).pop();
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Se agregaron $cantidadAgregar unidades a "$nombreInsumo"',
+                                  ),
+                                ),
+                              );
+                            } catch (e) {
+                              Navigator.of(context).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: ${e.toString()}'),
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text('Agregar'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancelar'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  final cantidad =
-                      int.tryParse(cantidadAgregarCtrl.text.trim()) ?? 0;
-                  if (cantidad <= 0) return;
-
-                  final ref = FirebaseFirestore.instance
-                      .collection('inventario_insumos')
-                      .doc(insumoId);
-                  await FirebaseFirestore.instance.runTransaction((txn) async {
-                    final snapshot = await txn.get(ref);
-                    final actual = (snapshot['cantidad'] ?? 0) as int;
-                    txn.update(ref, {'cantidad': actual + cantidad});
-                  });
-
-                  await _registrarAuditoria(
-                    accion: 'Agregar Stock',
-                    detalle:
-                        'Insumo: $nombreInsumo, Cantidad agregada: $cantidad',
-                  );
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Agregar'),
-              ),
-            ],
           ),
+        );
+      },
     );
   }
 

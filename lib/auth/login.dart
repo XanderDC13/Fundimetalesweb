@@ -36,6 +36,19 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (user != null) {
+          await user
+              .reload(); // Asegura que se actualice el estado de verificación
+          user = FirebaseAuth.instance.currentUser;
+
+          if (!user!.emailVerified) {
+            await FirebaseAuth.instance.signOut();
+            setState(() {
+              _errorMessage =
+                  'Debes verificar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.';
+            });
+            return;
+          }
+
           final doc =
               await FirebaseFirestore.instance
                   .collection('usuarios_activos')
@@ -43,9 +56,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   .get();
 
           if (doc.exists) {
-            // Detectar si la pantalla es ancha para decidir dashboard
+            // ✅ Decide destino según tamaño de pantalla
             final isDesktop = MediaQuery.of(context).size.width > 800;
-
             Widget destino =
                 isDesktop
                     ? const DashboardDeskScreen()
@@ -58,7 +70,8 @@ class _LoginScreenState extends State<LoginScreen> {
           } else {
             await FirebaseAuth.instance.signOut();
             setState(() {
-              _errorMessage = 'Tu cuenta está en proceso de verificación.';
+              _errorMessage =
+                  'Tu cuenta está en proceso de verificación por un administrador.';
             });
           }
         }

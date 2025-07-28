@@ -211,7 +211,20 @@ class _SolicitudInsumosWidgetState extends State<SolicitudInsumosWidget> {
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
           ),
+          dropdownColor: Colors.white,
           items:
               empleados.map((doc) {
                 return DropdownMenuItem(
@@ -274,7 +287,20 @@ class _SolicitudInsumosWidgetState extends State<SolicitudInsumosWidget> {
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
           ),
+          dropdownColor: Colors.white,
           items:
               insumos.map((doc) {
                 return DropdownMenuItem(

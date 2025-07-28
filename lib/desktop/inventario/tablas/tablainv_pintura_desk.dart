@@ -37,43 +37,55 @@ class _TablaInvPinturaDeskScreenState extends State<TablaInvPinturaDeskScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return MainDeskLayout(
-      child: Column(
-        children: [
-          Transform.translate(
-            offset: const Offset(-0.5, 0),
-            child: Container(
-              width: double.infinity,
-              color: const Color(0xFF2C3E50),
-              padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 38),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+    return Scaffold(
+      backgroundColor: Colors.white, // ✅ Fuerza fondo blanco total
+      body: MainDeskLayout(
+        child: Container(
+          color: Colors.white, // ✅ También fondo blanco interno
+          child: Column(
+            children: [
+              Transform.translate(
+                offset: const Offset(-0.5, 0),
+                child: Container(
+                  width: double.infinity,
+                  color: const Color(0xFF2C3E50),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 64,
+                    vertical: 38,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        'Historial - ${widget.nombre}',
-                        style: const TextStyle(
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.arrow_back_ios,
                           color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            'Historial - ${widget.nombre}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              _buildFiltroFecha(context),
+              const SizedBox(height: 12),
+              Expanded(child: _buildTabla(widget.referencia)),
+            ],
           ),
-          const SizedBox(height: 8),
-          _buildFiltroFecha(context),
-          const SizedBox(height: 12),
-          Expanded(child: _buildTabla(widget.referencia)),
-        ],
+        ),
       ),
     );
   }

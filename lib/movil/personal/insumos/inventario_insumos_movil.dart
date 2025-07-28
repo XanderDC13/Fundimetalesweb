@@ -167,6 +167,7 @@ class _InventarioInsumosWidgetState extends State<InventarioInsumosWidget> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      backgroundColor: Colors.white,
       builder: (context) {
         return Padding(
           padding: EdgeInsets.only(
@@ -241,6 +242,10 @@ class _InventarioInsumosWidgetState extends State<InventarioInsumosWidget> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          backgroundColor: Colors.white, // Fondo blanco puro
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           title: Text('Agregar stock a: $nombreInsumo'),
           content: TextField(
             controller: cantidadAgregarCtrl,
@@ -248,6 +253,7 @@ class _InventarioInsumosWidgetState extends State<InventarioInsumosWidget> {
             decoration: const InputDecoration(
               labelText: 'Cantidad a agregar',
               hintText: 'Ej: 5',
+              border: OutlineInputBorder(),
             ),
           ),
           actions: [

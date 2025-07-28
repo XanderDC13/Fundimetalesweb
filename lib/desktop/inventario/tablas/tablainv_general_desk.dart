@@ -36,49 +36,60 @@ class _TablainvDeskScreenState extends State<TablainvDeskScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return MainDeskLayout(
-      child: Column(
-        children: [
-          Transform.translate(
-            offset: const Offset(-0.5, 0),
-            child: Container(
-              width: double.infinity,
-              color: const Color(0xFF2C3E50),
-              padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 38),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        'Historial - ${widget.nombre}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+    return Container(
+      color: Colors.white,
+      child: MainDeskLayout(
+        child: Container(
+          color: Colors.white,
+          child: Column(
+            children: [
+              // Cabecera
+              Container(
+                width: double.infinity,
+                color: const Color(0xFF2C3E50),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 64,
+                  vertical: 38,
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_ios,
+                        color: Colors.white,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          'Historial - ${widget.nombre}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              _buildFiltroFecha(context),
+              const SizedBox(height: 12),
+              Expanded(child: _buildTabla(widget.referencia)),
+            ],
           ),
-          const SizedBox(height: 8),
-          _buildFiltroFecha(context),
-          const SizedBox(height: 12),
-          Expanded(child: _buildTabla(widget.referencia)),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildFiltroFecha(BuildContext context) {
-    return Padding(
+    return Container(
+      color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -165,76 +176,82 @@ class _TablainvDeskScreenState extends State<TablainvDeskScreen> {
           return const Center(child: Text('No hay registros para esta fecha.'));
         }
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final totalWidth = constraints.maxWidth;
-            final anchoColumna = totalWidth / 2;
+        return Container(
+          color: Colors.white,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final totalWidth = constraints.maxWidth;
+              final anchoColumna = totalWidth / 2;
 
-            return SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              child: SizedBox(
-                width: totalWidth,
-                child: DataTable(
-                  headingRowColor: MaterialStateProperty.all(
-                    const Color(0xFF4682B4),
-                  ),
-                  headingTextStyle: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                  dataTextStyle: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black87,
-                  ),
-                  columnSpacing: 0,
-                  columns: [
-                    DataColumn(
-                      label: SizedBox(
-                        width: anchoColumna,
-                        child: const Center(child: Text('Fecha')),
-                      ),
+              return SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                child: Container(
+                  color: Colors.white,
+                  width: totalWidth,
+                  child: DataTable(
+                    headingRowColor: WidgetStateProperty.all(
+                      const Color(0xFF4682B4),
                     ),
-                    DataColumn(
-                      label: SizedBox(
-                        width: anchoColumna,
-                        child: const Center(child: Text('Cantidad')),
-                      ),
+                    headingTextStyle: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
-                  ],
-                  rows:
-                      docs.map((doc) {
-                        final data = doc.data() as Map<String, dynamic>?;
-                        final cantidad = data?['cantidad'] ?? 0;
-                        final fecha =
-                            (data?['fecha_actualizacion'] as Timestamp?)
-                                ?.toDate();
-                        final fechaStr =
-                            fecha != null
-                                ? DateFormat('dd/MM/yyyy HH:mm').format(fecha)
-                                : 'Sin fecha';
+                    dataTextStyle: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                    columnSpacing: 0,
+                    columns: [
+                      DataColumn(
+                        label: SizedBox(
+                          width: anchoColumna,
+                          child: const Center(child: Text('Fecha')),
+                        ),
+                      ),
+                      DataColumn(
+                        label: SizedBox(
+                          width: anchoColumna,
+                          child: const Center(child: Text('Cantidad')),
+                        ),
+                      ),
+                    ],
+                    rows:
+                        docs.map((doc) {
+                          final data = doc.data() as Map<String, dynamic>?;
+                          final cantidad = data?['cantidad'] ?? 0;
+                          final fecha =
+                              (data?['fecha_actualizacion'] as Timestamp?)
+                                  ?.toDate();
+                          final fechaStr =
+                              fecha != null
+                                  ? DateFormat('dd/MM/yyyy HH:mm').format(fecha)
+                                  : 'Sin fecha';
 
-                        return DataRow(
-                          cells: [
-                            DataCell(
-                              SizedBox(
-                                width: anchoColumna,
-                                child: Center(child: Text(fechaStr)),
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                SizedBox(
+                                  width: anchoColumna,
+                                  child: Center(child: Text(fechaStr)),
+                                ),
                               ),
-                            ),
-                            DataCell(
-                              SizedBox(
-                                width: anchoColumna,
-                                child: Center(child: Text(cantidad.toString())),
+                              DataCell(
+                                SizedBox(
+                                  width: anchoColumna,
+                                  child: Center(
+                                    child: Text(cantidad.toString()),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
+                            ],
+                          );
+                        }).toList(),
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );

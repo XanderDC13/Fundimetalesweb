@@ -104,6 +104,7 @@ class _ReporteTransporteScreenState extends State<ReporteTransporteScreen> {
               ),
             ),
             pw.SizedBox(height: 20),
+            // ignore: deprecated_member_use
             pw.Table.fromTextArray(
               border: null,
               cellAlignment: pw.Alignment.centerLeft,

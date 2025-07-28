@@ -133,104 +133,128 @@ class _ReporteInventarioDeskScreenState
   }
 
   Widget _buildTabla(String coleccion) {
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: _getEntradas(coleccion),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final entradas = snapshot.data!;
-        if (entradas.isEmpty) {
-          return const Center(child: Text('No hay registros.'));
-        }
+    return Expanded(
+      // <-- hace que ocupe todo el espacio disponible verticalmente
+      child: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: _getEntradas(coleccion),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final entradas = snapshot.data!;
+          if (entradas.isEmpty) {
+            return const Center(child: Text('No hay registros.'));
+          }
 
-        return SingleChildScrollView(
-          child: DataTable(
-            headingRowColor: WidgetStateColor.resolveWith(
-              (states) => const Color(0xFF4682B4),
-            ),
-            columnSpacing: 0,
-            columns: const [
-              DataColumn(
-                label: Text('Fecha', style: TextStyle(color: Colors.white)),
-              ),
-              DataColumn(
-                label: Text('Ref', style: TextStyle(color: Colors.white)),
-              ),
-              DataColumn(
-                label: Text('Nombre', style: TextStyle(color: Colors.white)),
-              ),
-              DataColumn(
-                label: Text('Cantidad', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-            rows:
-                entradas.map((entrada) {
-                  final fechaCampo =
-                      coleccion == 'historial_inventario_general'
-                          ? entrada['fecha_actualizacion']
-                          : entrada['fecha'];
-                  final fecha =
-                      fechaCampo != null
-                          ? (fechaCampo as Timestamp).toDate()
-                          : null;
-
-                  return DataRow(
-                    cells: [
-                      DataCell(
-                        SizedBox(
-                          width: 55,
-                          child: Text(
-                            fecha != null
-                                ? fecha.toLocal().toString().split(' ')[0]
-                                : '-',
-                            style: const TextStyle(fontSize: 10),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                  child: DataTable(
+                    headingRowColor: WidgetStateColor.resolveWith(
+                      (states) => const Color(0xFF4682B4),
+                    ),
+                    columnSpacing: 16,
+                    dataRowMinHeight: 48,
+                    dataRowMaxHeight: 72,
+                    columns: const [
+                      DataColumn(
+                        label: Text(
+                          'Fecha',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                      DataCell(
-                        SizedBox(
-                          width: 50,
-                          child: Text(
-                            '${entrada['referencia'] ?? '-'}',
-                            style: const TextStyle(fontSize: 10),
+                      DataColumn(
+                        label: Text(
+                          'Referencia',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                      DataCell(
-                        SizedBox(
-                          width: 150,
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Text(
-                              '${entrada['nombre'] ?? '-'}',
-                              style: const TextStyle(fontSize: 10),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                      DataColumn(
+                        label: Text(
+                          'Nombre',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                      DataCell(
-                        SizedBox(
-                          width: 18,
-                          child: Center(
-                            child: Text(
-                              '${entrada['cantidad'] ?? 0}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 10,
-                              ),
-                            ),
+                      DataColumn(
+                        label: Text(
+                          'Cantidad',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ],
-                  );
-                }).toList(),
-          ),
-        );
-      },
+                    rows:
+                        entradas.map((entrada) {
+                          final fechaCampo =
+                              coleccion == 'historial_inventario_general'
+                                  ? entrada['fecha_actualizacion']
+                                  : entrada['fecha'];
+                          final fecha =
+                              fechaCampo != null
+                                  ? (fechaCampo as Timestamp).toDate()
+                                  : null;
+
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                Text(
+                                  fecha != null
+                                      ? fecha.toLocal().toString().split(' ')[0]
+                                      : '-',
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  '${entrada['referencia'] ?? '-'}',
+                                  style: const TextStyle(fontSize: 13),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  '${entrada['nombre'] ?? '-'}',
+                                  style: const TextStyle(fontSize: 13),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  softWrap: true,
+                                ),
+                              ),
+                              DataCell(
+                                Center(
+                                  child: Text(
+                                    '${entrada['cantidad'] ?? 0}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 

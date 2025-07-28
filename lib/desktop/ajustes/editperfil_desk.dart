@@ -45,8 +45,6 @@ class _EditarPerfilDeskScreenState extends State<EditarPerfilDeskScreen> {
       final snapshot = await _firestore.collection('sedes').get();
       listaSedes =
           snapshot.docs.map((doc) => doc['nombre'] as String).toList()..sort();
-    } catch (e) {
-      print('Error al cargar sedes: $e');
     } finally {
       setState(() {
         _cargandoSedes = false;
@@ -67,7 +65,7 @@ class _EditarPerfilDeskScreenState extends State<EditarPerfilDeskScreen> {
       final data = doc.data()!;
       _nombreController.text = data['nombre'] ?? '';
       _emailController.text = _usuario!.email ?? '';
-      sedeSeleccionada = data['sede'] ?? null;
+      sedeSeleccionada = data['sede'];
     }
   }
 
@@ -80,6 +78,7 @@ class _EditarPerfilDeskScreenState extends State<EditarPerfilDeskScreen> {
 
     try {
       if (nuevoEmail != _usuario!.email) {
+        // ignore: deprecated_member_use
         await _usuario!.updateEmail(nuevoEmail);
       }
 
@@ -97,6 +96,7 @@ class _EditarPerfilDeskScreenState extends State<EditarPerfilDeskScreen> {
             if (nuevaContrasena.isNotEmpty) 'contrasena': nuevaContrasena,
           });
 
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Perfil actualizado correctamente')),
       );
@@ -107,6 +107,7 @@ class _EditarPerfilDeskScreenState extends State<EditarPerfilDeskScreen> {
             'Por seguridad, vuelve a iniciar sesión para cambiar esta información.';
       }
       ScaffoldMessenger.of(
+        // ignore: use_build_context_synchronously
         context,
       ).showSnackBar(SnackBar(content: Text(mensaje)));
     }

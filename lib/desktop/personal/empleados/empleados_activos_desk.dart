@@ -153,52 +153,75 @@ class _EmpleadosActivosDeskScreenState
                                             DataCell(Text(email)),
                                             DataCell(Text(sede)),
                                             DataCell(
-                                              DropdownButton<String>(
-                                                value: valorRol,
-                                                underline: Container(),
-                                                items:
-                                                    roles.map((String value) {
-                                                      return DropdownMenuItem<
-                                                        String
-                                                      >(
-                                                        value: value,
-                                                        child: Row(
-                                                          children: [
-                                                            Icon(
-                                                              value ==
-                                                                      'Administrador'
-                                                                  ? Icons
-                                                                      .security
-                                                                  : Icons
-                                                                      .supervisor_account,
-                                                              color:
-                                                                  const Color(
-                                                                    0xFF2C3E50,
-                                                                  ),
-                                                              size: 18,
-                                                            ),
-                                                            const SizedBox(
-                                                              width: 8,
-                                                            ),
-                                                            Text(value),
-                                                          ],
-                                                        ),
-                                                      );
-                                                    }).toList(),
-                                                onChanged: (nuevoRol) {
-                                                  if (nuevoRol != null) {
-                                                    FirebaseFirestore.instance
-                                                        .collection(
-                                                          'usuarios_activos',
-                                                        )
-                                                        .doc(empleado.id)
-                                                        .update({
-                                                          'rol': nuevoRol,
-                                                        });
-                                                  }
-                                                },
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      Colors
+                                                          .white, // ✅ Fondo blanco
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: Colors.grey.shade300,
+                                                  ),
+                                                ),
+                                                child: DropdownButton<String>(
+                                                  value: valorRol,
+                                                  underline:
+                                                      Container(), // Elimina la línea inferior
+                                                  isExpanded:
+                                                      true, // ✅ Ocupa todo el ancho disponible
+                                                  dropdownColor:
+                                                      Colors
+                                                          .white, // ✅ También blanco al desplegar
+                                                  items:
+                                                      roles.map((String value) {
+                                                        return DropdownMenuItem<
+                                                          String
+                                                        >(
+                                                          value: value,
+                                                          child: Row(
+                                                            children: [
+                                                              Icon(
+                                                                value ==
+                                                                        'Administrador'
+                                                                    ? Icons
+                                                                        .security
+                                                                    : Icons
+                                                                        .supervisor_account,
+                                                                color:
+                                                                    const Color(
+                                                                      0xFF2C3E50,
+                                                                    ),
+                                                                size: 18,
+                                                              ),
+                                                              const SizedBox(
+                                                                width: 8,
+                                                              ),
+                                                              Text(value),
+                                                            ],
+                                                          ),
+                                                        );
+                                                      }).toList(),
+                                                  onChanged: (nuevoRol) {
+                                                    if (nuevoRol != null) {
+                                                      FirebaseFirestore.instance
+                                                          .collection(
+                                                            'usuarios_activos',
+                                                          )
+                                                          .doc(empleado.id)
+                                                          .update({
+                                                            'rol': nuevoRol,
+                                                          });
+                                                    }
+                                                  },
+                                                ),
                                               ),
                                             ),
+
                                             DataCell(
                                               IconButton(
                                                 icon: const Icon(

@@ -1,6 +1,7 @@
 import 'package:basefundi/desktop/inventario/editar/categorias_desk.dart';
+import 'package:basefundi/desktop/inventario/editar/editcant_prod_desk.dart';
 import 'package:basefundi/desktop/inventario/editar/editdatos_prod_desk.dart';
-import 'package:basefundi/movil/inventario/editar/editcant_prod_movil.dart';
+
 import 'package:basefundi/settings/csv_desk.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -693,19 +694,15 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                   0;
 
                                               return GestureDetector(
-                                                onTap: () async {
-                                                  await Navigator.push(
+                                                onTap: () {
+                                                  _navegarConFade(
                                                     context,
-                                                    MaterialPageRoute(
-                                                      builder:
-                                                          (context) =>
-                                                              EditInvProdScreen(
-                                                                producto:
-                                                                    producto,
-                                                              ),
+                                                    EditInvProdDeskScreen(
+                                                      producto: producto,
                                                     ),
                                                   );
                                                 },
+
                                                 child: Container(
                                                   decoration: BoxDecoration(
                                                     color: Colors.white,

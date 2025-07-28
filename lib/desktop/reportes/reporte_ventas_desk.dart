@@ -886,7 +886,7 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
                           label: SizedBox(
                             width: anchoCP,
                             child: const Text(
-                              'CP',
+                              'Copmprobante',
                               textAlign: TextAlign.center,
                             ),
                           ),

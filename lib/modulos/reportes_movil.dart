@@ -1,4 +1,5 @@
 import 'package:basefundi/movil/reportes/auditoria_movil.dart';
+import 'package:basefundi/movil/reportes/reporte_compras_movil.dart';
 import 'package:basefundi/movil/reportes/reporte_inv_movil.dart';
 import 'package:basefundi/movil/reportes/reporte_transporte_movil.dart';
 import 'package:basefundi/movil/reportes/reporte_ventas_movil.dart';
@@ -77,6 +78,21 @@ class _ReportesScreenState extends State<ReportesScreen>
                         context,
                         MaterialPageRoute(
                           builder: (context) => const ReporteVentasScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildBoton(
+                    icon: LucideIcons.barChart2,
+                    titulo: 'Reporte de Compras',
+                    subtitulo: 'Compra de materia prima',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => const ReporteComprasMobileScreen(),
                         ),
                       );
                     },

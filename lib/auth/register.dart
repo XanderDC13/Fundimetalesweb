@@ -42,7 +42,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _cargandoSedes = false;
       });
     } catch (e) {
-      print('Error al cargar sedes: $e');
       setState(() {
         _cargandoSedes = false;
       });
@@ -61,6 +60,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           password: password,
         );
 
+        // ✅ Enviar correo de verificación
+        await userCredential.user!.sendEmailVerification();
+
+        // ✅ Guardar en Firestore con verificado: false
         await _firestore
             .collection('usuarios_pendientes')
             .doc(userCredential.user!.uid)
@@ -71,16 +74,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
               'sede': _selectedSede,
               'uid': userCredential.user!.uid,
               'estado': 'pendiente',
+              'verificado': false,
               'fechaRegistro': FieldValue.serverTimestamp(),
             });
-
-        await userCredential.user!.sendEmailVerification();
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Registro enviado para aprobación. Espera la verificación del administrador.',
+              'Te hemos enviado un correo de verificación. Verifícalo y espera la aprobación del administrador.',
             ),
           ),
         );
@@ -246,9 +248,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ? const Center(child: CircularProgressIndicator())
                         : DropdownButtonFormField<String>(
                           value: _selectedSede,
-                          decoration: _inputDecoration(
-                            icon: Icons.location_city,
-                            hint: 'Sede',
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.white, // ✅ Fondo blanco
+                            hintText: 'Sede',
+                            prefixIcon: const Icon(
+                              Icons.location_city,
+                              color: Color(0xFF4682B4),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 18,
+                              horizontal: 12,
+                            ),
                           ),
                           items:
                               _listaSedes
