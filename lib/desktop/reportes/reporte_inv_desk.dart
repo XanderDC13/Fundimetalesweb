@@ -32,6 +32,20 @@ class _ReporteInventarioDeskScreenState
     super.dispose();
   }
 
+  // Función para convertir fecha con seguridad
+  DateTime? parseFechaCampo(dynamic fechaCampo) {
+    if (fechaCampo is Timestamp) {
+      return fechaCampo.toDate();
+    } else if (fechaCampo is String) {
+      try {
+        return DateTime.parse(fechaCampo);
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+
   pw.MultiPage buildReporteInventarioPDF({
     required String titulo,
     required List<String> headers,
@@ -118,17 +132,7 @@ class _ReporteInventarioDeskScreenState
                         ? e['fecha_actualizacion']
                         : e['fecha'];
 
-                DateTime? fecha;
-
-                if (fechaCampo is Timestamp) {
-                  fecha = fechaCampo.toDate();
-                } else if (fechaCampo is String) {
-                  try {
-                    fecha = DateTime.parse(fechaCampo);
-                  } catch (_) {
-                    fecha = null;
-                  }
-                }
+                final fecha = parseFechaCampo(fechaCampo);
 
                 if (_rangoFechas != null && fecha != null) {
                   return textoCoincide &&
@@ -164,7 +168,7 @@ class _ReporteInventarioDeskScreenState
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minWidth: constraints.maxWidth),
                   child: DataTable(
-                    headingRowColor: WidgetStateColor.resolveWith(
+                    headingRowColor: MaterialStateColor.resolveWith(
                       (states) => const Color(0xFF4682B4),
                     ),
                     columnSpacing: 16,
@@ -214,10 +218,8 @@ class _ReporteInventarioDeskScreenState
                               coleccion == 'historial_inventario_general'
                                   ? entrada['fecha_actualizacion']
                                   : entrada['fecha'];
-                          final fecha =
-                              fechaCampo != null
-                                  ? (fechaCampo as Timestamp).toDate()
-                                  : null;
+
+                          final fecha = parseFechaCampo(fechaCampo);
 
                           return DataRow(
                             cells: [
@@ -296,17 +298,7 @@ class _ReporteInventarioDeskScreenState
                   ? e['fecha_actualizacion']
                   : e['fecha'];
 
-          DateTime? fecha;
-
-          if (fechaCampo is Timestamp) {
-            fecha = fechaCampo.toDate();
-          } else if (fechaCampo is String) {
-            try {
-              fecha = DateTime.parse(fechaCampo);
-            } catch (_) {
-              fecha = null;
-            }
-          }
+          final fecha = parseFechaCampo(fechaCampo);
 
           if (_rangoFechas != null && fecha != null) {
             return textoCoincide &&
@@ -324,18 +316,9 @@ class _ReporteInventarioDeskScreenState
                   ? entrada['fecha_actualizacion']
                   : entrada['fecha'];
 
-          String fechaFormateada = '-';
-          DateTime? fecha;
+          final fecha = parseFechaCampo(fechaCampo);
 
-          if (fechaCampo is Timestamp) {
-            fecha = fechaCampo.toDate();
-          } else if (fechaCampo is String) {
-            try {
-              fecha = DateTime.parse(fechaCampo);
-            } catch (_) {
-              fecha = null;
-            }
-          }
+          String fechaFormateada = '-';
 
           if (fecha != null) {
             fechaFormateada = fecha.toLocal().toString().split(' ')[0];
@@ -345,7 +328,7 @@ class _ReporteInventarioDeskScreenState
             fechaFormateada,
             '${entrada['referencia'] ?? '-'}',
             '${entrada['nombre'] ?? '-'}',
-            '${entrada['cantidad'] ?? 0}',
+            ((entrada['cantidad'] ?? 0).toString()),
           ];
         }).toList();
 
