@@ -148,126 +148,123 @@ class _ReporteInventarioDeskScreenState
   }
 
   Widget _buildTabla(String coleccion) {
-    return Expanded(
-      // <-- hace que ocupe todo el espacio disponible verticalmente
-      child: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _getEntradas(coleccion),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final entradas = snapshot.data!;
-          if (entradas.isEmpty) {
-            return const Center(child: Text('No hay registros.'));
-          }
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _getEntradas(coleccion),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final entradas = snapshot.data!;
+        if (entradas.isEmpty) {
+          return const Center(child: Text('No hay registros.'));
+        }
 
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                  child: DataTable(
-                    headingRowColor: MaterialStateColor.resolveWith(
-                      (states) => const Color(0xFF4682B4),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: DataTable(
+                  headingRowColor: MaterialStateColor.resolveWith(
+                    (states) => const Color(0xFF4682B4),
+                  ),
+                  columnSpacing: 16,
+                  dataRowMinHeight: 48,
+                  dataRowMaxHeight: 72,
+                  columns: const [
+                    DataColumn(
+                      label: Text(
+                        'Fecha',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                    columnSpacing: 16,
-                    dataRowMinHeight: 48,
-                    dataRowMaxHeight: 72,
-                    columns: const [
-                      DataColumn(
-                        label: Text(
-                          'Fecha',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    DataColumn(
+                      label: Text(
+                        'Referencia',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      DataColumn(
-                        label: Text(
-                          'Referencia',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Nombre',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      DataColumn(
-                        label: Text(
-                          'Nombre',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Cantidad',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      DataColumn(
-                        label: Text(
-                          'Cantidad',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                    rows:
-                        entradas.map((entrada) {
-                          final fechaCampo =
-                              coleccion == 'historial_inventario_general'
-                                  ? entrada['fecha_actualizacion']
-                                  : entrada['fecha'];
+                    ),
+                  ],
+                  rows:
+                      entradas.map((entrada) {
+                        final fechaCampo =
+                            coleccion == 'historial_inventario_general'
+                                ? entrada['fecha_actualizacion']
+                                : entrada['fecha'];
 
-                          final fecha = parseFechaCampo(fechaCampo);
+                        final fecha = parseFechaCampo(fechaCampo);
 
-                          return DataRow(
-                            cells: [
-                              DataCell(
-                                Text(
-                                  fecha != null
-                                      ? fecha.toLocal().toString().split(' ')[0]
-                                      : '-',
-                                  style: const TextStyle(fontSize: 13),
-                                ),
+                        return DataRow(
+                          cells: [
+                            DataCell(
+                              Text(
+                                fecha != null
+                                    ? fecha.toLocal().toString().split(' ')[0]
+                                    : '-',
+                                style: const TextStyle(fontSize: 13),
                               ),
-                              DataCell(
-                                Text(
-                                  '${entrada['referencia'] ?? '-'}',
-                                  style: const TextStyle(fontSize: 13),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                            ),
+                            DataCell(
+                              Text(
+                                '${entrada['referencia'] ?? '-'}',
+                                style: const TextStyle(fontSize: 13),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              DataCell(
-                                Text(
-                                  '${entrada['nombre'] ?? '-'}',
-                                  style: const TextStyle(fontSize: 13),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  softWrap: true,
-                                ),
+                            ),
+                            DataCell(
+                              Text(
+                                '${entrada['nombre'] ?? '-'}',
+                                style: const TextStyle(fontSize: 13),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                softWrap: true,
                               ),
-                              DataCell(
-                                Center(
-                                  child: Text(
-                                    '${entrada['cantidad'] ?? 0}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                    ),
+                            ),
+                            DataCell(
+                              Center(
+                                child: Text(
+                                  '${entrada['cantidad'] ?? 0}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
                                   ),
                                 ),
                               ),
-                            ],
-                          );
-                        }).toList(),
-                  ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
                 ),
-              );
-            },
-          );
-        },
-      ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
