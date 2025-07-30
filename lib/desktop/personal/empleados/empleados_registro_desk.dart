@@ -292,26 +292,45 @@ class _EmpleadosPendientesDeskScreenState
                                                         tooltip:
                                                             'Aprobar usuario',
                                                         onPressed: () async {
-                                                          await FirebaseFirestore
-                                                              .instance
-                                                              .collection(
-                                                                'usuarios_activos',
-                                                              )
-                                                              .doc(user.id)
-                                                              .set(
-                                                                user.data()
-                                                                    as Map<
-                                                                      String,
-                                                                      dynamic
-                                                                    >,
-                                                              );
-                                                          await FirebaseFirestore
-                                                              .instance
-                                                              .collection(
-                                                                'usuarios_pendientes',
-                                                              )
-                                                              .doc(user.id)
-                                                              .delete();
+                                                          final pendienteDoc =
+                                                              await FirebaseFirestore
+                                                                  .instance
+                                                                  .collection(
+                                                                    'usuarios_pendientes',
+                                                                  )
+                                                                  .doc(user.id)
+                                                                  .get();
+
+                                                          if (pendienteDoc
+                                                              .exists) {
+                                                            final data =
+                                                                pendienteDoc
+                                                                    .data()!;
+
+                                                            // Actualiza los campos que quieras al aprobar
+                                                            data['estado'] =
+                                                                'aceptado';
+                                                            data['fechaVerificacion'] =
+                                                                FieldValue.serverTimestamp();
+
+                                                            // Guardar en usuarios_activos (crea o reemplaza)
+                                                            await FirebaseFirestore
+                                                                .instance
+                                                                .collection(
+                                                                  'usuarios_activos',
+                                                                )
+                                                                .doc(user.id)
+                                                                .set(data);
+
+                                                            // Borrar de usuarios_pendientes
+                                                            await FirebaseFirestore
+                                                                .instance
+                                                                .collection(
+                                                                  'usuarios_pendientes',
+                                                                )
+                                                                .doc(user.id)
+                                                                .delete();
+                                                          }
                                                         },
                                                       ),
                                                       IconButton(
@@ -322,6 +341,17 @@ class _EmpleadosPendientesDeskScreenState
                                                         tooltip:
                                                             'Rechazar usuario',
                                                         onPressed: () async {
+                                                          await FirebaseFirestore
+                                                              .instance
+                                                              .collection(
+                                                                'usuarios',
+                                                              )
+                                                              .doc(user.id)
+                                                              .update({
+                                                                'estado':
+                                                                    'rechazado',
+                                                              });
+
                                                           await FirebaseFirestore
                                                               .instance
                                                               .collection(

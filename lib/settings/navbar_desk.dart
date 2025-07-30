@@ -12,6 +12,7 @@ import 'package:basefundi/desktop/inventario/productos_desk.dart';
 import 'package:basefundi/desktop/inventario/transporte_desk.dart';
 import 'package:basefundi/desktop/personal/empleados/empleados_registro_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
+import 'package:basefundi/desktop/personal/funciones/tareas_realizar_desk.dart';
 import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
 import 'package:basefundi/desktop/reportes/auditoria_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_compras_desk.dart';
@@ -23,6 +24,7 @@ import 'package:basefundi/desktop/ventas/realizar_venta_desk.dart';
 import 'package:basefundi/desktop/ventas/ventas_totales_desk.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MainDeskLayout extends StatefulWidget {
   final Widget child;
@@ -47,6 +49,35 @@ void _navegarConFade(BuildContext context, Widget pantalla) {
 
 class _MainDeskLayoutState extends State<MainDeskLayout> {
   String? _expandedMenu;
+  String rolUsuario = 'Empleado'; // Rol por defecto
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarRolUsuario();
+  }
+
+  Future<void> _cargarRolUsuario() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('usuarios_activos')
+              .doc(user.uid)
+              .get();
+
+      if (doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          rolUsuario = data['rol'] ?? 'Empleado';
+        });
+      }
+    } catch (e) {
+      print('Error al cargar rol del usuario: $e');
+    }
+  }
 
   void _toggleMenu(String menu) {
     setState(() {
@@ -87,251 +118,7 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
                 ),
                 const SizedBox(height: 30),
 
-                Expanded(
-                  child: ListView(
-                    children: [
-                      _buildMainItem(
-                        icon: Icons.home,
-                        title: 'Inicio',
-                        onTap: () {
-                          _navegarConFade(context, const DashboardDeskScreen());
-                        },
-                      ),
-                      _buildExpandableItem(
-                        icon: Icons.shopping_cart,
-                        title: 'Ventas',
-                        menuKey: 'ventas',
-                        subItems: [
-                          _buildSubItem(
-                            label: 'Ventas Totales',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const VentasTotalesDeskScreen(),
-                              );
-                            },
-                          ),
-                          _buildSubItem(
-                            label: 'Modificar Ventas',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const ModificarVentaDeskScreen(),
-                              );
-                            },
-                          ),
-                          _buildSubItem(
-                            label: 'Realizar Venta',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const VentasDetalleDeskScreen(),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-
-                      _buildExpandableItem(
-                        icon: Icons.inventory,
-                        title: 'Inventario',
-                        menuKey: 'inventario',
-                        subItems: [
-                          _buildSubItem(
-                            label: 'Productos',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const TotalInvDeskScreen(),
-                              );
-                            },
-                          ),
-                          _buildSubItem(
-                            label: 'General',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const InventarioGeneralDeskScreen(),
-                              );
-                            },
-                          ),
-                          _buildSubItem(
-                            label: 'Fundición',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const InventarioFundicionDeskScreen(),
-                              );
-                            },
-                          ),
-                          _buildSubItem(
-                            label: 'Pintura',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const InventarioPinturaDeskScreen(),
-                              );
-                            },
-                          ),
-                          _buildSubItem(
-                            label: 'Transporte',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const TransporteDeskScreen(),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      _buildExpandableItem(
-                        icon: Icons.people,
-                        title: 'Personal',
-                        menuKey: 'personal',
-                        subItems: [
-                          _buildSubItem(
-                            label: 'Empleados',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const EmpleadosPendientesDeskScreen(),
-                              );
-                            },
-                          ),
-                          _buildSubItem(
-                            label: 'Funciones',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const FuncionesDeskScreen(),
-                              );
-                            },
-                          ),
-                          _buildSubItem(
-                            label: 'Insumos',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const InsumosDeskScreen(),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      _buildExpandableItem(
-                        icon: Icons.bar_chart,
-                        title: 'Reportes',
-                        menuKey: 'reportes',
-                        subItems: [
-                          _buildSubItem(
-                            label: 'Ventas',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const ReporteVentasDeskScreen(),
-                              );
-                            },
-                          ),
-                          _buildSubItem(
-                            label: 'Inventario',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const ReporteInventarioDeskScreen(),
-                              );
-                            },
-                          ),
-                          _buildSubItem(
-                            label: 'Compras',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const ReporteComprasDeskScreen(),
-                              );
-                            },
-                          ),
-                          _buildSubItem(
-                            label: 'Transporte',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const ReporteTransporteDeskScreen(),
-                              );
-                            },
-                          ),
-                          _buildSubItem(
-                            label: 'Auditoría',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const AuditoriaDeskScreen(),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      _buildExpandableItem(
-                        icon: Icons.contacts,
-                        title: 'Directorio',
-                        menuKey: 'directorio',
-                        subItems: [
-                          _buildSubItem(
-                            label: 'Proformas',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const OpcionesProformasDeskScreen(),
-                              );
-                            },
-                          ),
-                          _buildSubItem(
-                            label: 'Clientes',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const ClientesDeskScreen(),
-                              );
-                            },
-                          ),
-                          _buildSubItem(
-                            label: 'Proveedores',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const ProveedoresDeskScreen(),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      _buildExpandableItem(
-                        icon: Icons.settings,
-                        title: 'Ajustes',
-                        menuKey: 'ajustes',
-                        subItems: [
-                          _buildSubItem(
-                            label: 'Editar Perfil',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const EditarPerfilDeskScreen(),
-                              );
-                            },
-                          ),
-                          _buildSubItem(
-                            label: 'Enviar Feedback',
-                            onTap: () {
-                              _navegarConFade(
-                                context,
-                                const FeedbackDeskScreen(),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+                Expanded(child: ListView(children: _buildMenuItems())),
 
                 // BOTÓN DE CERRAR SESIÓN
                 Padding(
@@ -354,6 +141,234 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildMenuItems() {
+    List<Widget> menuItems = [
+      _buildMainItem(
+        icon: Icons.home,
+        title: 'Inicio',
+        onTap: () {
+          _navegarConFade(context, const DashboardDeskScreen());
+        },
+      ),
+      _buildExpandableItem(
+        icon: Icons.shopping_cart,
+        title: 'Ventas',
+        menuKey: 'ventas',
+        subItems:
+            rolUsuario == 'Administrador'
+                ? [
+                  _buildSubItem(
+                    label: 'Ventas Totales',
+                    onTap: () {
+                      _navegarConFade(context, const VentasTotalesDeskScreen());
+                    },
+                  ),
+                  _buildSubItem(
+                    label: 'Modificar Ventas',
+                    onTap: () {
+                      _navegarConFade(
+                        context,
+                        const ModificarVentaDeskScreen(),
+                      );
+                    },
+                  ),
+                  _buildSubItem(
+                    label: 'Realizar Venta',
+                    onTap: () {
+                      _navegarConFade(context, const VentasDetalleDeskScreen());
+                    },
+                  ),
+                ]
+                : [
+                  _buildSubItem(
+                    label: 'Realizar Venta',
+                    onTap: () {
+                      _navegarConFade(context, const VentasDetalleDeskScreen());
+                    },
+                  ),
+                ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.inventory,
+        title: 'Inventario',
+        menuKey: 'inventario',
+        subItems: [
+          _buildSubItem(
+            label: 'Productos',
+            onTap: () {
+              _navegarConFade(context, const TotalInvDeskScreen());
+            },
+          ),
+          _buildSubItem(
+            label: 'General',
+            onTap: () {
+              _navegarConFade(context, const InventarioGeneralDeskScreen());
+            },
+          ),
+          _buildSubItem(
+            label: 'Fundición',
+            onTap: () {
+              _navegarConFade(context, const InventarioFundicionDeskScreen());
+            },
+          ),
+          _buildSubItem(
+            label: 'Pintura',
+            onTap: () {
+              _navegarConFade(context, const InventarioPinturaDeskScreen());
+            },
+          ),
+          _buildSubItem(
+            label: 'Transporte',
+            onTap: () {
+              _navegarConFade(context, const TransporteDeskScreen());
+            },
+          ),
+        ],
+      ),
+    ];
+
+    // Solo agregar Personal si es Administrador
+    if (rolUsuario == 'Administrador') {
+      menuItems.add(
+        _buildExpandableItem(
+          icon: Icons.people,
+          title: 'Personal',
+          menuKey: 'personal',
+          subItems: [
+            _buildSubItem(
+              label: 'Empleados',
+              onTap: () {
+                _navegarConFade(context, const EmpleadosPendientesDeskScreen());
+              },
+            ),
+            _buildSubItem(
+              label: 'Funciones',
+              onTap: () {
+                _navegarConFade(context, const FuncionesDeskScreen());
+              },
+            ),
+            _buildSubItem(
+              label: 'Insumos',
+              onTap: () {
+                _navegarConFade(context, const InsumosDeskScreen());
+              },
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Para empleados, solo mostrar Tareas
+      menuItems.add(
+        _buildMainItem(
+          icon: Icons.task_alt,
+          title: 'Tareas',
+          onTap: () {
+            _navegarConFade(context, const TareasPendientesDeskScreen());
+          },
+        ),
+      );
+    }
+
+    // Solo agregar Reportes si es Administrador
+    if (rolUsuario == 'Administrador') {
+      menuItems.add(
+        _buildExpandableItem(
+          icon: Icons.bar_chart,
+          title: 'Reportes',
+          menuKey: 'reportes',
+          subItems: [
+            _buildSubItem(
+              label: 'Ventas',
+              onTap: () {
+                _navegarConFade(context, const ReporteVentasDeskScreen());
+              },
+            ),
+            _buildSubItem(
+              label: 'Inventario',
+              onTap: () {
+                _navegarConFade(context, const ReporteInventarioDeskScreen());
+              },
+            ),
+            _buildSubItem(
+              label: 'Compras',
+              onTap: () {
+                _navegarConFade(context, const ReporteComprasDeskScreen());
+              },
+            ),
+            _buildSubItem(
+              label: 'Transporte',
+              onTap: () {
+                _navegarConFade(context, const ReporteTransporteDeskScreen());
+              },
+            ),
+            _buildSubItem(
+              label: 'Auditoría',
+              onTap: () {
+                _navegarConFade(context, const AuditoriaDeskScreen());
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Solo agregar Directorio si es Administrador
+    if (rolUsuario == 'Administrador') {
+      menuItems.add(
+        _buildExpandableItem(
+          icon: Icons.contacts,
+          title: 'Directorio',
+          menuKey: 'directorio',
+          subItems: [
+            _buildSubItem(
+              label: 'Proformas',
+              onTap: () {
+                _navegarConFade(context, const OpcionesProformasDeskScreen());
+              },
+            ),
+            _buildSubItem(
+              label: 'Clientes',
+              onTap: () {
+                _navegarConFade(context, const ClientesDeskScreen());
+              },
+            ),
+            _buildSubItem(
+              label: 'Proveedores',
+              onTap: () {
+                _navegarConFade(context, const ProveedoresDeskScreen());
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Ajustes está disponible para todos
+    menuItems.add(
+      _buildExpandableItem(
+        icon: Icons.settings,
+        title: 'Ajustes',
+        menuKey: 'ajustes',
+        subItems: [
+          _buildSubItem(
+            label: 'Editar Perfil',
+            onTap: () {
+              _navegarConFade(context, const EditarPerfilDeskScreen());
+            },
+          ),
+          _buildSubItem(
+            label: 'Enviar Feedback',
+            onTap: () {
+              _navegarConFade(context, const FeedbackDeskScreen());
+            },
+          ),
+        ],
+      ),
+    );
+
+    return menuItems;
   }
 
   Widget _buildMainItem({

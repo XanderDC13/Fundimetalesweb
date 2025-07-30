@@ -36,8 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (user != null) {
-          await user
-              .reload(); // Asegura que se actualice el estado de verificación
+          await user.reload(); // 🔄 Actualiza datos del usuario
           user = FirebaseAuth.instance.currentUser;
 
           if (!user!.emailVerified) {
@@ -55,25 +54,47 @@ class _LoginScreenState extends State<LoginScreen> {
                   .doc(user.uid)
                   .get();
 
-          if (doc.exists) {
-            // ✅ Decide destino según tamaño de pantalla
-            final isDesktop = MediaQuery.of(context).size.width > 800;
-            Widget destino =
-                isDesktop
-                    ? const DashboardDeskScreen()
-                    : const DashboardScreen();
-
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => destino),
-            );
-          } else {
+          if (!doc.exists) {
             await FirebaseAuth.instance.signOut();
             setState(() {
               _errorMessage =
-                  'Tu cuenta está en proceso de verificación por un administrador.';
+                  'Tu cuenta está en revisión por un administrador.';
             });
+            return;
           }
+
+          final data = doc.data();
+
+          final bool correoVerificado = user.emailVerified;
+          final String estado = data?['estado'] ?? 'pendiente';
+
+          if (!correoVerificado) {
+            await FirebaseAuth.instance.signOut();
+            setState(() {
+              _errorMessage =
+                  'Debes verificar tu correo antes de iniciar sesión.';
+            });
+            return;
+          }
+
+          if (estado != 'aceptado') {
+            await FirebaseAuth.instance.signOut();
+            setState(() {
+              _errorMessage =
+                  'Tu cuenta está en revisión por un administrador.';
+            });
+            return;
+          }
+
+          // ✅ Todo validado
+          final isDesktop = MediaQuery.of(context).size.width > 800;
+          Widget destino =
+              isDesktop ? const DashboardDeskScreen() : const DashboardScreen();
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => destino),
+          );
         }
       } on FirebaseAuthException catch (e) {
         setState(() {
