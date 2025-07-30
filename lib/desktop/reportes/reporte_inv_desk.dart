@@ -118,8 +118,19 @@ class _ReporteInventarioDeskScreenState
                         ? e['fecha_actualizacion']
                         : e['fecha'];
 
-                if (_rangoFechas != null && fechaCampo != null) {
-                  final fecha = (fechaCampo as Timestamp).toDate();
+                DateTime? fecha;
+
+                if (fechaCampo is Timestamp) {
+                  fecha = fechaCampo.toDate();
+                } else if (fechaCampo is String) {
+                  try {
+                    fecha = DateTime.parse(fechaCampo);
+                  } catch (_) {
+                    fecha = null;
+                  }
+                }
+
+                if (_rangoFechas != null && fecha != null) {
                   return textoCoincide &&
                       fecha.isAfter(_rangoFechas!.start) &&
                       fecha.isBefore(
@@ -285,8 +296,19 @@ class _ReporteInventarioDeskScreenState
                   ? e['fecha_actualizacion']
                   : e['fecha'];
 
-          if (_rangoFechas != null && fechaCampo != null) {
-            final fecha = (fechaCampo as Timestamp).toDate();
+          DateTime? fecha;
+
+          if (fechaCampo is Timestamp) {
+            fecha = fechaCampo.toDate();
+          } else if (fechaCampo is String) {
+            try {
+              fecha = DateTime.parse(fechaCampo);
+            } catch (_) {
+              fecha = null;
+            }
+          }
+
+          if (_rangoFechas != null && fecha != null) {
             return textoCoincide &&
                 fecha.isAfter(_rangoFechas!.start) &&
                 fecha.isBefore(_rangoFechas!.end.add(const Duration(days: 1)));
@@ -301,17 +323,26 @@ class _ReporteInventarioDeskScreenState
               coleccion == 'historial_inventario_general'
                   ? entrada['fecha_actualizacion']
                   : entrada['fecha'];
-          final fecha =
-              fechaCampo != null
-                  ? (fechaCampo as Timestamp)
-                      .toDate()
-                      .toLocal()
-                      .toString()
-                      .split(' ')[0]
-                  : '-';
+
+          String fechaFormateada = '-';
+          DateTime? fecha;
+
+          if (fechaCampo is Timestamp) {
+            fecha = fechaCampo.toDate();
+          } else if (fechaCampo is String) {
+            try {
+              fecha = DateTime.parse(fechaCampo);
+            } catch (_) {
+              fecha = null;
+            }
+          }
+
+          if (fecha != null) {
+            fechaFormateada = fecha.toLocal().toString().split(' ')[0];
+          }
 
           return [
-            fecha,
+            fechaFormateada,
             '${entrada['referencia'] ?? '-'}',
             '${entrada['nombre'] ?? '-'}',
             '${entrada['cantidad'] ?? 0}',
