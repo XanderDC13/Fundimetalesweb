@@ -1,6 +1,5 @@
+import 'package:basefundi/desktop/ventas/carrito_controller_desk.dart';
 import 'package:basefundi/desktop/ventas/carrito_desk.dart';
-
-import 'package:basefundi/movil/ventas/carrito_controller_movil.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';

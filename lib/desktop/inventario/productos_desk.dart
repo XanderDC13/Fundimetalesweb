@@ -3,6 +3,7 @@ import 'package:basefundi/desktop/inventario/editar/editcant_prod_desk.dart';
 import 'package:basefundi/desktop/inventario/editar/editdatos_prod_desk.dart';
 
 import 'package:basefundi/settings/csv_desk.dart';
+import 'package:basefundi/settings/csv_exportar_desk.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -279,35 +280,35 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
     return MainDeskLayout(
       child: Column(
         children: [
-          // ✅ CABECERA UNIDA Y CENTRADA
+          // ✅ CABECERA CON TÍTULO CENTRADO Y BOTÓN A LA DERECHA
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
               width: double.infinity,
               color: const Color(0xFF2C3E50),
               padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 38),
-              child: Stack(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios,
-                        color: Colors.white,
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
+                  // Botón de regreso
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
                   ),
-                  const Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Inventario General',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+
+                  // Título centrado (expande para mantenerlo en el centro)
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        'Inventario General',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -391,9 +392,31 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                 },
 
                                 icon: const Icon(Icons.file_upload),
-                                label: const Text('Importar CSV'),
+                                label: const Text('Importar'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF27AE60),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Botón de exportación
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  exportarInventarioDesk(context);
+                                },
+                                icon: const Icon(Icons.download),
+                                label: const Text('Exportar'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(
+                                    0xFF4682B4,
+                                  ), // azul que quieres
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),

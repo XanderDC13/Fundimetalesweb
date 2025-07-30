@@ -1,6 +1,6 @@
+import 'package:basefundi/desktop/personal/insumos/historial_insumos_desk.dart';
+import 'package:basefundi/desktop/personal/insumos/inventario_insumos_desk.dart';
 import 'package:basefundi/desktop/personal/insumos/solicitud_insumos_desk.dart';
-import 'package:basefundi/movil/personal/insumos/historial_insumos_movil.dart';
-import 'package:basefundi/movil/personal/insumos/inventario_insumos_movil.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
 import 'package:flutter/material.dart';
 
@@ -95,8 +95,8 @@ class _InsumosDeskScreenState extends State<InsumosDeskScreen> {
                               index: _selectedIndex,
                               children: const [
                                 SolicitudInsumosDeskWidget(),
-                                InventarioInsumosWidget(),
-                                HistorialInsumosWidget(),
+                                InventarioInsumosDeskScreen(),
+                                HistorialInsumosDeskWidget(),
                               ],
                             ),
                           ),

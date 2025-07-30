@@ -2,8 +2,7 @@ import 'package:basefundi/settings/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:basefundi/movil/dashboard_movil.dart'; // 📱 Dashboard móvil
-import 'package:basefundi/desktop/dashboard_desk.dart'; // 💻 Dashboard escritorio
+import 'package:basefundi/desktop/dashboard_desk.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -64,18 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
           }
 
           final data = doc.data();
-
-          final bool correoVerificado = user.emailVerified;
           final String estado = data?['estado'] ?? 'pendiente';
-
-          if (!correoVerificado) {
-            await FirebaseAuth.instance.signOut();
-            setState(() {
-              _errorMessage =
-                  'Debes verificar tu correo antes de iniciar sesión.';
-            });
-            return;
-          }
 
           if (estado != 'aceptado') {
             await FirebaseAuth.instance.signOut();
@@ -86,14 +74,12 @@ class _LoginScreenState extends State<LoginScreen> {
             return;
           }
 
-          // ✅ Todo validado
-          final isDesktop = MediaQuery.of(context).size.width > 800;
-          Widget destino =
-              isDesktop ? const DashboardDeskScreen() : const DashboardScreen();
-
+          // ✅ Solo navegación a escritorio
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => destino),
+            MaterialPageRoute(
+              builder: (context) => const DashboardDeskScreen(),
+            ),
           );
         }
       } on FirebaseAuthException catch (e) {

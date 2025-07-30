@@ -1,9 +1,9 @@
 import 'package:basefundi/desktop/dashboard_desk.dart';
+import 'package:basefundi/desktop/ventas/carrito_controller_desk.dart';
 import 'package:basefundi/firebase_options.dart';
 import 'package:basefundi/settings/animacion_inicio.dart';
 import 'package:basefundi/auth/login.dart';
 import 'package:basefundi/auth/register.dart';
-import 'package:basefundi/movil/ventas/carrito_controller_movil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';

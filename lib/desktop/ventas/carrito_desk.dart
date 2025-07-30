@@ -1,4 +1,4 @@
-import 'package:basefundi/movil/ventas/carrito_controller_movil.dart';
+import 'package:basefundi/desktop/ventas/carrito_controller_desk.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';

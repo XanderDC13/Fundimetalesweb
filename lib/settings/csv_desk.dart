@@ -1,9 +1,8 @@
-import 'dart:io';
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:csv/csv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:basefundi/settings/navbar_desk.dart'; // Usa tu mismo MainDeskLayout
+import 'package:basefundi/settings/navbar_desk.dart';
 
 class ImportarProductosDeskScreen extends StatefulWidget {
   const ImportarProductosDeskScreen({super.key});
@@ -27,120 +26,113 @@ class _ImportarProductosDeskScreenState
     });
 
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['csv'],
-      );
+      final input = html.FileUploadInputElement();
+      input.accept = '.csv';
+      input.click();
 
-      if (result != null && result.files.single.path != null) {
-        final file = File(result.files.single.path!);
-        final contenido = await file.readAsString();
-
-        final rowsAsListOfValues = const CsvToListConverter(
-          fieldDelimiter: ';',
-          eol: '\n',
-        ).convert(contenido);
-
-        if (rowsAsListOfValues.isEmpty) {
+      input.onChange.listen((event) {
+        final file = input.files?.first;
+        if (file == null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('El archivo CSV está vacío')),
+            const SnackBar(content: Text('No se seleccionó ningún archivo')),
           );
+          setState(() => cargando = false);
           return;
         }
 
-        setState(() {
-          totalFilas = rowsAsListOfValues.length - 1;
-          filasProcesadas = 0;
-        });
+        final reader = html.FileReader();
+        reader.readAsText(file);
 
-        for (int i = 1; i < rowsAsListOfValues.length; i++) {
-          final fila = rowsAsListOfValues[i];
-          print('Fila $i: $fila');
+        reader.onLoadEnd.listen((event) async {
+          final contenido = reader.result as String;
+          final rowsAsListOfValues = const CsvToListConverter(
+            fieldDelimiter: ';',
+            eol: '\n',
+          ).convert(contenido);
 
-          if (fila.length < 11) {
-            print('⚠️ Fila $i incompleta, saltada.');
-            continue;
-          }
-
-          final rawCodigo = fila[0].toString().trim();
-          final codigo =
-              rawCodigo.startsWith("'") ? rawCodigo.substring(1) : rawCodigo;
-
-          final referencia = fila[1].toString().trim();
-          final nombre = fila[2].toString().trim();
-          final costo = double.tryParse(fila[3].toString().trim()) ?? 0.0;
-
-          List<double> precios = [];
-          for (int j = 4; j <= 9; j++) {
-            final precio = double.tryParse(fila[j].toString().trim()) ?? 0.0;
-            if (precio > 0) {
-              precios.add(precio);
-            }
-          }
-
-          final categoria = fila[10].toString().trim();
-
-          print('→ CODIGO: $codigo');
-          print('→ REFERENCIA: $referencia');
-          print('→ NOMBRE: $nombre');
-          print('→ COSTO: $costo');
-          print('→ PRECIOS: $precios');
-          print('→ CATEGORIA: $categoria');
-
-          if (codigo.isEmpty || nombre.isEmpty || categoria.isEmpty) {
-            print('⚠️ Fila $i inválida (faltan datos), saltada.');
-            continue;
-          }
-
-          try {
-            final docRef = FirebaseFirestore.instance
-                .collection('inventario_general')
-                .doc(codigo);
-
-            await docRef.set({
-              'codigo': codigo,
-              'referencia': referencia,
-              'nombre': nombre,
-              'costo': costo,
-              'precios': precios,
-              'categoria': categoria,
-              'fecha': FieldValue.serverTimestamp(),
-            }, SetOptions(merge: true));
-
-            print(
-              '✅ Guardado: $codigo | Ref: $referencia | Categoria: $categoria',
+          if (rowsAsListOfValues.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('El archivo CSV está vacío')),
             );
-          } catch (e) {
-            print('❌ Error fila $i: $e');
+            setState(() => cargando = false);
+            return;
           }
 
           setState(() {
-            filasProcesadas = i;
+            totalFilas = rowsAsListOfValues.length - 1;
+            filasProcesadas = 0;
           });
-        }
 
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Productos importados correctamente')),
-        );
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se seleccionó ningún archivo')),
-        );
-      }
+          for (int i = 1; i < rowsAsListOfValues.length; i++) {
+            final fila = rowsAsListOfValues[i];
+
+            if (fila.length < 11) {
+              print('⚠️ Fila $i incompleta, saltada.');
+              continue;
+            }
+
+            final rawCodigo = fila[0].toString().trim();
+            final codigo =
+                rawCodigo.startsWith("'") ? rawCodigo.substring(1) : rawCodigo;
+
+            final referencia = fila[1].toString().trim();
+            final nombre = fila[2].toString().trim();
+            final costo = double.tryParse(fila[3].toString().trim()) ?? 0.0;
+
+            List<double> precios = [];
+            for (int j = 4; j <= 9; j++) {
+              final precio = double.tryParse(fila[j].toString().trim()) ?? 0.0;
+              if (precio > 0) {
+                precios.add(precio);
+              }
+            }
+
+            final categoria = fila[10].toString().trim();
+
+            if (codigo.isEmpty || nombre.isEmpty || categoria.isEmpty) {
+              print('⚠️ Fila $i inválida (faltan datos), saltada.');
+              continue;
+            }
+
+            try {
+              final docRef = FirebaseFirestore.instance
+                  .collection('inventario_general')
+                  .doc(codigo);
+
+              await docRef.set({
+                'codigo': codigo,
+                'referencia': referencia,
+                'nombre': nombre,
+                'costo': costo,
+                'precios': precios,
+                'categoria': categoria,
+                'fecha': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
+
+              print('✅ Guardado: $codigo');
+            } catch (e) {
+              print('❌ Error fila $i: $e');
+            }
+
+            setState(() {
+              filasProcesadas = i;
+            });
+          }
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Productos importados correctamente')),
+          );
+          setState(() => cargando = false);
+        });
+      });
     } catch (e) {
       print('❌ ERROR GENERAL: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Error al importar CSV')));
-    } finally {
-      if (mounted) {
-        setState(() {
-          cargando = false;
-        });
-      }
+      setState(() => cargando = false);
     }
   }
 
