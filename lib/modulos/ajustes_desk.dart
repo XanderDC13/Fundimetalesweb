@@ -133,7 +133,7 @@ class _SettingsDeskScreenState extends State<SettingsDeskScreen>
                       _buildBoton(
                         icon: Icons.info_outline,
                         titulo: 'Versión de la app',
-                        subtitulo: '1.0.0',
+                        subtitulo: '1.1.0',
                         onTap: () {
                           // Implementar acción si quieres
                         },

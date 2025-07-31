@@ -1,4 +1,5 @@
 import 'package:basefundi/desktop/directorio/clientes_desk.dart';
+import 'package:basefundi/desktop/directorio/pedidos_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas_desk.dart';
 import 'package:basefundi/desktop/directorio/proveedores_desk.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
@@ -103,6 +104,14 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
                         subtitle: 'Control de proformas e inventario',
                         icon: Icons.receipt_long,
                         destination: OpcionesProformasDeskScreen(),
+                      ),
+                      const SizedBox(height: 20),
+                      _buildCard(
+                        context: context,
+                        title: 'Pedidos',
+                        subtitle: 'Control de nuevos pedidos y envíos',
+                        icon: Icons.assignment,
+                        destination: PedidosDeskScreen(),
                       ),
                       const SizedBox(height: 20),
                       _buildCard(

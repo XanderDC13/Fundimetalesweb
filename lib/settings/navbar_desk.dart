@@ -3,6 +3,7 @@ import 'package:basefundi/desktop/ajustes/editperfil_desk.dart';
 import 'package:basefundi/desktop/ajustes/feedback_desk.dart';
 import 'package:basefundi/desktop/dashboard_desk.dart';
 import 'package:basefundi/desktop/directorio/clientes_desk.dart';
+import 'package:basefundi/desktop/directorio/pedidos_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas_desk.dart';
 import 'package:basefundi/desktop/directorio/proveedores_desk.dart';
 import 'package:basefundi/desktop/inventario/inventario_fundicion_desk.dart';
@@ -269,6 +270,15 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
           },
         ),
       );
+      menuItems.add(
+        _buildMainItem(
+          icon: Icons.assignment,
+          title: 'Pedidos',
+          onTap: () {
+            _navegarConFade(context, const PedidosDeskScreen());
+          },
+        ),
+      );
     }
 
     // Solo agregar Reportes si es Administrador
@@ -326,6 +336,12 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
               label: 'Proformas',
               onTap: () {
                 _navegarConFade(context, const OpcionesProformasDeskScreen());
+              },
+            ),
+            _buildSubItem(
+              label: 'Pedidos',
+              onTap: () {
+                _navegarConFade(context, const PedidosDeskScreen());
               },
             ),
             _buildSubItem(
