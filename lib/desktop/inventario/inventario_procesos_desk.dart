@@ -17,7 +17,7 @@ class _InventarioProcesoDeskScreenState
     extends State<InventarioProcesoDeskScreen>
     with SingleTickerProviderStateMixin {
   String searchQuery = '';
-  String procesoSeleccionado = 'todos'; // ✅ Filtro por proceso
+  String procesoSeleccionado = 'todos';
 
   late final AnimationController _controller;
   late final Animation<double> _fadeAnimation;
@@ -231,24 +231,31 @@ class _InventarioProcesoDeskScreenState
         return LayoutBuilder(
           builder: (context, constraints) {
             final totalWidth = constraints.maxWidth;
-            final double anchoNombre = totalWidth * 0.25;
+            final double anchoNombre = totalWidth * 0.30;
             final double anchoReferencia = totalWidth * 0.25;
-            final double anchoProceso = totalWidth * 0.2;
+            // ✅ NO definir anchoProceso fijo, se ajustará automáticamente
             final double anchoCantidad = totalWidth * 0.15;
             final double anchoAcciones = totalWidth * 0.15;
+            // El 15% restante se distribuye automáticamente
 
             return SingleChildScrollView(
               scrollDirection: Axis.vertical,
               child: DataTable(
-                columnSpacing: 0,
+                columnSpacing: 8,
                 headingRowColor: MaterialStateProperty.all(
                   const Color(0xFF4682B4),
                 ),
-                headingTextStyle: const TextStyle(color: Colors.white),
+                headingTextStyle: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                ),
+                dataTextStyle: const TextStyle(fontSize: 10),
                 columns: const [
                   DataColumn(label: Text('Nombre')),
                   DataColumn(label: Text('Referencia')),
-                  DataColumn(label: Text('Proceso')),
+                  DataColumn(
+                    label: Text('Proceso', textAlign: TextAlign.center),
+                  ),
                   DataColumn(label: Text('Cantidad')),
                   DataColumn(label: Text('Acción')),
                 ],
@@ -291,29 +298,34 @@ class _InventarioProcesoDeskScreenState
                               ),
                             ),
                           ),
+
+                          // ✅ CELDA DE PROCESO CON ANCHO AUTOMÁTICO
                           DataCell(
-                            SizedBox(
-                              width: anchoProceso,
+                            IntrinsicWidth(
+                              // ✅ Esto ajusta el ancho al contenido
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
+                                  horizontal: 8, // ✅ Padding normal
+                                  vertical: 4, // ✅ Padding normal
                                 ),
                                 decoration: BoxDecoration(
                                   color: _getColorProceso(data['proceso']),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  data['proceso'].toUpperCase(),
+                                  data['proceso']
+                                      .toUpperCase(), // ✅ Texto completo
                                   style: const TextStyle(
-                                    fontSize: 9,
+                                    fontSize: 9, // ✅ Tamaño normal
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
                             ),
                           ),
+
                           DataCell(
                             SizedBox(
                               width: anchoCantidad,
@@ -360,47 +372,98 @@ class _InventarioProcesoDeskScreenState
     ];
 
     try {
-      for (String proceso in procesosInventario) {
-        final snapshot =
-            await FirebaseFirestore.instance
-                .collection('inventarios')
-                .doc(proceso)
-                .collection('productos')
-                .get();
+      // ✅ 1. EJECUTAR TODAS LAS CONSULTAS DE INVENTARIO EN PARALELO
+      final futures =
+          procesosInventario
+              .map(
+                (proceso) => FirebaseFirestore.instance
+                    .collection('inventarios')
+                    .doc(proceso)
+                    .collection('productos')
+                    .get()
+                    .then(
+                      (snapshot) => {'proceso': proceso, 'snapshot': snapshot},
+                    ),
+              )
+              .toList();
+
+      final resultados = await Future.wait(futures);
+
+      // ✅ 2. RECOPILAR TODAS LAS REFERENCIAS ÚNICAS
+      final Set<String> todasLasReferencias = {};
+      final List<Map<String, dynamic>> productosConProceso = [];
+
+      for (final resultado in resultados) {
+        final proceso = resultado['proceso'] as String;
+        final snapshot = resultado['snapshot'] as QuerySnapshot;
 
         for (var doc in snapshot.docs) {
-          final data = doc.data();
+          final data = doc.data() as Map<String, dynamic>;
           final referencia = doc.id;
           final cantidad =
               int.tryParse(data['cantidad']?.toString() ?? '0') ?? 0;
 
-          // Obtener el nombre del producto
-          String nombre = 'Producto no encontrado';
-          try {
-            final productoDoc =
-                await FirebaseFirestore.instance
-                    .collection('productos')
-                    .where('referencia', isEqualTo: referencia)
-                    .limit(1)
-                    .get();
-
-            if (productoDoc.docs.isNotEmpty) {
-              nombre = productoDoc.docs.first.data()['nombre'] ?? 'Sin nombre';
-            }
-          } catch (e) {
-            print('Error obteniendo producto $referencia: $e');
-          }
-
-          todosLosProductos.add({
+          todasLasReferencias.add(referencia);
+          productosConProceso.add({
             'referencia': referencia,
-            'nombre': nombre,
             'proceso': proceso,
             'cantidad': cantidad,
           });
         }
       }
+
+      // ✅ 3. OBTENER TODOS LOS NOMBRES EN UNA SOLA CONSULTA BATCH
+      final Map<String, String> nombresProductos = {};
+
+      if (todasLasReferencias.isNotEmpty) {
+        // Dividir en lotes de 10 (límite de Firestore para consultas 'in')
+        final lotes = <List<String>>[];
+        final listaReferencias = todasLasReferencias.toList();
+
+        for (int i = 0; i < listaReferencias.length; i += 10) {
+          final fin =
+              (i + 10 < listaReferencias.length)
+                  ? i + 10
+                  : listaReferencias.length;
+          lotes.add(listaReferencias.sublist(i, fin));
+        }
+
+        // Ejecutar consultas de lotes en paralelo
+        final futuresNombres =
+            lotes
+                .map(
+                  (lote) =>
+                      FirebaseFirestore.instance
+                          .collection('productos')
+                          .where('referencia', whereIn: lote)
+                          .get(),
+                )
+                .toList();
+
+        final resultadosNombres = await Future.wait(futuresNombres);
+
+        for (final snapshot in resultadosNombres) {
+          for (final doc in snapshot.docs) {
+            final data = doc.data();
+            nombresProductos[data['referencia']] =
+                data['nombre'] ?? 'Sin nombre';
+          }
+        }
+      }
+
+      // ✅ 4. COMBINAR DATOS
+      for (final producto in productosConProceso) {
+        todosLosProductos.add({
+          'referencia': producto['referencia'],
+          'nombre':
+              nombresProductos[producto['referencia']] ??
+              'Producto no encontrado',
+          'proceso': producto['proceso'],
+          'cantidad': producto['cantidad'],
+        });
+      }
     } catch (e) {
-      print('Error obteniendo inventarios: $e');
+      print('Error obteniendo inventarios optimizado: $e');
     }
 
     return todosLosProductos;
