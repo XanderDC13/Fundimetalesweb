@@ -32,6 +32,38 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:async';
+
+class MenuStateManager {
+  static final MenuStateManager _instance = MenuStateManager._internal();
+  factory MenuStateManager() => _instance;
+  MenuStateManager._internal();
+
+  String? _expandedMenu;
+  String _rolUsuario = 'Empleado';
+  bool _isInitialized = false;
+
+  String? get expandedMenu => _expandedMenu;
+  String get rolUsuario => _rolUsuario;
+  bool get isInitialized => _isInitialized;
+
+  void setExpandedMenu(String? menu) {
+    _expandedMenu = menu;
+  }
+
+  void setRolUsuario(String rol) {
+    _rolUsuario = rol;
+    _isInitialized = true;
+  }
+
+  void toggleMenu(String menu) {
+    if (_expandedMenu == menu) {
+      _expandedMenu = null;
+    } else {
+      _expandedMenu = menu;
+    }
+  }
+}
 
 class MainDeskLayout extends StatefulWidget {
   final Widget child;
@@ -42,14 +74,34 @@ class MainDeskLayout extends StatefulWidget {
   State<MainDeskLayout> createState() => _MainDeskLayoutState();
 }
 
-class _MainDeskLayoutState extends State<MainDeskLayout> {
-  String? _expandedMenu;
-  String rolUsuario = 'Empleado'; // Rol por defecto
+class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAliveClientMixin {
+  final MenuStateManager _menuStateManager = MenuStateManager();
+  late StreamSubscription<User?> _authSubscription;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-    _cargarRolUsuario();
+    _initializeMenuState();
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null && !_menuStateManager.isInitialized) {
+        _cargarRolUsuario();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    super.dispose();
+  }
+
+  void _initializeMenuState() {
+    if (!_menuStateManager.isInitialized) {
+      _cargarRolUsuario();
+    }
   }
 
   Future<void> _cargarRolUsuario() async {
@@ -57,17 +109,16 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
     if (user == null) return;
 
     try {
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('usuarios_activos')
-              .doc(user.uid)
-              .get();
+      final doc = await FirebaseFirestore.instance
+          .collection('usuarios_activos')
+          .doc(user.uid)
+          .get();
 
-      if (doc.exists) {
+      if (doc.exists && mounted) {
         final data = doc.data()!;
-        setState(() {
-          rolUsuario = data['rol'] ?? 'Empleado';
-        });
+        final rol = data['rol'] ?? 'Empleado';
+        _menuStateManager.setRolUsuario(rol);
+        setState(() {});
       }
     } catch (e) {
       print('Error al cargar rol del usuario: $e');
@@ -76,325 +127,384 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
 
   void _toggleMenu(String menu) {
     setState(() {
-      if (_expandedMenu == menu) {
-        _expandedMenu = null;
-      } else {
-        _expandedMenu = menu;
-      }
+      _menuStateManager.toggleMenu(menu);
     });
   }
 
   Future<void> _logout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    // ignore: use_build_context_synchronously
-    context.go('/login');
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        context.go('/login');
+      }
+    } catch (e) {
+      print('Error al cerrar sesión: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); 
+    
     return Scaffold(
       body: Row(
         children: [
-          // BARRA LATERAL
           Container(
             width: 250,
             color: const Color(0xFF2C3E50),
             child: Column(
               children: [
-                const SizedBox(height: 40),
-                const Text(
-                  'Fundimetales',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                _buildMenuHeader(),
+                Expanded(
+                  child: ListView(
+                    key: const ValueKey('menu_list'), 
+                    children: _buildMenuItems(),
                   ),
                 ),
-                const SizedBox(height: 30),
-
-                Expanded(child: ListView(children: _buildMenuItems())),
-
-                // BOTÓN DE CERRAR SESIÓN
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: TextButton.icon(
-                    onPressed:
-                        () => _logout(context), // ahora sí es un VoidCallback
-                    icon: const Icon(Icons.logout, color: Colors.white),
-                    label: const Text(
-                      'Cerrar sesión',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
+                _buildLogoutButton(context),
               ],
             ),
           ),
 
-          // CONTENIDO PRINCIPAL
-          Expanded(child: widget.child),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: widget.child,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  List<Widget> _buildMenuItems() {
-  List<Widget> menuItems = [
-    _buildMainItem(
-      icon: Icons.home,
-      title: 'Inicio',
-      onTap: () {
-        navegarConFade(context, const DashboardDeskScreen());
-      },
-    ),
-  ];
-
-  switch (rolUsuario) {
-    case 'Administrador General':
-      menuItems.addAll([
-        _buildExpandableItem(
-          icon: Icons.shopping_cart,
-          title: 'Ventas',
-          menuKey: 'ventas',
-          subItems: [
-            _buildSubItem(
-              label: 'Ventas Totales',
-              onTap: () => navegarConFade(context, const VentasTotalesDeskScreen()),
-            ),
-            _buildSubItem(
-              label: 'Modificar Ventas',
-              onTap: () => navegarConFade(context, const ModificarVentaDeskScreen()),
-            ),
-            _buildSubItem(
-              label: 'Realizar Venta',
-              onTap: () => navegarConFade(context, const VentasDetalleDeskScreen()),
-            ),
-          ],
-        ),
-        _buildExpandableItem(
-          icon: Icons.inventory,
-          title: 'Inventario',
-          menuKey: 'inventario',
-          subItems: [
-            _buildSubItem(
-              label: 'Productos',
-              onTap: () => navegarConFade(context, const TotalInvDeskScreen()),
-            ),
-            _buildSubItem(
-              label: 'General',
-              onTap: () => navegarConFade(context, const InventarioGeneralDeskScreen()),
-            ),
-            _buildSubItem(
-              label: 'Fundición',
-              onTap: () => navegarConFade(context, const InventarioFundicionDeskScreen()),
-            ),
-            _buildSubItem(
-              label: 'Pintura',
-              onTap: () => navegarConFade(context, const InventarioProcesoDeskScreen()),
-            ),
-            _buildSubItem(
-              label: 'Transporte',
-              onTap: () => navegarConFade(context, const TransporteDeskScreen()),
-            ),
-          ],
-        ),
-        _buildExpandableItem(
-          icon: Icons.people,
-          title: 'Personal',
-          menuKey: 'personal',
-          subItems: [
-            _buildSubItem(
-              label: 'Empleados',
-              onTap: () => navegarConFade(context, const EmpleadosPendientesDeskScreen()),
-            ),
-            _buildSubItem(
-              label: 'Funciones',
-              onTap: () => navegarConFade(context, const FuncionesDeskScreen()),
-            ),
-            _buildSubItem(
-              label: 'Insumos',
-              onTap: () => navegarConFade(context, const InsumosDeskScreen()),
-            ),
-          ],
-        ),
-        _buildExpandableItem(
-          icon: Icons.bar_chart,
-          title: 'Reportes',
-          menuKey: 'reportes',
-          subItems: [
-            _buildSubItem(
-              label: 'Ventas',
-              onTap: () => navegarConFade(context, const ReporteVentasDeskScreen()),
-            ),
-            _buildSubItem(
-              label: 'Inventario',
-              onTap: () => navegarConFade(context, const ReporteInventarioDeskScreen()),
-            ),
-            _buildSubItem(
-              label: 'Compras',
-              onTap: () => navegarConFade(context, const ReporteComprasDeskScreen()),
-            ),
-            _buildSubItem(
-              label: 'Transporte',
-              onTap: () => navegarConFade(context, const ReporteTransporteDeskScreen()),
-            ),
-            _buildSubItem(
-              label: 'Auditoría',
-              onTap: () => navegarConFade(context, const AuditoriaDeskScreen()),
-            ),
-          ],
-        ),
-        _buildExpandableItem(
-          icon: Icons.contacts,
-          title: 'Directorio',
-          menuKey: 'directorio',
-          subItems: [
-            _buildSubItem(
-              label: 'Proformas',
-              onTap: () => navegarConFade(context, const OpcionesProformasDeskScreen()),
-            ),
-            _buildSubItem(
-              label: 'Pedidos',
-              onTap: () => navegarConFade(context, const PedidosDeskScreen()),
-            ),
-            _buildSubItem(
-              label: 'Clientes',
-              onTap: () => navegarConFade(context, const ClientesDeskScreen()),
-            ),
-            _buildSubItem(
-              label: 'Proveedores',
-              onTap: () => navegarConFade(context, const ProveedoresDeskScreen()),
-            ),
-          ],
-        ),
-      ]);
-      break;
-
-    case 'Gerente Sede':
-      menuItems.addAll([
-        _buildExpandableItem(
-          icon: Icons.shopping_cart,
-          title: 'Ventas',
-          menuKey: 'ventas',
-          subItems: [
-            _buildSubItem(
-              label: 'Realizar Venta',
-              onTap: () => navegarConFade(context, const VentasDetalleDeskScreen()),
-            ),
-          ],
-        ),
-        _buildExpandableItem(
-          icon: Icons.inventory,
-          title: 'Inventario',
-          menuKey: 'inventario',
-          subItems: [
-            _buildSubItem(
-              label: 'General',
-              onTap: () => navegarConFade(context, const InventarioGeneralDeskScreen()),
-            ),
-          ],
-        ),
-        _buildMainItem(
-          icon: Icons.bar_chart,
-          title: 'Reportes',
-          onTap: () => navegarConFade(context, const ReportesDeskScreen()),
-        ),
-      ]);
-      break;
-
-    case 'Supervisor Fundición':
-      menuItems.addAll([
-        _buildMainItem(
-          icon: Icons.local_fire_department,
-          title: 'Fundición',
-          onTap: () => navegarConFade(context, const FundicionDeskScreen()),
-        ),
-        _buildMainItem(
-          icon: Icons.bar_chart,
-          title: 'Insumos',
-          onTap: () => navegarConFade(context, const InsumosDeskScreen()),
-        ),
-      ]);
-      break;
-
-    case 'Operador Fundición':
-      menuItems.addAll([
-        _buildMainItem(
-          icon: Icons.task_alt,
-          title: 'Tareas',
-          onTap: () => navegarConFade(
-            context,
-            OperadorTareasScreen(
-              operadorId: '',
-              operadorNombre: '',
+  Widget _buildMenuHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      child: Column(
+        children: [
+          const Text(
+            'Fundimetales',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ),
-      ]);
-      break;
-
-    case 'Supervisor Mecanizado':
-      menuItems.addAll([
-        _buildMainItem(
-          icon: Icons.inventory,
-          title: 'Inventario',
-          onTap: () => navegarConFade(context, const InventarioDeskScreen()),
-        ),
-        _buildMainItem(
-          icon: Icons.task_alt,
-          title: 'Tareas',
-          onTap: () => navegarConFade(context, const TareasPendientesDeskScreen()),
-        ),
-        _buildMainItem(
-          icon: Icons.bar_chart,
-          title: 'Reportes',
-          onTap: () => navegarConFade(context, const ReportesDeskScreen()),
-        ),
-      ]);
-      break;
-
-    case 'Operador Mecanizado':
-      menuItems.add(
-        _buildMainItem(
-          icon: Icons.task_alt,
-          title: 'Tareas',
-          onTap: () => navegarConFade(context, const TareasPendientesDeskScreen()),
-        ),
-      );
-      break;
-
-    default:
-      menuItems.add(
-        _buildMainItem(
-          icon: Icons.settings,
-          title: 'Ajustes',
-          onTap: () => navegarConFade(context, const SettingsDeskScreen()),
-        ),
-      );
+          const SizedBox(height: 8),
+          Text(
+            _menuStateManager.rolUsuario,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  // Ajustes siempre al final
-  menuItems.add(
-    _buildExpandableItem(
+  Widget _buildLogoutButton(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Colors.white24, width: 1),
+        ),
+      ),
+      child: TextButton.icon(
+        onPressed: () => _logout(context),
+        icon: const Icon(Icons.logout, color: Colors.white),
+        label: const Text(
+          'Cerrar sesión',
+          style: TextStyle(color: Colors.white),
+        ),
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildMenuItems() {
+    List<Widget> menuItems = [
+      _buildMainItem(
+        icon: Icons.home,
+        title: 'Inicio',
+        onTap: () => _navigateToScreen(const DashboardDeskScreen()),
+      ),
+    ];
+
+    switch (_menuStateManager.rolUsuario) {
+      case 'Administrador General':
+        menuItems.addAll(_buildAdminMenuItems());
+        break;
+      case 'Gerente Sede':
+        menuItems.addAll(_buildGerenteMenuItems());
+        break;
+      case 'Supervisor Fundición':
+        menuItems.addAll(_buildSupervisorFundicionMenuItems());
+        break;
+      case 'Operador Fundición':
+        menuItems.addAll(_buildOperadorFundicionMenuItems());
+        break;
+      case 'Supervisor Mecanizado':
+        menuItems.addAll(_buildSupervisorMecanizadoMenuItems());
+        break;
+      case 'Operador Mecanizado':
+        menuItems.addAll(_buildOperadorMecanizadoMenuItems());
+        break;
+      default:
+        menuItems.add(_buildDefaultMenuItem());
+    }
+
+    menuItems.add(_buildAjustesMenuItem());
+
+    return menuItems;
+  }
+
+  void _navigateToScreen(Widget screen) {
+    if (mounted) {
+      navegarConFade(context, screen);
+    }
+  }
+
+  List<Widget> _buildAdminMenuItems() {
+    return [
+      _buildExpandableItem(
+        icon: Icons.shopping_cart,
+        title: 'Ventas',
+        menuKey: 'ventas',
+        subItems: [
+          _buildSubItem(
+            label: 'Ventas Totales',
+            onTap: () => _navigateToScreen(const VentasTotalesDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Modificar Ventas',
+            onTap: () => _navigateToScreen(const ModificarVentaDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Realizar Venta',
+            onTap: () => _navigateToScreen(const VentasDetalleDeskScreen()),
+          ),
+        ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.inventory,
+        title: 'Inventario',
+        menuKey: 'inventario',
+        subItems: [
+          _buildSubItem(
+            label: 'Productos',
+            onTap: () => _navigateToScreen(const TotalInvDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'General',
+            onTap: () => _navigateToScreen(const InventarioGeneralDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Fundición',
+            onTap: () => _navigateToScreen(const InventarioFundicionDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Pintura',
+            onTap: () => _navigateToScreen(const InventarioProcesoDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Transporte',
+            onTap: () => _navigateToScreen(const TransporteDeskScreen()),
+          ),
+        ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.people,
+        title: 'Personal',
+        menuKey: 'personal',
+        subItems: [
+          _buildSubItem(
+            label: 'Empleados',
+            onTap: () => _navigateToScreen(const EmpleadosPendientesDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Funciones',
+            onTap: () => _navigateToScreen(const FuncionesDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Insumos',
+            onTap: () => _navigateToScreen(const InsumosDeskScreen()),
+          ),
+        ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.bar_chart,
+        title: 'Reportes',
+        menuKey: 'reportes',
+        subItems: [
+          _buildSubItem(
+            label: 'Ventas',
+            onTap: () => _navigateToScreen(const ReporteVentasDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Inventario',
+            onTap: () => _navigateToScreen(const ReporteInventarioDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Compras',
+            onTap: () => _navigateToScreen(const ReporteComprasDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Transporte',
+            onTap: () => _navigateToScreen(const ReporteTransporteDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Auditoría',
+            onTap: () => _navigateToScreen(const AuditoriaDeskScreen()),
+          ),
+        ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.contacts,
+        title: 'Directorio',
+        menuKey: 'directorio',
+        subItems: [
+          _buildSubItem(
+            label: 'Proformas',
+            onTap: () => _navigateToScreen(const OpcionesProformasDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Pedidos',
+            onTap: () => _navigateToScreen(const PedidosDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Clientes',
+            onTap: () => _navigateToScreen(const ClientesDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Proveedores',
+            onTap: () => _navigateToScreen(const ProveedoresDeskScreen()),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  List<Widget> _buildGerenteMenuItems() {
+    return [
+      _buildExpandableItem(
+        icon: Icons.shopping_cart,
+        title: 'Ventas',
+        menuKey: 'ventas',
+        subItems: [
+          _buildSubItem(
+            label: 'Realizar Venta',
+            onTap: () => _navigateToScreen(const VentasDetalleDeskScreen()),
+          ),
+        ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.inventory,
+        title: 'Inventario',
+        menuKey: 'inventario',
+        subItems: [
+          _buildSubItem(
+            label: 'General',
+            onTap: () => _navigateToScreen(const InventarioGeneralDeskScreen()),
+          ),
+        ],
+      ),
+      _buildMainItem(
+        icon: Icons.bar_chart,
+        title: 'Reportes',
+        onTap: () => _navigateToScreen(const ReportesDeskScreen()),
+      ),
+    ];
+  }
+
+  List<Widget> _buildSupervisorFundicionMenuItems() {
+    return [
+      _buildMainItem(
+        icon: Icons.local_fire_department,
+        title: 'Fundición',
+        onTap: () => _navigateToScreen(const FundicionDeskScreen()),
+      ),
+      _buildMainItem(
+        icon: Icons.bar_chart,
+        title: 'Insumos',
+        onTap: () => _navigateToScreen(const InsumosDeskScreen()),
+      ),
+    ];
+  }
+
+  List<Widget> _buildOperadorFundicionMenuItems() {
+    return [
+      _buildMainItem(
+        icon: Icons.task_alt,
+        title: 'Tareas',
+        onTap: () => _navigateToScreen(
+          OperadorTareasScreen(
+            operadorId: '',
+            operadorNombre: '',
+          ),
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _buildSupervisorMecanizadoMenuItems() {
+    return [
+      _buildMainItem(
+        icon: Icons.inventory,
+        title: 'Inventario',
+        onTap: () => _navigateToScreen(const InventarioDeskScreen()),
+      ),
+      _buildMainItem(
+        icon: Icons.task_alt,
+        title: 'Tareas',
+        onTap: () => _navigateToScreen(const TareasPendientesDeskScreen()),
+      ),
+      _buildMainItem(
+        icon: Icons.bar_chart,
+        title: 'Reportes',
+        onTap: () => _navigateToScreen(const ReportesDeskScreen()),
+      ),
+    ];
+  }
+
+  List<Widget> _buildOperadorMecanizadoMenuItems() {
+    return [
+      _buildMainItem(
+        icon: Icons.task_alt,
+        title: 'Tareas',
+        onTap: () => _navigateToScreen(const TareasPendientesDeskScreen()),
+      ),
+    ];
+  }
+
+  Widget _buildDefaultMenuItem() {
+    return _buildMainItem(
+      icon: Icons.settings,
+      title: 'Ajustes',
+      onTap: () => _navigateToScreen(const SettingsDeskScreen()),
+    );
+  }
+
+  Widget _buildAjustesMenuItem() {
+    return _buildExpandableItem(
       icon: Icons.settings,
       title: 'Ajustes',
       menuKey: 'ajustes',
       subItems: [
         _buildSubItem(
           label: 'Editar Perfil',
-          onTap: () => navegarConFade(context, const EditarPerfilDeskScreen()),
+          onTap: () => _navigateToScreen(const EditarPerfilDeskScreen()),
         ),
         _buildSubItem(
           label: 'Enviar Feedback',
-          onTap: () => navegarConFade(context, const FeedbackDeskScreen()),
+          onTap: () => _navigateToScreen(const FeedbackDeskScreen()),
         ),
       ],
-    ),
-  );
-
-  return menuItems;
-}
-
+    );
+  }
 
   Widget _buildMainItem({
     required IconData icon,
@@ -405,6 +515,7 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
       leading: Icon(icon, color: Colors.white),
       title: Text(title, style: const TextStyle(color: Colors.white)),
       onTap: onTap,
+      hoverColor: Colors.white.withOpacity(0.1),
     );
   }
 
@@ -414,26 +525,36 @@ class _MainDeskLayoutState extends State<MainDeskLayout> {
     required String menuKey,
     required List<Widget> subItems,
   }) {
-    return ExpansionTile(
-      leading: Icon(icon, color: Colors.white),
-      title: Text(title, style: const TextStyle(color: Colors.white)),
-      trailing: Icon(
-        _expandedMenu == menuKey ? Icons.expand_less : Icons.expand_more,
-        color: Colors.white,
+    final isExpanded = _menuStateManager.expandedMenu == menuKey;
+    
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        key: ValueKey(menuKey), 
+        leading: Icon(icon, color: Colors.white),
+        title: Text(title, style: const TextStyle(color: Colors.white)),
+        trailing: Icon(
+          isExpanded ? Icons.expand_less : Icons.expand_more,
+          color: Colors.white,
+        ),
+        backgroundColor: Colors.transparent,
+        collapsedBackgroundColor: Colors.transparent,
+        initiallyExpanded: isExpanded,
+        onExpansionChanged: (_) => _toggleMenu(menuKey),
+        children: subItems,
       ),
-      backgroundColor: Colors.transparent,
-      collapsedBackgroundColor: Colors.transparent,
-      initiallyExpanded: _expandedMenu == menuKey,
-      onExpansionChanged: (_) => _toggleMenu(menuKey),
-      children: subItems,
     );
   }
 
-  Widget _buildSubItem({required String label, required VoidCallback onTap}) {
+  Widget _buildSubItem({
+    required String label, 
+    required VoidCallback onTap
+  }) {
     return ListTile(
       contentPadding: const EdgeInsets.only(left: 72),
       title: Text(label, style: const TextStyle(color: Colors.white70)),
       onTap: onTap,
+      hoverColor: Colors.white.withOpacity(0.05),
     );
   }
 }
