@@ -215,7 +215,7 @@ class _HistorialEnviosDeskScreenState extends State<HistorialEnviosDeskScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: Colors.green,
+                                      color: const Color(0xFF4682B4),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: const Icon(
@@ -272,7 +272,7 @@ class _HistorialEnviosDeskScreenState extends State<HistorialEnviosDeskScreen> {
                                                     vertical: 2,
                                                   ),
                                               decoration: BoxDecoration(
-                                                color: Colors.green.shade100,
+                                                color: Colors.blue.shade100,
                                                 borderRadius:
                                                     BorderRadius.circular(12),
                                               ),
@@ -281,7 +281,7 @@ class _HistorialEnviosDeskScreenState extends State<HistorialEnviosDeskScreen> {
                                                 style: const TextStyle(
                                                   fontSize: 13,
                                                   fontWeight: FontWeight.bold,
-                                                  color: Colors.green,
+                                                  color: Color(0xFF4682B4),
                                                 ),
                                               ),
                                             ),
@@ -517,13 +517,13 @@ class _HistorialEnviosDeskScreenState extends State<HistorialEnviosDeskScreen> {
                                             Container(
                                               padding: const EdgeInsets.all(10),
                                               decoration: BoxDecoration(
-                                                color: Colors.green.shade100,
+                                                color: Colors.blue.shade100,
                                                 borderRadius:
                                                     BorderRadius.circular(12),
                                               ),
                                               child: const Icon(
                                                 Icons.local_shipping,
-                                                color: Colors.green,
+                                                color: Color(0xFF4682B4),
                                               ),
                                             ),
                                             const SizedBox(width: 14),

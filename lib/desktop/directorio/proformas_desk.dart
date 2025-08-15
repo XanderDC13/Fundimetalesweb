@@ -1,5 +1,6 @@
 import 'package:basefundi/desktop/directorio/proformas/proforma_fundicion_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas/proforma_ventas_desk.dart';
+import 'package:basefundi/settings/transition.dart';
 import 'package:flutter/material.dart';
 import 'package:basefundi/desktop/directorio/proformas/proforma_guardadas_desk.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
@@ -33,18 +34,6 @@ class _OpcionesProformasDeskScreenState
   void dispose() {
     _controller.dispose();
     super.dispose();
-  }
-
-  void _navegarConFade(BuildContext context, Widget pantalla) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 150),
-      ),
-    );
   }
 
   Widget _getProformaFundicionScreen() {
@@ -127,7 +116,7 @@ class _OpcionesProformasDeskScreenState
                       const SizedBox(height: 20),
                       _buildBoton(
                         icono: Icons.list_alt_outlined,
-                        titulo: 'Ver Proformas Guardadas',
+                        titulo: 'Ver Proformas Guardadas de Ventas',
                         subtitulo: 'Consulta todas las proformas registradas',
                         destino: _getProformaGuardadasScreen(),
                       ),
@@ -149,7 +138,7 @@ class _OpcionesProformasDeskScreenState
     required Widget destino,
   }) {
     return InkWell(
-      onTap: () => _navegarConFade(context, destino),
+      onTap: () => navegarConFade(context, destino),
       borderRadius: BorderRadius.circular(16),
       child: Card(
         color: Colors.white,

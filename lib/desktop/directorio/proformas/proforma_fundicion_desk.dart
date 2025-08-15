@@ -141,26 +141,30 @@ class _ProformaFundicionDeskScreenState
   }
 
   Future<void> _previsualizarNumeroProforma() async {
-    final fechaHoy = DateTime.now();
-    final fechaFormateada =
-        "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
+  final fechaHoy = DateTime.now();
+  final fechaFormateada =
+      "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
 
-    final counterRef = FirebaseFirestore.instance
-        .collection('proformas_compras_counter')
-        .doc(fechaFormateada);
+  final counterRef = FirebaseFirestore.instance
+      .collection('proformas_compras_counter')
+      .doc(fechaFormateada);
 
-    final counterDoc = await counterRef.get();
+  final counterDoc = await counterRef.get();
 
-    int numero = 1;
+  int numero = 1;
 
-    if (counterDoc.exists) {
-      numero = counterDoc['contador'] + 1;
-    }
-
-    setState(() {
-      _numeroProforma = "PROFORMA N-$fechaFormateada-$numero";
-    });
+  if (counterDoc.exists) {
+    numero = counterDoc['contador'] + 1;
+  } else {
+    // Inicializar el documento con contador 0 si no existe
+    await counterRef.set({'contador': 0});
   }
+
+  setState(() {
+    _numeroProforma = "PROFORMA N-$fechaFormateada-$numero";
+  });
+}
+
 
   Widget _buildMobileClienteSection() {
     return _buildMobileSection(
@@ -1009,7 +1013,7 @@ class _ProformaFundicionDeskScreenState
           "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
 
       final counterRef = FirebaseFirestore.instance
-          .collection('proformas_counters')
+          .collection('proformas_compras_counter')
           .doc(fechaFormateada);
 
       final counterDoc = await counterRef.get();

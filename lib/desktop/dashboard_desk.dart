@@ -1,12 +1,16 @@
-import 'package:basefundi/desktop/dash_bajostock_movil.dart';
+import 'package:basefundi/desktop/dash_bajostock_desk.dart';
+import 'package:basefundi/desktop/fundicion/tareas_cumplir_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_realizar_desk.dart';
+import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
 import 'package:basefundi/modulos/ajustes_desk.dart';
 import 'package:basefundi/modulos/directorio_desk.dart';
+import 'package:basefundi/modulos/fundicion.dart';
 import 'package:basefundi/modulos/inventario_desk.dart';
 import 'package:basefundi/modulos/personal_desk.dart';
 import 'package:basefundi/modulos/reportes_desk.dart';
 import 'package:basefundi/modulos/ventas_desk.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/settings/transition.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart'
@@ -67,81 +71,76 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
   }
 
   Future<void> _cargarResumenHoy() async {
-    try {
-      final now = DateTime.now();
-      final startOfDay = DateTime(now.year, now.month, now.day);
-      final endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    final endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
-      final ventasQuery =
-          await FirebaseFirestore.instance
-              .collection('ventas')
-              .where(
-                'fecha',
-                isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
-              )
-              .where('fecha', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
-              .get();
+    final ventasQuery =
+        await FirebaseFirestore.instance
+            .collection('ventas')
+            .where(
+              'fecha',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+            )
+            .where('fecha', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+            .get();
 
-      int totalVentas = ventasQuery.docs.length;
-      int totalProductos = 0;
-      double totalIngresos = 0.0;
+    int totalVentas = ventasQuery.docs.length;
+    int totalProductos = 0;
+    double totalIngresos = 0.0;
 
-      for (var doc in ventasQuery.docs) {
-        final data = doc.data();
-        totalIngresos += (data['total'] ?? 0.0).toDouble();
-        final productos = data['productos'] as List<dynamic>? ?? [];
-        for (var producto in productos) {
-          totalProductos += (producto['cantidad'] ?? 0) as int;
-        }
+    for (var doc in ventasQuery.docs) {
+      final data = doc.data();
+      totalIngresos += (data['total'] ?? 0.0).toDouble();
+      final productos = data['productos'] as List<dynamic>? ?? [];
+      for (var producto in productos) {
+        totalProductos += (producto['cantidad'] ?? 0) as int;
       }
-
-      final inventarioSnapshot =
-          await FirebaseFirestore.instance
-              .collection('historial_inventario_general')
-              .orderBy('fecha_actualizacion', descending: true)
-              .get();
-
-      final ventasSnapshot =
-          await FirebaseFirestore.instance.collection('ventas').get();
-      final Map<String, int> ventasPorReferencia = {};
-      for (var venta in ventasSnapshot.docs) {
-        final productos = List<Map<String, dynamic>>.from(venta['productos']);
-        for (var producto in productos) {
-          final referencia = producto['referencia']?.toString() ?? '';
-          final cantidad = (producto['cantidad'] ?? 0) as num;
-          ventasPorReferencia[referencia] =
-              (ventasPorReferencia[referencia] ?? 0) + cantidad.toInt();
-        }
-      }
-
-      final Map<String, int> stockFinal = {};
-      for (var doc in inventarioSnapshot.docs) {
-        final data = doc.data();
-        final referencia = (data['referencia'] ?? '').toString();
-        final cantidad = (data['cantidad'] ?? 0) as int;
-        final tipo = (data['tipo'] ?? 'entrada').toString();
-        final ajuste = tipo == 'salida' ? -cantidad : cantidad;
-        stockFinal[referencia] = (stockFinal[referencia] ?? 0) + ajuste;
-      }
-
-      ventasPorReferencia.forEach((referencia, cantidadVendida) {
-        if (stockFinal.containsKey(referencia)) {
-          stockFinal[referencia] = stockFinal[referencia]! - cantidadVendida;
-        }
-      });
-
-      int bajoStock =
-          stockFinal.values.where((cantidad) => cantidad < 5).length;
-
-      setState(() {
-        ventasRealizadas = totalVentas;
-        productosVendidos = totalProductos;
-        ingresosDia = totalIngresos;
-        productosBajoStock = bajoStock;
-      });
-    } catch (e) {
-      print('Error al cargar resumen del día: $e');
     }
+
+    final inventarioSnapshot =
+        await FirebaseFirestore.instance
+            .collection('inventarios')
+            .orderBy('fecha_actualizacion', descending: true)
+            .get();
+
+    final ventasSnapshot =
+        await FirebaseFirestore.instance.collection('ventas').get();
+    final Map<String, int> ventasPorReferencia = {};
+    for (var venta in ventasSnapshot.docs) {
+      final productos = List<Map<String, dynamic>>.from(venta['productos']);
+      for (var producto in productos) {
+        final referencia = producto['referencia']?.toString() ?? '';
+        final cantidad = (producto['cantidad'] ?? 0) as num;
+        ventasPorReferencia[referencia] =
+            (ventasPorReferencia[referencia] ?? 0) + cantidad.toInt();
+      }
+    }
+
+    final Map<String, int> stockFinal = {};
+    for (var doc in inventarioSnapshot.docs) {
+      final data = doc.data();
+      final referencia = (data['referencia'] ?? '').toString();
+      final cantidad = (data['cantidad'] ?? 0) as int;
+      final tipo = (data['tipo'] ?? 'entrada').toString();
+      final ajuste = tipo == 'salida' ? -cantidad : cantidad;
+      stockFinal[referencia] = (stockFinal[referencia] ?? 0) + ajuste;
+    }
+
+    ventasPorReferencia.forEach((referencia, cantidadVendida) {
+      if (stockFinal.containsKey(referencia)) {
+        stockFinal[referencia] = stockFinal[referencia]! - cantidadVendida;
+      }
+    });
+
+    int bajoStock = stockFinal.values.where((cantidad) => cantidad < 5).length;
+
+    setState(() {
+      ventasRealizadas = totalVentas;
+      productosVendidos = totalProductos;
+      ingresosDia = totalIngresos;
+      productosBajoStock = bajoStock;
+    });
   }
 
   @override
@@ -155,7 +154,6 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
     return MainDeskLayout(
       child: Column(
         children: [
-          // CABECERA AZUL
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
@@ -234,6 +232,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
+            // ignore: deprecated_member_use
             color: Colors.black.withOpacity(0.1),
             blurRadius: 12,
             offset: const Offset(0, 6),
@@ -280,7 +279,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
                   value: productosBajoStock.toString(),
                   label: 'Productos Bajo Stock',
                   onTap: () {
-                    _navegarConFade(context, const BajoStockScreen());
+                    navegarConFade(context, const BajoStockDeskScreen());
                   },
                 ),
               ),
@@ -327,89 +326,155 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
     );
   }
 
-  void _navegarConFade(BuildContext context, Widget pantalla) {
-    Navigator.of(context)
-        .push(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => pantalla,
-            transitionsBuilder: (
-              context,
-              animation,
-              secondaryAnimation,
-              child,
-            ) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: const Duration(milliseconds: 150),
-          ),
-        )
-        .then((_) {
-          _cargarResumenHoy();
-        });
-  }
-
   Widget _buildGridFunctions() {
     int crossAxisCount = isDesktop ? 5 : 3;
 
-    final botones =
-        rolUsuario == 'Administrador'
-            ? [
-              _gridButton(
-                Icons.attach_money,
-                'Ventas',
-                () => _navegarConFade(context, const VentasDeskScreen()),
-              ),
-              _gridButton(
-                Icons.inventory_2,
-                'Inventario',
-                () => _navegarConFade(context, const InventarioDeskScreen()),
-              ),
-              _gridButton(
-                Icons.people,
-                'Personal',
-                () => _navegarConFade(context, const PersonalDeskScreen()),
-              ),
-              _gridButton(
-                Icons.bar_chart,
-                'Reportes',
-                () => _navegarConFade(context, const ReportesDeskScreen()),
-              ),
-              _gridButton(
-                Icons.calculate,
-                'Directorio',
-                () => _navegarConFade(context, const DirectorioDeskScreen()),
-              ),
-              _gridButton(
-                Icons.settings,
-                'Ajustes',
-                () => _navegarConFade(context, const SettingsDeskScreen()),
-              ),
-            ]
-            : [
-              _gridButton(
-                Icons.attach_money,
-                'Ventas',
-                () => _navegarConFade(context, const VentasDeskScreen()),
-              ),
-              _gridButton(
-                Icons.inventory_2,
-                'Inventario',
-                () => _navegarConFade(context, const InventarioDeskScreen()),
-              ),
-              _gridButton(
-                Icons.task_alt,
-                'Tareas',
-                () => _navegarConFade(
-                  context,
-                  const TareasPendientesDeskScreen(),
-                ),
-              ),
-              _gridButton(
-                Icons.settings,
-                'Ajustes',
-                () => _navegarConFade(context, const SettingsDeskScreen()),
-              ),
-            ];
+    List<Widget> botones = [];
+
+    switch (rolUsuario) {
+      case 'Administrador General':
+        botones = [
+          _gridButton(
+            Icons.attach_money,
+            'Ventas',
+            () => navegarConFade(context, const VentasDeskScreen()),
+          ),
+          _gridButton(
+            Icons.inventory_2,
+            'Inventario',
+            () => navegarConFade(context, const InventarioDeskScreen()),
+          ),
+          _gridButton(
+            Icons.people,
+            'Personal',
+            () => navegarConFade(context, const PersonalDeskScreen()),
+          ),
+          _gridButton(
+            Icons.calculate,
+            'Directorio',
+            () => navegarConFade(context, const DirectorioDeskScreen()),
+          ),
+          _gridButton(
+            Icons.local_fire_department,
+            'Fundición',
+            () => navegarConFade(context, const FundicionDeskScreen()),
+          ),
+          _gridButton(
+            Icons.bar_chart,
+            'Reportes',
+            () => navegarConFade(context, const ReportesDeskScreen()),
+          ),
+
+          _gridButton(
+            Icons.settings,
+            'Ajustes',
+            () => navegarConFade(context, const SettingsDeskScreen()),
+          ),
+        ];
+        break;
+
+      case 'Gerente Sede':
+        botones = [
+          _gridButton(
+            Icons.attach_money,
+            'Ventas',
+            () => navegarConFade(context, const VentasDeskScreen()),
+          ),
+          _gridButton(
+            Icons.inventory_2,
+            'Inventario',
+            () => navegarConFade(context, const InventarioDeskScreen()),
+          ),
+          _gridButton(
+            Icons.bar_chart,
+            'Reportes',
+            () => navegarConFade(context, const ReportesDeskScreen()),
+          ),
+          _gridButton(
+            Icons.settings,
+            'Ajustes',
+            () => navegarConFade(context, const SettingsDeskScreen()),
+          ),
+        ];
+        break;
+
+      case 'Supervisor Fundición':
+        botones = [
+          _gridButton(
+            Icons.local_fire_department,
+            'Fundición',
+            () => navegarConFade(context, const FundicionDeskScreen()),
+          ),
+          _gridButton(
+            Icons.bar_chart,
+            'Insumos',
+            () => navegarConFade(context, const InsumosDeskScreen()),
+          ),
+          _gridButton(
+            Icons.settings,
+            'Ajustes',
+            () => navegarConFade(context, const SettingsDeskScreen()),
+          ),
+        ];
+        break;
+
+      case 'Operador Fundición':
+        botones = [
+          _gridButton(
+            Icons.task_alt,
+            'Tareas',
+            () => navegarConFade(
+              context,
+              const OperadorTareasScreen(operadorId: '', operadorNombre: ''),
+            ),
+          ),
+          _gridButton(
+            Icons.settings,
+            'Ajustes',
+            () => navegarConFade(context, const SettingsDeskScreen()),
+          ),
+        ];
+        break;
+
+      case 'Supervisor Mecanizado':
+        botones = [
+          _gridButton(
+            Icons.inventory_2,
+            'Inventario',
+            () => navegarConFade(context, const InventarioDeskScreen()),
+          ),
+          _gridButton(
+            Icons.task_alt,
+            'Tareas',
+            () => navegarConFade(context, const TareasPendientesDeskScreen()),
+          ),
+          _gridButton(
+            Icons.bar_chart,
+            'Reportes',
+            () => navegarConFade(context, const ReportesDeskScreen()),
+          ),
+        ];
+        break;
+
+      case 'Operador Mecanizado':
+        botones = [
+          _gridButton(
+            Icons.task_alt,
+            'Tareas',
+            () => navegarConFade(context, const TareasPendientesDeskScreen()),
+          ),
+        ];
+        break;
+
+      default:
+        botones = [
+          _gridButton(
+            Icons.settings,
+            'Ajustes',
+            () => navegarConFade(context, const SettingsDeskScreen()),
+          ),
+        ];
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -436,6 +501,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
+                  // ignore: deprecated_member_use
                   color: Colors.black.withOpacity(0.08),
                   blurRadius: 8,
                   offset: const Offset(0, 4),

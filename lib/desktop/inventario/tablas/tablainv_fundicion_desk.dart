@@ -39,12 +39,13 @@ class _TablaInvFundicionDeskScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // ✅ fondo blanco total
+      backgroundColor: Colors.white, // fondo blanco total
       body: MainDeskLayout(
         child: Container(
-          color: Colors.white, // ✅ asegura blanco dentro también
+          color: Colors.white, // asegura blanco dentro también
           child: Column(
             children: [
+              // ✅ Cabecera con desplazamiento de medio pixel
               Transform.translate(
                 offset: const Offset(-0.5, 0),
                 child: Container(
@@ -67,7 +68,7 @@ class _TablaInvFundicionDeskScreenState
                       Expanded(
                         child: Center(
                           child: Text(
-                            'Historial - ${widget.nombre}',
+                            'Historial - ${widget.nombre}', // 🔹 Cambiar aquí
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 22,
@@ -81,8 +82,13 @@ class _TablaInvFundicionDeskScreenState
                 ),
               ),
               const SizedBox(height: 8),
+
+              // 🔹 Aquí colocas tu filtro
               _buildFiltroFecha(context),
+
               const SizedBox(height: 12),
+
+              // 🔹 Aquí colocas tu tabla/lista principal
               Expanded(child: _buildTabla(widget.referencia)),
             ],
           ),

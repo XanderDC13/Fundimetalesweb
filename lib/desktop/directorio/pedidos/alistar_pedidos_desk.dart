@@ -461,8 +461,77 @@ class _AlistarPedidosDeskWidgetState extends State<AlistarPedidosDeskWidget> {
                                         ],
                                       ),
                                     );
-                                  }).toList(),
-                                  const SizedBox(height: 16),
+                                  }),
+                                  const SizedBox(height: 8),
+                                  if (doc['productosAFundir'] != null &&
+                                      doc['productosAFundir'].isNotEmpty) ...[
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                      'Productos que necesitan fundición:',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.redAccent,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ...List<Widget>.from(
+                                      doc['productosAFundir'].map<Widget>((
+                                        producto,
+                                      ) {
+                                        return Container(
+                                          width: double.infinity,
+                                          margin: const EdgeInsets.only(
+                                            bottom: 8,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.shade50,
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.redAccent,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                flex: 3,
+                                                child: Text(
+                                                  producto['nombre'] ??
+                                                      'Sin nombre',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 2,
+                                                child: Text(
+                                                  'Ref: ${producto['referencia'] ?? '—'}',
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 2,
+                                                child: Text(
+                                                  'A fundir: ${producto['cantidadAFundir']}',
+                                                  textAlign: TextAlign.right,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ],
+
+                                  const SizedBox(height: 8),
                                   TextField(
                                     controller: _getObservacionController(
                                       pedidoId,

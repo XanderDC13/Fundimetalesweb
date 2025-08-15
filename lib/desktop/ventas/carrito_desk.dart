@@ -29,7 +29,6 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
         color: const Color(0xFFFFFFFF),
         child: Column(
           children: [
-            // CABECERA CON Transform.translate
             Transform.translate(
               offset: const Offset(-0.5, 0),
               child: Container(
@@ -117,7 +116,7 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                                                   CircleAvatar(
                                                     backgroundColor:
                                                         producto.exentoIva
-                                                            ? Colors.green
+                                                            ? const Color(0xFF3498DB)
                                                             : Colors.grey,
                                                     child: Icon(
                                                       producto.exentoIva
@@ -155,9 +154,7 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                                                                 ),
                                                             decoration: BoxDecoration(
                                                               color:
-                                                                  Colors
-                                                                      .green
-                                                                      .shade100,
+                                                                  const Color(0xFF3498DB).withOpacity(0.1),
                                                               borderRadius:
                                                                   BorderRadius.circular(
                                                                     4,
@@ -168,8 +165,7 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                                                               style: TextStyle(
                                                                 fontSize: 10,
                                                                 color:
-                                                                    Colors
-                                                                        .green,
+                                                                    Color(0xFF3498DB),
                                                                 fontWeight:
                                                                     FontWeight
                                                                         .bold,
@@ -776,6 +772,66 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
     );
   }
 
+  // En VerCarritoDeskScreen - Método _actualizarInventarioDespuesVenta corregido
+
+Future<void> _actualizarInventarioDespuesVenta(
+  List productos,
+  CarritoController carrito,
+) async {
+  final firestore = FirebaseFirestore.instance;
+  
+  for (var producto in productos) {
+    final referencia = producto.referencia;
+    final cantidadVendida = producto.cantidad;
+    
+    print('🔍 Actualizando inventario: $referencia, cantidad: $cantidadVendida, exentoIva: ${producto.exentoIva}');
+    
+    if (!producto.exentoIva) {
+      // ✅ USAR LA REFERENCIA COMO ID DEL DOCUMENTO
+      final inventarioRef = firestore
+          .collection('inventarios')
+          .doc('bodega')
+          .collection('productos')
+          .doc(referencia); // ← Usar directamente la referencia como ID
+      
+      try {
+        final docSnapshot = await inventarioRef.get();
+        if (docSnapshot.exists) {
+          final cantidadActual = (docSnapshot.data()?['cantidad'] ?? 0) as int;
+          print('📦 Cantidad actual en inventario: $cantidadActual');
+          print('📤 Cantidad a restar: $cantidadVendida');
+          
+          // ✅ CORREGIDO: Usar update en lugar de batch para operación individual
+          final nuevaCantidad = (cantidadActual - cantidadVendida).clamp(0, double.infinity).toInt();
+          
+          await inventarioRef.update({
+            'cantidad': nuevaCantidad,
+            'ultima_actualizacion': Timestamp.now(),
+            'ultima_venta': DateTime.now().toIso8601String(),
+          });
+          
+          print('✅ Inventario actualizado: $referencia, nueva cantidad: $nuevaCantidad');
+        } else {
+          print('⚠️ Documento de inventario no existe para: $referencia');
+          // ✅ Opcional: Crear el documento si no existe
+          await inventarioRef.set({
+            'cantidad': 0, // Ya vendido, cantidad 0
+            'referencia': referencia,
+            'ultima_actualizacion': Timestamp.now(),
+            'ultima_venta': DateTime.now().toIso8601String(),
+          });
+        }
+      } catch (e) {
+        print('❌ Error al actualizar inventario para $referencia: $e');
+      }
+    } else {
+      print('🚛 Producto de transporte, no se actualiza inventario: $referencia');
+    }
+  }
+  
+  print('✅ Proceso de actualización de inventario completado');
+}
+
   Future<void> _guardarVentaEnFirebase(
     List productos,
     CarritoController carrito,
@@ -871,5 +927,7 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
       'usuario_uid': currentUser.uid,
       'usuario_nombre': nombreUsuario,
     });
+    // Al final del método _guardarVentaEnFirebase, después de la auditoría
+    await _actualizarInventarioDespuesVenta(productos, carrito);
   }
 }

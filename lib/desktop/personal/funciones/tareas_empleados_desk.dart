@@ -1,5 +1,6 @@
 import 'package:basefundi/desktop/personal/funciones/tareas_historial_desk.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/settings/transition.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -13,18 +14,6 @@ class FuncionesDeskScreen extends StatefulWidget {
 
 class _FuncionesDeskScreenState extends State<FuncionesDeskScreen> {
   String _searchText = '';
-
-  void _navegarConFade(BuildContext context, Widget pantalla) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 150),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -136,7 +125,7 @@ class _FuncionesDeskScreenState extends State<FuncionesDeskScreen> {
                                   alignment: Alignment.centerRight,
                                   child: ElevatedButton.icon(
                                     onPressed: () {
-                                      _navegarConFade(
+                                      navegarConFade(
                                         context,
                                         const HistorialTareasDeskScreen(),
                                       );

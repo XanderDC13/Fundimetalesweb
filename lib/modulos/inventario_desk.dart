@@ -1,8 +1,9 @@
 import 'package:basefundi/desktop/inventario/inventario_fundicion_desk.dart';
 import 'package:basefundi/desktop/inventario/inventario_general_desk.dart';
-import 'package:basefundi/desktop/inventario/inventario_pintura_desk.dart';
+import 'package:basefundi/desktop/inventario/inventario_procesos_desk.dart';
 import 'package:basefundi/desktop/inventario/productos_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_transporte_desk.dart';
+import 'package:basefundi/settings/transition.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
@@ -18,18 +19,6 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-
-  void _navegarConFade(BuildContext context, Widget pantalla) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 150),
-      ),
-    );
-  }
 
   @override
   void initState() {
@@ -53,7 +42,6 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
     return MainDeskLayout(
       child: Column(
         children: [
-          // ✅ CABECERA CON Transform.translate
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
@@ -90,7 +78,6 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
             ),
           ),
 
-          // ✅ CONTENIDO PRINCIPAL CON FADE
           Expanded(
             child: Container(
               color: Colors.white,
@@ -105,7 +92,7 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
                         titulo: 'Productos',
                         subtitulo: 'Listado completo',
                         onTap: () {
-                          _navegarConFade(context, const TotalInvDeskScreen());
+                          navegarConFade(context, const TotalInvDeskScreen());
                         },
                       ),
                       const SizedBox(height: 20),
@@ -114,7 +101,7 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
                         titulo: 'Inventario en Fundición',
                         subtitulo: 'Registro de fundición',
                         onTap: () {
-                          _navegarConFade(
+                          navegarConFade(
                             context,
                             const InventarioFundicionDeskScreen(),
                           );
@@ -123,12 +110,12 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
                       const SizedBox(height: 20),
                       _buildBoton(
                         icon: LucideIcons.paintBucket,
-                        titulo: 'Inventario en Pintura',
-                        subtitulo: 'Registro de pintura',
+                        titulo: 'Inventario por Procesos',
+                        subtitulo: 'Registro de inventario en procesos',
                         onTap: () {
-                          _navegarConFade(
+                          navegarConFade(
                             context,
-                            const InventarioPinturaDeskScreen(),
+                            const InventarioProcesoDeskScreen(),
                           );
                         },
                       ),
@@ -138,7 +125,7 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
                         titulo: 'Inventario General',
                         subtitulo: 'Suma final de productos',
                         onTap: () {
-                          _navegarConFade(
+                          navegarConFade(
                             context,
                             InventarioGeneralDeskScreen(),
                           );
@@ -150,7 +137,7 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
                         titulo: 'Transporte',
                         subtitulo: 'Tiempos de entrega',
                         onTap: () {
-                          _navegarConFade(
+                          navegarConFade(
                             context,
                             const ReporteTransporteDeskScreen(),
                           );

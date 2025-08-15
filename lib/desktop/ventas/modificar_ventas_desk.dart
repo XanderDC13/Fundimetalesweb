@@ -58,7 +58,7 @@ class _ModificarVentaDeskScreenState extends State<ModificarVentaDeskScreen>
         final data = doc.data() as Map<String, dynamic>;
         final rol = data['rol'];
 
-        if (rol == 'Administrador') {
+        if (rol == 'Administrador General') {
           setState(() {
             _esAdmin = true;
             _verificado = true;
@@ -419,6 +419,44 @@ class _ModificarVentaDeskScreenState extends State<ModificarVentaDeskScreen>
     );
   }
 
+// Método para restaurar el inventario de bodega
+Future<void> _restaurarInventarioBodega(String referencia, int cantidadRestaurar) async {
+  try {
+    final inventarioRef = FirebaseFirestore.instance
+        .collection('inventarios')
+        .doc('bodega')
+        .collection('productos')
+        .doc(referencia);
+    
+    // Obtener cantidad actual
+    final doc = await inventarioRef.get();
+    
+    if (doc.exists) {
+      final cantidadActual = (doc.data()?['cantidad'] ?? 0) as int;
+      final nuevaCantidad = cantidadActual + cantidadRestaurar;
+      
+      // Actualizar cantidad
+      await inventarioRef.update({
+        'cantidad': nuevaCantidad,
+        'ultima_actualizacion': Timestamp.now(),
+      });
+      
+      print('Inventario restaurado: $referencia - Nueva cantidad: $nuevaCantidad');
+    } else {
+      // Si no existe el documento, crearlo
+      await inventarioRef.set({
+        'referencia': referencia,
+        'cantidad': cantidadRestaurar,
+        'ultima_actualizacion': Timestamp.now(),
+      });
+      
+      print('Inventario creado y restaurado: $referencia - Cantidad: $cantidadRestaurar');
+    }
+  } catch (e) {
+    print('Error restaurando inventario de bodega para $referencia: $e');
+  }
+}
+
   void _confirmarEliminacion(String idVenta) {
     showDialog(
       context: context,
@@ -464,14 +502,28 @@ class _ModificarVentaDeskScreenState extends State<ModificarVentaDeskScreen>
 
                   final ventaData = ventaDoc.data();
 
-                  if (ventaData != null && ventaData['productos'] != null) {
-                    final productos = List<Map<String, dynamic>>.from(
-                      ventaData['productos'],
-                    );
+                  // Restaurar inventario de bodega
+if (ventaData != null && ventaData['productos'] != null) {
+  final productos = List<Map<String, dynamic>>.from(
+    ventaData['productos'],
+  );
 
-                    // Extraer cliente y total de ventaData
-                    final cliente = ventaData['cliente'] ?? 'Sin nombre';
-                    final total = ventaData['total'] ?? 0.0;
+  // Restaurar cada producto al inventario de bodega
+  for (final producto in productos) {
+    final referencia = producto['referencia']?.toString() ?? 
+                     producto['codigo']?.toString() ?? '';
+    final cantidadVendida = (producto['cantidad'] ?? 0) as num;
+    
+    if (referencia.isNotEmpty && cantidadVendida > 0) {
+      await _restaurarInventarioBodega(referencia, cantidadVendida.toInt());
+    }
+  }
+
+  // Extraer cliente y total de ventaData
+  final cliente = ventaData['cliente'] ?? 'Sin nombre';
+  final total = ventaData['total'] ?? 0.0;
+
+  // Resto del código de auditoría...
 
                     // ignore: unused_local_variable
                     for (final producto in productos) {

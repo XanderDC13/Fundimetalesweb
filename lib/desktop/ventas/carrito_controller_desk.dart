@@ -121,59 +121,63 @@ class CarritoController extends ChangeNotifier {
     return palabrasTransporte.any((palabra) => nombreUpper.contains(palabra));
   }
 
-  void agregarProducto(ProductoEnCarrito producto) {
-    final index = _items.indexWhere((p) => p.referencia == producto.referencia);
+  // En CarritoController - Método agregarProducto corregido
 
-    // Verificar si es producto de transporte y aplicar exención de IVA
-    final esTransporte = _esProductoTransporte(
-      producto.referencia,
-      producto.nombre,
-    );
+void agregarProducto(ProductoEnCarrito producto) {
+  final index = _items.indexWhere((p) => p.referencia == producto.referencia);
 
-    // Crear producto con la configuración correcta de IVA
-    final productoFinal = ProductoEnCarrito(
-      referencia: producto.referencia,
-      nombre: producto.nombre,
-      precio: producto.precio,
-      disponibles:
-          esTransporte
-              ? 999999
-              : producto.disponibles, // Ilimitado para transporte
-      exentoIva: esTransporte, // Exento si es transporte
-      cantidad: producto.cantidad,
-    );
+  // Verificar si es producto de transporte y aplicar exención de IVA
+  final esTransporte = _esProductoTransporte(
+    producto.referencia,
+    producto.nombre,
+  );
 
-    if (index != -1) {
-      // Si ya existe el producto
-      if (esTransporte) {
-        // Para transporte, permitir agregar sin límite
-        _items[index].cantidad += 1;
-      } else {
-        // Para productos normales, verificar stock
-        if (_items[index].cantidad < _items[index].disponibles) {
-          _items[index].cantidad += 1;
-        } else {
-          throw Exception('No hay suficientes unidades disponibles');
-        }
-      }
+  if (index != -1) {
+    // Si ya existe el producto, agregar solo 1 unidad más
+    if (esTransporte) {
+      // Para transporte, agregar 1 unidad adicional
+      _items[index].cantidad += 1;
     } else {
-      // Si es un producto nuevo
-      if (esTransporte) {
-        // Para transporte, agregar sin restricciones
-        _items.add(productoFinal);
+      // Para productos normales, verificar stock antes de agregar 1
+      final nuevaCantidad = _items[index].cantidad + 1;
+      if (nuevaCantidad <= _items[index].disponibles) {
+        _items[index].cantidad = nuevaCantidad;
       } else {
-        // Para productos normales, verificar stock
-        if (producto.cantidad <= producto.disponibles) {
-          _items.add(productoFinal);
-        } else {
-          throw Exception(
-            'La cantidad solicitada excede las unidades disponibles',
-          );
-        }
+        throw Exception('No hay suficientes unidades disponibles');
       }
     }
-    notifyListeners();
+  } else {
+    // ✅ CORREGIDO: Si es un producto nuevo, verificar que tenga stock disponible
+    if (esTransporte) {
+      // Para transporte, siempre permitir
+      final productoFinal = ProductoEnCarrito(
+        referencia: producto.referencia,
+        nombre: producto.nombre,
+        precio: producto.precio,
+        disponibles: 999999, // Sin límite para transporte
+        exentoIva: true,
+        cantidad: 1, // ✅ Siempre iniciar con 1
+      );
+      _items.add(productoFinal);
+    } else {
+      // Para productos normales, verificar que tenga al menos 1 disponible
+      if (producto.disponibles >= 1) {
+        final productoFinal = ProductoEnCarrito(
+          referencia: producto.referencia,
+          nombre: producto.nombre,
+          precio: producto.precio,
+          disponibles: producto.disponibles,
+          exentoIva: false,
+          cantidad: 1, // ✅ Siempre iniciar con 1
+        );
+        _items.add(productoFinal);
+      } else {
+        throw Exception('No hay unidades disponibles para este producto');
+      }
+    }
   }
+  notifyListeners();
+}
 
   void actualizarCantidad(String referencia, int nuevaCantidad) {
     final index = _items.indexWhere((p) => p.referencia == referencia);

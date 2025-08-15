@@ -44,27 +44,28 @@ class _TablainvDeskScreenState extends State<TablainvDeskScreen> {
           child: Column(
             children: [
               // Cabecera
-              Container(
-                width: double.infinity,
-                color: const Color(0xFF2C3E50),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 64,
-                  vertical: 38,
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios,
-                        color: Colors.white,
+              Transform.translate(
+                offset: const Offset(-0.5, 0),
+                child: Container(
+                  width: double.infinity,
+                  color: const Color(0xFF2C3E50),
+                  padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 38),
+                  child: Stack(
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios,
+                            color: Colors.white,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
                       ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Center(
+                      Align(
+                        alignment: Alignment.center,
                         child: Text(
-                          'Historial - ${widget.nombre}',
+                          'Historial Bodega - ${widget.nombre}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 22,
@@ -72,8 +73,8 @@ class _TablainvDeskScreenState extends State<TablainvDeskScreen> {
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -136,31 +137,16 @@ class _TablainvDeskScreenState extends State<TablainvDeskScreen> {
   }
 
   Widget _buildTabla(String referencia) {
+    // Query para la nueva estructura: inventarios > bodega > productos
     Query query = FirebaseFirestore.instance
-        .collection('historial_inventario_general')
-        .where('referencia', isEqualTo: referencia);
-
-    if (_fechaSeleccionada != null) {
-      final inicioDelDia = DateTime(
-        _fechaSeleccionada!.year,
-        _fechaSeleccionada!.month,
-        _fechaSeleccionada!.day,
-        0,
-        0,
-        0,
-      );
-      final finDelDia = inicioDelDia.add(
-        const Duration(hours: 23, minutes: 59, seconds: 59),
-      );
-
-      query = query
-          .where('fecha_actualizacion', isGreaterThanOrEqualTo: inicioDelDia)
-          .where('fecha_actualizacion', isLessThanOrEqualTo: finDelDia);
-    }
+        .collection('inventarios')
+        .doc('bodega')
+        .collection('productos')
+        .where('referencia', isEqualTo: referencia)
+        .orderBy('fecha_actualizacion', descending: true);
 
     return StreamBuilder<QuerySnapshot>(
-      stream:
-          query.orderBy('fecha_actualizacion', descending: true).snapshots(),
+      stream: query.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -172,8 +158,37 @@ class _TablainvDeskScreenState extends State<TablainvDeskScreen> {
 
         final docs = snapshot.data?.docs ?? [];
 
-        if (docs.isEmpty) {
-          return const Center(child: Text('No hay registros para esta fecha.'));
+        // Filtrar por fecha en el cliente si hay fecha seleccionada
+        List<QueryDocumentSnapshot> docsFiltrados = docs;
+        if (_fechaSeleccionada != null) {
+          final inicioDelDia = DateTime(
+            _fechaSeleccionada!.year,
+            _fechaSeleccionada!.month,
+            _fechaSeleccionada!.day,
+            0,
+            0,
+            0,
+          );
+          final finDelDia = inicioDelDia.add(
+            const Duration(hours: 23, minutes: 59, seconds: 59),
+          );
+
+          docsFiltrados = docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>?;
+            final fecha = (data?['fecha_actualizacion'] as Timestamp?)?.toDate();
+            if (fecha == null) return false;
+            return fecha.isAfter(inicioDelDia.subtract(const Duration(seconds: 1))) &&
+                   fecha.isBefore(finDelDia.add(const Duration(seconds: 1)));
+          }).toList();
+        }
+
+        if (docsFiltrados.isEmpty) {
+          return const Center(
+            child: Text(
+              'No hay registros de bodega para esta fecha.',
+              style: TextStyle(fontSize: 16),
+            ),
+          );
         }
 
         return Container(
@@ -216,37 +231,33 @@ class _TablainvDeskScreenState extends State<TablainvDeskScreen> {
                         ),
                       ),
                     ],
-                    rows:
-                        docs.map((doc) {
-                          final data = doc.data() as Map<String, dynamic>?;
-                          final cantidad = data?['cantidad'] ?? 0;
-                          final fecha =
-                              (data?['fecha_actualizacion'] as Timestamp?)
-                                  ?.toDate();
-                          final fechaStr =
-                              fecha != null
-                                  ? DateFormat('dd/MM/yyyy HH:mm').format(fecha)
-                                  : 'Sin fecha';
+                    rows: docsFiltrados.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>?;
+                      final cantidad = data?['cantidad'] ?? 0;
+                      final fecha = (data?['fecha_actualizacion'] as Timestamp?)?.toDate();
+                      final fechaStr = fecha != null
+                          ? DateFormat('dd/MM/yyyy HH:mm').format(fecha)
+                          : 'Sin fecha';
 
-                          return DataRow(
-                            cells: [
-                              DataCell(
-                                SizedBox(
-                                  width: anchoColumna,
-                                  child: Center(child: Text(fechaStr)),
-                                ),
+                      return DataRow(
+                        cells: [
+                          DataCell(
+                            SizedBox(
+                              width: anchoColumna,
+                              child: Center(child: Text(fechaStr)),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width: anchoColumna,
+                              child: Center(
+                                child: Text(cantidad.toString()),
                               ),
-                              DataCell(
-                                SizedBox(
-                                  width: anchoColumna,
-                                  child: Center(
-                                    child: Text(cantidad.toString()),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        }).toList(),
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
                   ),
                 ),
               );

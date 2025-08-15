@@ -107,57 +107,166 @@ class _ReporteInventarioDeskScreenState
     );
   }
 
-  Stream<List<Map<String, dynamic>>> _getEntradas(String coleccion) {
-    final ordenCampo =
-        coleccion == 'historial_inventario_general'
-            ? 'fecha_actualizacion'
-            : 'fecha';
+  // Nueva lógica: Obtener productos de la colección productos
+  Future<Map<String, Map<String, dynamic>>> _getProductos() async {
+    final productosSnapshot =
+        await FirebaseFirestore.instance.collection('productos').get();
 
-    return FirebaseFirestore.instance
-        .collection(coleccion)
-        .orderBy(ordenCampo, descending: true)
-        .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs.map((doc) => doc.data()).where((e) {
-                final nombre = (e['nombre'] ?? '').toString().toLowerCase();
-                final referencia =
-                    (e['referencia'] ?? '').toString().toLowerCase();
-                final textoCoincide =
-                    nombre.contains(_filtroTexto.toLowerCase()) ||
-                    referencia.contains(_filtroTexto.toLowerCase());
-
-                final fechaCampo =
-                    coleccion == 'historial_inventario_general'
-                        ? e['fecha_actualizacion']
-                        : e['fecha'];
-
-                final fecha = parseFechaCampo(fechaCampo);
-
-                if (_rangoFechas != null && fecha != null) {
-                  return textoCoincide &&
-                      fecha.isAfter(_rangoFechas!.start) &&
-                      fecha.isBefore(
-                        _rangoFechas!.end.add(const Duration(days: 1)),
-                      );
-                }
-
-                return textoCoincide;
-              }).toList(),
-        );
+    final productos = <String, Map<String, dynamic>>{};
+    print('=== PRODUCTOS CARGADOS ===');
+    for (var doc in productosSnapshot.docs) {
+      final data = doc.data();
+      // Usar la referencia como clave en lugar del ID del documento
+      final referencia = data['referencia'] ?? doc.id;
+      productos[referencia] = data;
+      print('Referencia: $referencia, Datos: $data');
+    }
+    print('Total productos: ${productos.length}');
+    print('========================');
+    return productos;
   }
 
-  Widget _buildTabla(String coleccion) {
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: _getEntradas(coleccion),
+  // Nueva lógica: Obtener entradas de las subcolecciones
+  Future<List<Map<String, dynamic>>> _getEntradasFromSubcolecciones(
+    List<String> subcolecciones,
+    Map<String, Map<String, dynamic>> productos,
+  ) async {
+    List<Map<String, dynamic>> todasLasEntradas = [];
+
+    for (String subcoleccion in subcolecciones) {
+      try {
+        // Acceder a la subcolección de productos dentro del documento de cada área
+        final productosSubcoleccionRef = FirebaseFirestore.instance
+            .collection('inventarios')
+            .doc(subcoleccion) // bodega, bruto, fundicion, etc.
+            .collection('productos'); // Subcolección de productos
+
+        // Obtener los documentos de productos
+        final productosSubcoleccion = await productosSubcoleccionRef.get();
+
+        for (var productoDoc in productosSubcoleccion.docs) {
+          final data = productoDoc.data();
+          final productoId = productoDoc.id;
+
+          // Debug: imprimir información del producto
+          print('Producto ID en inventario: $productoId');
+          print('Datos del inventario: $data');
+
+          // Buscar el producto por referencia en lugar de por ID
+          // El productoId debería ser la referencia del producto
+          final infoProducto = productos[productoId] ?? {};
+          print('Info producto encontrada: $infoProducto');
+
+          final entradaCompleta = {
+            ...data,
+            'nombre': infoProducto['nombre'] ?? 'Producto no encontrado',
+            'referencia':
+                infoProducto['referencia'] ??
+                productoId, // usar el productoId como referencia si no se encuentra
+            'subcoleccion': subcoleccion,
+          };
+
+          print('Entrada completa: $entradaCompleta');
+          print('---');
+
+          // Aplicar filtros
+          final nombre =
+              (entradaCompleta['nombre'] ?? '').toString().toLowerCase();
+          final referencia =
+              (entradaCompleta['referencia'] ?? '').toString().toLowerCase();
+          final textoCoincide =
+              nombre.contains(_filtroTexto.toLowerCase()) ||
+              referencia.contains(_filtroTexto.toLowerCase());
+
+          // Para el filtro de fechas, usar 'ultima_actualizacion' o 'ultima_venta'
+          DateTime? fecha;
+          if (entradaCompleta['ultima_actualizacion'] != null) {
+            fecha = parseFechaCampo(entradaCompleta['ultima_actualizacion']);
+          } else if (entradaCompleta['ultima_venta'] != null) {
+            // Si ultima_venta es un string, parsearlo
+            final ultimaVentaStr = entradaCompleta['ultima_venta'].toString();
+            try {
+              fecha = DateTime.parse(ultimaVentaStr);
+            } catch (_) {
+              fecha = null;
+            }
+          }
+
+          bool cumpleFiltroFecha = true;
+          if (_rangoFechas != null && fecha != null) {
+            cumpleFiltroFecha =
+                fecha.isAfter(_rangoFechas!.start) &&
+                fecha.isBefore(_rangoFechas!.end.add(const Duration(days: 1)));
+          }
+
+          if (textoCoincide && cumpleFiltroFecha) {
+            todasLasEntradas.add(entradaCompleta);
+          }
+        }
+      } catch (e) {
+        print('Error obteniendo datos de subcolección $subcoleccion: $e');
+        // Agregar más información de debug
+        print(
+          'Estructura esperada: inventarios/$subcoleccion/productos/[producto_id]',
+        );
+      }
+    }
+
+    // Ordenar por fecha (más reciente primero)
+    todasLasEntradas.sort((a, b) {
+      DateTime? fechaA;
+      DateTime? fechaB;
+
+      // Para a
+      if (a['ultima_actualizacion'] != null) {
+        fechaA = parseFechaCampo(a['ultima_actualizacion']);
+      } else if (a['ultima_venta'] != null) {
+        try {
+          fechaA = DateTime.parse(a['ultima_venta'].toString());
+        } catch (_) {
+          fechaA = null;
+        }
+      }
+
+      // Para b
+      if (b['ultima_actualizacion'] != null) {
+        fechaB = parseFechaCampo(b['ultima_actualizacion']);
+      } else if (b['ultima_venta'] != null) {
+        try {
+          fechaB = DateTime.parse(b['ultima_venta'].toString());
+        } catch (_) {
+          fechaB = null;
+        }
+      }
+
+      if (fechaA == null && fechaB == null) return 0;
+      if (fechaA == null) return 1;
+      if (fechaB == null) return -1;
+      return fechaB.compareTo(fechaA);
+    });
+
+    return todasLasEntradas;
+  }
+
+  // ✅ SOLUCIÓN ALTERNATIVA: Usar FutureBuilder en lugar de StreamBuilder
+  Widget _buildTabla(String tipo) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      // ✅ Usar Future en lugar de Stream para evitar el problema de múltiples listeners
+      future: _getEntradasFuture(tipo),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        final entradas = snapshot.data!;
-        if (entradas.isEmpty) {
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(child: Text('No hay registros.'));
         }
+
+        final entradas = snapshot.data!;
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -212,12 +321,22 @@ class _ReporteInventarioDeskScreenState
                   ],
                   rows:
                       entradas.map((entrada) {
-                        final fechaCampo =
-                            coleccion == 'historial_inventario_general'
-                                ? entrada['fecha_actualizacion']
-                                : entrada['fecha'];
+                        DateTime? fecha;
 
-                        final fecha = parseFechaCampo(fechaCampo);
+                        // Usar ultima_actualizacion o ultima_venta para mostrar la fecha
+                        if (entrada['ultima_actualizacion'] != null) {
+                          fecha = parseFechaCampo(
+                            entrada['ultima_actualizacion'],
+                          );
+                        } else if (entrada['ultima_venta'] != null) {
+                          try {
+                            fecha = DateTime.parse(
+                              entrada['ultima_venta'].toString(),
+                            );
+                          } catch (_) {
+                            fecha = null;
+                          }
+                        }
 
                         return DataRow(
                           cells: [
@@ -268,55 +387,75 @@ class _ReporteInventarioDeskScreenState
     );
   }
 
-  Future<void> _exportarPDF(String coleccion) async {
+  // ✅ NUEVA FUNCIÓN: Versión Future de _getEntradas
+  Future<List<Map<String, dynamic>>> _getEntradasFuture(String tipo) async {
+    // Obtener los productos una vez
+    final productos = await _getProductos();
+
+    // Definir las subcolecciones según el tipo
+    List<String> subcolecciones;
+    switch (tipo) {
+      case 'general':
+        subcolecciones = ['bodega'];
+        break;
+      case 'fundicion':
+        subcolecciones = ['fundicion'];
+        break;
+      case 'procesos':
+        subcolecciones = ['bruto', 'mecanizado', 'pintura', 'pulido'];
+        break;
+      default:
+        subcolecciones = [];
+    }
+
+    // Obtener datos de todas las subcolecciones combinadas
+    return await _getEntradasFromSubcolecciones(subcolecciones, productos);
+  }
+
+  Future<void> _exportarPDF(String tipo) async {
     final pdf = pw.Document();
 
-    final snapshot =
-        await FirebaseFirestore.instance
-            .collection(coleccion)
-            .orderBy(
-              coleccion == 'historial_inventario_general'
-                  ? 'fecha_actualizacion'
-                  : 'fecha',
-              descending: true,
-            )
-            .get();
+    // Obtener los productos
+    final productos = await _getProductos();
 
-    final entradas =
-        snapshot.docs.map((doc) => doc.data()).where((e) {
-          final nombre = (e['nombre'] ?? '').toString().toLowerCase();
-          final referencia = (e['referencia'] ?? '').toString().toLowerCase();
-          final textoCoincide =
-              nombre.contains(_filtroTexto.toLowerCase()) ||
-              referencia.contains(_filtroTexto.toLowerCase());
+    // Definir las subcolecciones según el tipo
+    List<String> subcolecciones;
+    switch (tipo) {
+      case 'general':
+        subcolecciones = ['bodega'];
+        break;
+      case 'fundicion':
+        subcolecciones = ['fundicion'];
+        break;
+      case 'procesos':
+        subcolecciones = ['bruto', 'mecanizado', 'pintura', 'pulido'];
+        break;
+      default:
+        subcolecciones = [];
+    }
 
-          final fechaCampo =
-              coleccion == 'historial_inventario_general'
-                  ? e['fecha_actualizacion']
-                  : e['fecha'];
-
-          final fecha = parseFechaCampo(fechaCampo);
-
-          if (_rangoFechas != null && fecha != null) {
-            return textoCoincide &&
-                fecha.isAfter(_rangoFechas!.start) &&
-                fecha.isBefore(_rangoFechas!.end.add(const Duration(days: 1)));
-          }
-
-          return textoCoincide;
-        }).toList();
+    // Obtener todas las entradas
+    final entradas = await _getEntradasFromSubcolecciones(
+      subcolecciones,
+      productos,
+    );
 
     final lista =
         entradas.map((entrada) {
-          final fechaCampo =
-              coleccion == 'historial_inventario_general'
-                  ? entrada['fecha_actualizacion']
-                  : entrada['fecha'];
+          DateTime? fecha;
 
-          final fecha = parseFechaCampo(fechaCampo);
+          // Usar ultima_actualizacion o ultima_venta para el PDF
+          if (entrada['ultima_actualizacion'] != null) {
+            fecha = parseFechaCampo(entrada['ultima_actualizacion']);
+          } else if (entrada['ultima_venta'] != null) {
+            try {
+              fecha = DateTime.parse(entrada['ultima_venta'].toString());
+            } catch (_) {
+              fecha = null;
+            }
+          }
 
           String fechaFormateada = '-';
-
           if (fecha != null) {
             fechaFormateada = fecha.toLocal().toString().split(' ')[0];
           }
@@ -325,13 +464,13 @@ class _ReporteInventarioDeskScreenState
             fechaFormateada,
             '${entrada['referencia'] ?? '-'}',
             '${entrada['nombre'] ?? '-'}',
-            ((entrada['cantidad'] ?? 0).toString()),
+            '${entrada['cantidad'] ?? 0}',
           ];
         }).toList();
 
     pdf.addPage(
       buildReporteInventarioPDF(
-        titulo: 'Reporte de ${coleccion.replaceAll('_', ' ').toUpperCase()}',
+        titulo: 'Reporte de ${tipo.toUpperCase()}',
         headers: ['Fecha', 'Ref', 'Nombre', 'Cant'],
         dataRows: lista,
         footerText: 'Total registros: ${lista.length}',
@@ -343,16 +482,11 @@ class _ReporteInventarioDeskScreenState
 
   @override
   Widget build(BuildContext context) {
-    final colecciones = [
-      'inventario_fundicion',
-      'inventario_pintura',
-      'historial_inventario_general',
-    ];
+    final tipos = ['fundicion', 'procesos', 'general'];
 
     return MainDeskLayout(
       child: Column(
         children: [
-          // ✅ CABECERA
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
@@ -506,7 +640,7 @@ class _ReporteInventarioDeskScreenState
                         dividerColor: Colors.transparent,
                         tabs: const [
                           Tab(text: 'Fundición'),
-                          Tab(text: 'Pintura'),
+                          Tab(text: 'Procesos'),
                           Tab(text: 'General'),
                         ],
                       ),
@@ -516,9 +650,9 @@ class _ReporteInventarioDeskScreenState
                     child: TabBarView(
                       controller: _tabController,
                       children: [
-                        _buildTabla('inventario_fundicion'),
-                        _buildTabla('inventario_pintura'),
-                        _buildTabla('historial_inventario_general'),
+                        _buildTabla('fundicion'),
+                        _buildTabla('procesos'),
+                        _buildTabla('general'),
                       ],
                     ),
                   ),
@@ -529,8 +663,8 @@ class _ReporteInventarioDeskScreenState
                     ),
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        final coleccion = colecciones[_tabController.index];
-                        _exportarPDF(coleccion);
+                        final tipo = tipos[_tabController.index];
+                        _exportarPDF(tipo);
                       },
                       icon: const Icon(Icons.picture_as_pdf),
                       label: const Text('Exportar a PDF'),

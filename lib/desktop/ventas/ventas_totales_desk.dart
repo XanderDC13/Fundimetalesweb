@@ -146,13 +146,9 @@ class _VentasTotalesDeskScreenState extends State<VentasTotalesDeskScreen> {
 
                                   return GestureDetector(
                                     onTap: () {
-                                      navigateWithTransition(
-                                        context: context,
-                                        destination: FacturaDetalleDeskScreen(
-                                          venta: venta,
-                                        ),
-                                        transition: TransitionType.fade,
-                                        replace: false,
+                                      navegarConFade(
+                                        context,
+                                        FacturaDetalleDeskScreen(venta: venta),
                                       );
                                     },
 

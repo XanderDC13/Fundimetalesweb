@@ -1,5 +1,6 @@
 import 'package:basefundi/desktop/personal/empleados/empleados_activos_desk.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/settings/transition.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -10,18 +11,6 @@ class EmpleadosPendientesDeskScreen extends StatefulWidget {
   @override
   State<EmpleadosPendientesDeskScreen> createState() =>
       _EmpleadosPendientesDeskScreenState();
-}
-
-void _navegarConFade(BuildContext context, Widget pantalla) {
-  Navigator.of(context).push(
-    PageRouteBuilder(
-      pageBuilder: (context, animation, secondaryAnimation) => pantalla,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(opacity: animation, child: child);
-      },
-      transitionDuration: const Duration(milliseconds: 150),
-    ),
-  );
 }
 
 class _EmpleadosPendientesDeskScreenState
@@ -379,7 +368,7 @@ class _EmpleadosPendientesDeskScreenState
                               padding: const EdgeInsets.only(bottom: 16),
                               child: ElevatedButton.icon(
                                 onPressed: () {
-                                  _navegarConFade(
+                                  navegarConFade(
                                     context,
                                     const EmpleadosActivosDeskScreen(),
                                   );

@@ -1,5 +1,6 @@
 import 'package:basefundi/desktop/ajustes/editperfil_desk.dart';
 import 'package:basefundi/desktop/ajustes/feedback_desk.dart';
+import 'package:basefundi/settings/transition.dart';
 import 'package:flutter/material.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
 
@@ -14,18 +15,6 @@ class _SettingsDeskScreenState extends State<SettingsDeskScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-
-  void _navegarConFade(BuildContext context, Widget pantalla) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 150),
-      ),
-    );
-  }
 
   @override
   void initState() {
@@ -102,7 +91,7 @@ class _SettingsDeskScreenState extends State<SettingsDeskScreen>
                         titulo: 'Editar perfil',
                         subtitulo: 'Cambiar datos de usuario',
                         onTap: () {
-                          _navegarConFade(
+                          navegarConFade(
                             context,
                             const EditarPerfilDeskScreen(),
                           );
@@ -125,7 +114,7 @@ class _SettingsDeskScreenState extends State<SettingsDeskScreen>
                         titulo: 'Enviar feedback',
                         subtitulo: 'Opinión o sugerencias',
                         onTap: () {
-                          _navegarConFade(context, const FeedbackDeskScreen());
+                          navegarConFade(context, const FeedbackDeskScreen());
                         },
                       ),
 

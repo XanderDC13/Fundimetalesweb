@@ -1,4 +1,5 @@
 import 'package:basefundi/desktop/directorio/pedidos/historial_pedidos_desk.dart';
+import 'package:basefundi/settings/transition.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -39,18 +40,6 @@ class _PedidosEnviadosDeskWidgetState extends State<PedidosEnviadosDeskWidget> {
     }
   }
 
-  void _navegarConFade(BuildContext context, Widget pantalla) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 150),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -85,7 +74,7 @@ class _PedidosEnviadosDeskWidgetState extends State<PedidosEnviadosDeskWidget> {
               // Botón de historial
               ElevatedButton.icon(
                 onPressed: () {
-                  _navegarConFade(context, const HistorialEnviosDeskScreen());
+                  navegarConFade(context, const HistorialEnviosDeskScreen());
                 },
                 icon: const Icon(Icons.history, size: 18),
                 label: const Text('Historial'),

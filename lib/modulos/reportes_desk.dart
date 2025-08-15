@@ -3,6 +3,7 @@ import 'package:basefundi/desktop/reportes/reporte_compras_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_inv_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_transporte_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_ventas_desk.dart';
+import 'package:basefundi/settings/transition.dart';
 import 'package:flutter/material.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -18,18 +19,6 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-
-  void _navegarConFade(BuildContext context, Widget pantalla) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 150),
-      ),
-    );
-  }
 
   @override
   void initState() {
@@ -109,7 +98,7 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
                         titulo: 'Reporte de Inventario',
                         subtitulo: 'Detalle de productos',
                         onTap: () {
-                          _navegarConFade(
+                          navegarConFade(
                             context,
                             const ReporteInventarioDeskScreen(),
                           );
@@ -122,7 +111,7 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
                         titulo: 'Reporte de Ventas',
                         subtitulo: 'Historial de ventas',
                         onTap: () {
-                          _navegarConFade(
+                          navegarConFade(
                             context,
                             const ReporteVentasDeskScreen(),
                           );
@@ -134,7 +123,7 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
                         titulo: 'Reporte de Compras',
                         subtitulo: 'Compra de materia prima',
                         onTap: () {
-                          _navegarConFade(
+                          navegarConFade(
                             context,
                             const ReporteComprasDeskScreen(),
                           );
@@ -146,7 +135,7 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
                         titulo: 'Reporte de Transporte',
                         subtitulo: 'Tiempos y entregas',
                         onTap: () {
-                          _navegarConFade(
+                          navegarConFade(
                             context,
                             const ReporteTransporteDeskScreen(),
                           );
@@ -158,7 +147,7 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
                         titulo: 'Auditoría',
                         subtitulo: 'Ediciones y cambios en el sistema',
                         onTap: () {
-                          _navegarConFade(context, const AuditoriaDeskScreen());
+                          navegarConFade(context, const AuditoriaDeskScreen());
                         },
                       ),
                     ],

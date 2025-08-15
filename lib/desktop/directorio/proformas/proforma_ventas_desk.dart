@@ -10,7 +10,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 
 class ProformaVentasDeskScreen extends StatefulWidget {
+  const ProformaVentasDeskScreen({super.key});
+
   @override
+  // ignore: library_private_types_in_public_api
   _ProformaVentasDeskScreenState createState() =>
       _ProformaVentasDeskScreenState();
 }
@@ -243,26 +246,30 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
   }
 
   Future<void> _previsualizarNumeroProforma() async {
-    final fechaHoy = DateTime.now();
-    final fechaFormateada =
-        "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
+  final fechaHoy = DateTime.now();
+  final fechaFormateada =
+      "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
 
-    final counterRef = FirebaseFirestore.instance
-        .collection('proformas_ventas_counter')
-        .doc(fechaFormateada);
+  final counterRef = FirebaseFirestore.instance
+      .collection('proformas_ventas_counter')
+      .doc(fechaFormateada);
 
-    final counterDoc = await counterRef.get();
+  final counterDoc = await counterRef.get();
 
-    int numero = 1;
+  int numero = 1;
 
-    if (counterDoc.exists) {
-      numero = counterDoc['contador'] + 1; // SOLO LEE, NO ACTUALIZA
-    }
-
-    setState(() {
-      _numeroProforma = "PROFORMA N-$fechaFormateada-$numero";
-    });
+  if (counterDoc.exists) {
+    numero = counterDoc['contador'] + 1;
+  } else {
+    // ⚠️ Crear el documento si no existe
+    await counterRef.set({'contador': 0});
   }
+
+  setState(() {
+    _numeroProforma = "PROFORMA N-$fechaFormateada-$numero";
+  });
+}
+
 
   Widget _buildMobileClienteSection() {
     return _buildMobileSection(
@@ -899,7 +906,7 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
     );
   }
 
-  Widget _buildMobileTotalesSection() {
+  Widget  _buildMobileTotalesSection() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[50],
@@ -1420,6 +1427,8 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
       final imageBytes = await _transportImage!.readAsBytes();
       transportImageProvider = pw.MemoryImage(imageBytes);
     }
+    final double subtotalCero =
+        double.tryParse(_subtotalCeroController.text) ?? 0.0;
 
     pdf.addPage(
       pw.Page(
@@ -1440,7 +1449,7 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
                     pw.SizedBox(height: 10),
                     _buildPDFItemsTable(),
                     pw.SizedBox(height: 10),
-                    _buildPDFTotales(),
+                    _buildPDFTotales(subtotalCero), // <- Aquí lo usas
                     pw.SizedBox(height: 10),
                     _buildPDFCondiciones(),
                   ],
@@ -1755,7 +1764,7 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
     );
   }
 
-  pw.Widget _buildPDFTotales() {
+  pw.Widget _buildPDFTotales(double subtotalCero) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.end,
       children: [
@@ -1783,7 +1792,10 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text('Subtotal 0%:', style: pw.TextStyle(fontSize: 7)),
-                  pw.Text('\$5.00', style: pw.TextStyle(fontSize: 7)),
+                  pw.Text(
+                    '\$${subtotalCero.toStringAsFixed(2)}',
+                    style: pw.TextStyle(fontSize: 7),
+                  ),
                 ],
               ),
               pw.SizedBox(height: 2),
@@ -1932,7 +1944,7 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
                             "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
 
                         final counterRef = FirebaseFirestore.instance
-                            .collection('proformas_counters')
+                            .collection('proformas_ventas_counter')
                             .doc(fechaFormateada);
 
                         final counterDoc = await counterRef.get();
@@ -1972,11 +1984,20 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
                                   )
                                   .toList(),
                           'fecha': Timestamp.now(),
+
+                          // 🔹 Datos de envío
+                          'transporte': _transporteController.text,
+                          'destino': _destinoController.text,
+                          'fecha_envio': _fechaController.text,
+                          'transportista': _transportistaController.text,
+
+                          // 🔸 Subtotal 0%
+                          'subtotal_0': _subtotalCeroController.text,
                         };
 
                         // 👉 3. Guardar en Firestore
                         await FirebaseFirestore.instance
-                            .collection('proformas')
+                            .collection('proformasventas')
                             .add(proformaData);
 
                         print(

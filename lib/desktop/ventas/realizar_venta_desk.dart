@@ -30,70 +30,75 @@ class _VentasDetalleDeskScreenState extends State<VentasDetalleDeskScreen> {
     );
   }
 
-  Future<List<Map<String, dynamic>>> fetchProductosCombinados() async {
-    final historialSnapshot =
-        await FirebaseFirestore.instance
-            .collection('historial_inventario_general')
-            .orderBy('fecha_actualizacion', descending: true)
-            .get();
+  // En VentasDetalleDeskScreen - Método fetchProductosCombinados corregido
 
-    final inventarioSnapshot =
-        await FirebaseFirestore.instance.collection('inventario_general').get();
+Future<List<Map<String, dynamic>>> fetchProductosCombinados() async {
+  try {
+    // 1. Obtener todos los productos base
+    final productosSnapshot = await FirebaseFirestore.instance
+        .collection('productos')
+        .get();
 
-    final ventasSnapshot =
-        await FirebaseFirestore.instance.collection('ventas').get();
+    // 2. Obtener todos los documentos dentro de la subcolección 'bodega'
+    final inventarioBodegaSnapshot = await FirebaseFirestore.instance
+        .collection('inventarios')
+        .doc('bodega')
+        .collection('productos')
+        .get();
 
-    final Map<String, Map<String, dynamic>> baseProductos = {};
-    for (var doc in inventarioSnapshot.docs) {
+    final Map<String, Map<String, dynamic>> productosDisponibles = {};
+
+    // Procesar productos base - USAR REFERENCIA COMO CLAVE
+    for (var doc in productosSnapshot.docs) {
       final data = doc.data();
-      final referencia = (data['referencia'] ?? '').toString();
-      baseProductos[referencia] = {
+      final referencia = data['referencia'] ?? doc.id; // ✅ Si no hay referencia, usar el ID
+
+      productosDisponibles[referencia] = {
         'referencia': referencia,
         'nombre': data['nombre'] ?? '',
-        'precios': (data['precios'] ?? []),
+        'codigo': doc.id,
+        'categoria': data['categoria'] ?? '',
+        'costo': data['costo'] ?? 0,
+        'precios': List<double>.from(data['precios'] ?? []),
         'cantidad': 0,
       };
     }
 
-    for (var doc in historialSnapshot.docs) {
+    // ✅ BUSCAR POR REFERENCIA EN INVENTARIO DE BODEGA
+    for (var doc in inventarioBodegaSnapshot.docs) {
       final data = doc.data();
-      final referencia = (data['referencia'] ?? '').toString();
+      final referenciaInventario = doc.id; // El ID del documento es la referencia
       final cantidad = (data['cantidad'] ?? 0) as int;
-      final tipo = (data['tipo'] ?? 'entrada').toString();
-      final ajuste = tipo == 'salida' ? -cantidad : cantidad;
+      
+      // Buscar directamente por la referencia
+      if (productosDisponibles.containsKey(referenciaInventario)) {
+        productosDisponibles[referenciaInventario]!['cantidad'] = cantidad;
 
-      if (baseProductos.containsKey(referencia)) {
-        baseProductos[referencia]!['cantidad'] += ajuste;
       } else {
-        baseProductos[referencia] = {
-          'referencia': referencia,
-          'nombre': data['nombre'] ?? '',
-          'precios': [],
-          'cantidad': ajuste,
-        };
+
       }
     }
 
-    for (var venta in ventasSnapshot.docs) {
-      final productos = List<Map<String, dynamic>>.from(venta['productos']);
-      for (var producto in productos) {
-        final referencia = producto['referencia']?.toString() ?? '';
-        final cantidad = (producto['cantidad'] ?? 0) as num;
-
-        if (baseProductos.containsKey(referencia)) {
-          baseProductos[referencia]!['cantidad'] -= cantidad.toInt();
-        }
-      }
-    }
-
-    return baseProductos.values.toList();
+    final resultado = productosDisponibles.values
+        .where((producto) => producto['cantidad'] >= 0) 
+        .toList();
+  
+    return resultado;
+  } catch (e) {
+    return [];
   }
+}
 
+  // Método actualizado para agregar productos al carrito
   Future<void> _seleccionarPrecioYAgregar(
     Map<String, dynamic> data,
     BuildContext context,
   ) async {
     final List<dynamic> precios = data['precios'] ?? [];
+    final referencia = data['referencia'] ?? data['codigo'];
+
+    // ✅ Usar la cantidad directamente del fetch (ya es la cantidad actual)
+    int cantidadDisponible = data['cantidad'] ?? 0;
 
     final precioSeleccionado = await showModalBottomSheet<double>(
       context: context,
@@ -136,7 +141,7 @@ class _VentasDetalleDeskScreenState extends State<VentasDetalleDeskScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Selecciona un precio',
                   style: TextStyle(
                     fontSize: 20,
@@ -145,13 +150,22 @@ class _VentasDetalleDeskScreenState extends State<VentasDetalleDeskScreen> {
                     letterSpacing: 1.1,
                   ),
                 ),
+                // ✅ MOSTRAR cantidad disponible
+                Text(
+                  'Disponibles: $cantidadDisponible',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: cantidadDisponible > 0 ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 20),
 
-                // Lista de precios configurados
                 if (precios.isNotEmpty) ...[
                   ...precios.asMap().entries.map((entry) {
                     final index = entry.key + 1;
                     final precio = (entry.value as num).toDouble();
+
                     return Card(
                       color: Colors.white,
                       margin: const EdgeInsets.symmetric(vertical: 6),
@@ -165,7 +179,7 @@ class _VentasDetalleDeskScreenState extends State<VentasDetalleDeskScreen> {
                           color: Color(0xFF4682B4),
                         ),
                         title: Text(
-                          'PVP$index: \$${precio.toStringAsFixed(2)}',
+                          "PVP $index: \$${precio.toStringAsFixed(2)}",
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 16,
@@ -182,7 +196,6 @@ class _VentasDetalleDeskScreenState extends State<VentasDetalleDeskScreen> {
                   const SizedBox(height: 10),
                 ],
 
-                // Botón de precio personalizado
                 Card(
                   color: Colors.white,
                   shape: RoundedRectangleBorder(
@@ -230,10 +243,10 @@ class _VentasDetalleDeskScreenState extends State<VentasDetalleDeskScreen> {
 
     if (precioSeleccionado != null) {
       final producto = ProductoEnCarrito(
-        referencia: data['referencia'],
+        referencia: referencia,
         nombre: data['nombre'],
         precio: precioSeleccionado,
-        disponibles: data['cantidad'],
+        disponibles: cantidadDisponible,
       );
 
       try {
@@ -246,9 +259,9 @@ class _VentasDetalleDeskScreenState extends State<VentasDetalleDeskScreen> {
           SnackBar(content: Text('${data['nombre']} agregado al carrito')),
         );
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No tienes unidades disponibles')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       }
     }
   }
@@ -445,119 +458,155 @@ class _VentasDetalleDeskScreenState extends State<VentasDetalleDeskScreen> {
     );
   }
 
-  Widget _buildProductoCard(Map<String, dynamic> data, BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        _seleccionarPrecioYAgregar(data, context);
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade300),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
+
+Widget _buildProductoCard(Map<String, dynamic> data, BuildContext context) {
+  final cantidadDisponible = data['cantidad'] ?? 0;
+  final categoria = data['categoria']?.toString().toUpperCase() ?? '';
+  
+  // ✅ EXCEPCIÓN: Los productos de TRANSPORTE siempre están disponibles
+  final esTransporte = categoria == 'TRANSPORTE';
+  final tieneStock = cantidadDisponible > 0 || esTransporte;
+  
+  return GestureDetector(
+    onTap: tieneStock ? () {
+      _seleccionarPrecioYAgregar(data, context);
+    } : null,
+    child: Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: tieneStock 
+            ? Colors.grey.shade300 
+            : Colors.red.shade300, 
         ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.shopping_bag_rounded,
-              size: 48,
-              color: Color(0xFF2C3E50),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // ✅ Ícono diferente para TRANSPORTE
+          Icon(
+            esTransporte ? Icons.local_shipping_rounded : Icons.shopping_bag_rounded,
+            size: 48,
+            color: tieneStock 
+              ? const Color(0xFF2C3E50) 
+              : Colors.grey.shade400,
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Column(
+              children: [
+                Text(
+                  data['nombre'],
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: tieneStock 
+                      ? const Color(0xFF2C3E50)
+                      : Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Ref: ${data['referencia']}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF7F8C8D),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: Column(
-                children: [
-                  Text(
-                    data['nombre'],
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Color(0xFF2C3E50),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Ref: ${data['referencia']}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF7F8C8D),
-                    ),
-                  ),
-                ],
+          ),
+          const SizedBox(height: 8),
+          
+          // ✅ MOSTRAR ESTADO SEGÚN CATEGORÍA
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+            decoration: BoxDecoration(
+              color: esTransporte
+                  ? const Color(0xFF3498DB).withOpacity(0.1) // Azul para transporte
+                  : cantidadDisponible > 5
+                      ? const Color(0xFF27AE60).withOpacity(0.1) // Verde si > 5
+                      : cantidadDisponible > 0
+                          ? const Color(0xFFF39C12).withOpacity(0.1) // Naranja si 1-5
+                          : const Color(0xFFE74C3C).withOpacity(0.1), // Rojo si 0
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              esTransporte
+                  ? 'Servicio disponible'
+                  : cantidadDisponible > 0 
+                      ? '$cantidadDisponible disponibles'
+                      : 'Sin stock',
+              style: TextStyle(
+                fontSize: 12,
+                color: esTransporte
+                    ? const Color(0xFF3498DB) // Azul para transporte
+                    : cantidadDisponible > 5
+                        ? const Color(0xFF27AE60) // Verde
+                        : cantidadDisponible > 0
+                            ? const Color(0xFDF39C12) // Naranja
+                            : const Color(0xFFE74C3C), // Rojo
+                fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-              decoration: BoxDecoration(
-                color:
-                    data['cantidad'] > 0
-                        ? const Color(0xFF27AE60).withOpacity(0.1)
-                        : const Color(0xFFE74C3C).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+          ),
+          
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: tieneStock 
+                  ? const Color(0xFF4682B4)
+                  : Colors.grey.shade400,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
               ),
-              child: Text(
-                '${data['cantidad']} disponibles',
-                style: TextStyle(
-                  fontSize: 12,
-                  color:
-                      data['cantidad'] > 0
-                          ? const Color(0xFF27AE60)
-                          : const Color(0xFFE74C3C),
+              icon: Icon(
+                tieneStock 
+                  ? (esTransporte ? Icons.add_business : Icons.add_shopping_cart)
+                  : Icons.block,
+                color: Colors.white,
+                size: 20,
+              ),
+              label: Text(
+                tieneStock 
+                  ? 'Agregar' 
+                  : 'Sin stock',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              onPressed: tieneStock ? () {
+                _seleccionarPrecioYAgregar(data, context);
+              } : null,
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4682B4),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  elevation: 0,
-                ),
-                icon: const Icon(
-                  Icons.add_shopping_cart,
-                  color: Colors.white,
-                  size: 20,
-                ),
-                label: const Text(
-                  'Agregar',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                onPressed: () {
-                  _seleccionarPrecioYAgregar(data, context);
-                },
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Future<double?> _mostrarDialogPrecioPersonalizado(
     BuildContext context,

@@ -46,57 +46,56 @@ class _EditarVentaDeskScreenState extends State<EditarVentaDeskScreen> {
     return categoria?.toUpperCase() == 'TRANSPORTE';
   }
 
-  /// ✅ Corrige cálculo de stock disponible
   Future<void> _cargarDisponibles() async {
-    final historialSnapshot =
-        await FirebaseFirestore.instance
-            .collection('historial_inventario_general')
-            .get();
-
-    final ventasSnapshot =
-        await FirebaseFirestore.instance.collection('ventas').get();
-
-    final ventasPorProducto = <String, int>{};
-    for (var venta in ventasSnapshot.docs) {
-      final productosVenta = List<Map<String, dynamic>>.from(
-        venta['productos'] ?? [],
-      );
-      for (var producto in productosVenta) {
-        final referencia = producto['referencia'] ?? producto['referencia'];
-        final cantidad = (producto['cantidad'] ?? 0) as int;
-        ventasPorProducto[referencia] =
-            (ventasPorProducto[referencia] ?? 0) + cantidad;
-      }
-    }
+  try {
+    // 1. Obtener inventario actual de bodega
+    final inventarioBodegaSnapshot = await FirebaseFirestore.instance
+        .collection('inventarios')
+        .doc('bodega')
+        .collection('productos')
+        .get();
 
     final disponibles = <String, int>{};
-    for (var doc in historialSnapshot.docs) {
-      final data = doc.data();
-      final referencia = (data['referencia'] ?? '').toString();
-      final cantidad = (data['cantidad'] ?? 0) as int;
-      final tipo = (data['tipo'] ?? 'entrada').toString();
-      final ajuste = tipo == 'salida' ? -cantidad : cantidad;
 
-      disponibles[referencia] = (disponibles[referencia] ?? 0) + ajuste;
+    // 2. Procesar inventario de bodega
+    for (var doc in inventarioBodegaSnapshot.docs) {
+      final referencia = doc.id; // El ID del documento es la referencia
+      final cantidad = (doc.data()['cantidad'] ?? 0) as int;
+      
+      disponibles[referencia] = cantidad;
     }
 
-    // Resta todas las ventas (incluye la actual)
-    ventasPorProducto.forEach((referencia, vendidos) {
-      disponibles[referencia] = (disponibles[referencia] ?? 0) - vendidos;
-    });
-
-    // ✅ Sumar lo que ya está agregado para no bloquear stock usado en esta edición
-    for (var producto in _productos) {
-      final referencia = producto['referencia'];
-      final cantidad = producto['cantidad'] ?? 0;
-      disponibles[referencia] =
-          ((disponibles[referencia] ?? 0) + cantidad).toInt();
+ 
+if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalId'))) {
+  // Solo suma si los productos vienen de una venta existente
+  for (var producto in _productos) {
+    final referencia = producto['referencia'];
+    final cantidadEditando = producto['cantidad'] ?? 0;
+    
+    if (cantidadEditando > 0) {
+      disponibles[referencia] = 
+          ((disponibles[referencia] ?? 0) + cantidadEditando).toInt();
     }
+  }
+}
 
     setState(() {
       _disponibles = disponibles;
     });
+    
+    // Debug: puedes comentar esta línea en producción
+    disponibles.forEach((ref, cant) {
+      print('Referencia: $ref, Cantidad disponible: $cant');
+    });
+
+  } catch (e) {
+    print('Error al cargar disponibles: $e');
+    setState(() {
+      _disponibles = <String, int>{};
+    });
   }
+}
+
 
   /// ✅ Calcula total, con IVA solo para productos que NO son de transporte
   double _calcularTotal() {
@@ -131,7 +130,7 @@ class _EditarVentaDeskScreenState extends State<EditarVentaDeskScreen> {
   /// ✅ Selector de productos con diseño elegante
   Future<void> _agregarProducto() async {
     final snapshot =
-        await FirebaseFirestore.instance.collection('inventario_general').get();
+        await FirebaseFirestore.instance.collection('productos').get();
 
     final productosDisponibles =
         snapshot.docs.map((doc) {
@@ -141,7 +140,7 @@ class _EditarVentaDeskScreenState extends State<EditarVentaDeskScreen> {
             'nombre': data['nombre'],
             'precios': data['precios'],
             'referencia': data['referencia'],
-            'categoria': data['categoria'], // ✅ Agregamos categoría
+            'categoria': data['categoria'], 
           };
         }).toList();
 

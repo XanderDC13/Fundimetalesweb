@@ -20,7 +20,6 @@ class _EmpleadosActivosDeskScreenState
     return MainDeskLayout(
       child: Column(
         children: [
-          // ✅ CABECERA ESCRITORIO
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
@@ -57,7 +56,6 @@ class _EmpleadosActivosDeskScreenState
             ),
           ),
 
-          // ✅ CONTENIDO TABLA
           Expanded(
             child: Container(
               color: Colors.white,
@@ -107,7 +105,7 @@ class _EmpleadosActivosDeskScreenState
                                 scrollDirection: Axis.horizontal,
                                 child: DataTable(
                                   columnSpacing: 32,
-                                  headingRowColor: MaterialStateProperty.all(
+                                  headingRowColor: WidgetStateProperty.all(
                                     const Color(0xFF4682B4),
                                   ),
                                   headingTextStyle: const TextStyle(
@@ -136,8 +134,12 @@ class _EmpleadosActivosDeskScreenState
                                         final rol =
                                             empleado['rol'] ?? 'Empleado';
                                         final roles = [
-                                          'Administrador',
-                                          'Empleado',
+                                          'Administrador General',
+                                          'Gerente Sede',
+                                          'Supervisor Fundición',
+                                          'Operador Fundición',
+                                          'Supervisor Mecanizado',
+                                          'Operador Mecanizado',
                                         ];
 
                                         final valorRol = roles.firstWhere(

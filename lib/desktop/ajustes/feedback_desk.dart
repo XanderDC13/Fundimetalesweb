@@ -172,6 +172,7 @@ class _FeedbackDeskScreenState extends State<FeedbackDeskScreen> {
                                     ),
                                   ),
                                   child: DropdownButtonFormField<String>(
+                                    dropdownColor: Colors.white,
                                     value: _type,
                                     decoration: const InputDecoration(
                                       border: InputBorder.none,

@@ -1,4 +1,5 @@
 import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/settings/transition.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -13,18 +14,6 @@ class HistorialTareasDeskScreen extends StatefulWidget {
 
 class _HistorialTareasDeskScreenState extends State<HistorialTareasDeskScreen> {
   String _searchQuery = '';
-
-  void _navegarConFade(BuildContext context, Widget pantalla) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 150),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -180,7 +169,7 @@ class _HistorialTareasDeskScreenState extends State<HistorialTareasDeskScreen> {
                                           color: Colors.grey,
                                         ),
                                         onTap: () {
-                                          _navegarConFade(
+                                          navegarConFade(
                                             context,
                                             HistorialUsuarioDeskScreen(
                                               userId: userDoc.id,

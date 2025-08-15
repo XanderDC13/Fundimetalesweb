@@ -1,6 +1,7 @@
 import 'package:basefundi/desktop/personal/empleados/empleados_registro_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
 import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
+import 'package:basefundi/settings/transition.dart';
 import 'package:flutter/material.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
 
@@ -15,18 +16,6 @@ class _PersonalDeskScreenState extends State<PersonalDeskScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-
-  void _navegarConFade(BuildContext context, Widget pantalla) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 150),
-      ),
-    );
-  }
 
   @override
   void initState() {
@@ -141,7 +130,7 @@ class _PersonalDeskScreenState extends State<PersonalDeskScreen>
   }) {
     return InkWell(
       onTap: () {
-        _navegarConFade(context, destination);
+        navegarConFade(context, destination);
       },
 
       borderRadius: BorderRadius.circular(16),

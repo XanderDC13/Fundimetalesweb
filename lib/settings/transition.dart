@@ -1,40 +1,12 @@
 import 'package:flutter/material.dart';
 
-enum TransitionType { fade, slide, scale }
-
-void navigateWithTransition({
-  required BuildContext context,
-  required Widget destination,
-  TransitionType transition = TransitionType.fade,
-  Duration duration = const Duration(milliseconds: 150),
-  bool replace = true,
-}) {
-  PageRouteBuilder route = PageRouteBuilder(
-    pageBuilder: (context, animation, secondaryAnimation) => destination,
-    transitionDuration: duration,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      switch (transition) {
-        case TransitionType.slide:
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(1.0, 0.0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeInOut),
-            ),
-            child: child,
-          );
-        case TransitionType.scale:
-          return ScaleTransition(scale: animation, child: child);
-        case TransitionType.fade:
-          return FadeTransition(opacity: animation, child: child);
-      }
-    },
+void navegarConFade(BuildContext context, Widget pantalla) {
+  Navigator.of(context).push(
+    PageRouteBuilder(
+      pageBuilder: (_, animation, __) => pantalla,
+      transitionsBuilder: (_, animation, __, child) =>
+          FadeTransition(opacity: animation, child: child),
+      transitionDuration: const Duration(milliseconds: 150),
+    ),
   );
-
-  if (replace) {
-    Navigator.pushReplacement(context, route);
-  } else {
-    Navigator.push(context, route);
-  }
 }

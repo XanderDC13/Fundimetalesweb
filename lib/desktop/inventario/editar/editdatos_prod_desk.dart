@@ -112,7 +112,7 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
     try {
       final doc =
           await FirebaseFirestore.instance
-              .collection('inventario_general')
+              .collection('productos')
               .doc(widget.codigoBarras)
               .get();
 
@@ -238,7 +238,7 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
 
     // Guardar producto
     final docRef = FirebaseFirestore.instance
-        .collection('inventario_general')
+        .collection('productos')
         .doc(codigo);
     final datos = {
       'codigo': codigo,
@@ -279,15 +279,7 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
         'usuario_uid': uid,
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Cambios:\n${cambios.join('\n')}')),
-      );
     }
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Cambios:\n${cambios.join('\n')}')));
-
     Navigator.pop(context);
   }
 

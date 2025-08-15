@@ -2,6 +2,7 @@ import 'package:basefundi/settings/navbar_desk.dart';
 import 'package:basefundi/desktop/ventas/modificar_ventas_desk.dart';
 import 'package:basefundi/desktop/ventas/ventas_totales_desk.dart';
 import 'package:basefundi/desktop/ventas/realizar_venta_desk.dart';
+import 'package:basefundi/settings/transition.dart';
 import 'package:flutter/material.dart';
 
 class VentasDeskScreen extends StatefulWidget {
@@ -16,17 +17,6 @@ class _VentasDeskScreenState extends State<VentasDeskScreen>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
 
-  void _navegarConFade(BuildContext context, Widget pantalla) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => pantalla,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 150),
-      ),
-    );
-  }
 
   @override
   void initState() {
@@ -135,7 +125,7 @@ class _VentasDeskScreenState extends State<VentasDeskScreen>
     required Widget destino,
   }) {
     return InkWell(
-      onTap: () => _navegarConFade(context, destino),
+      onTap: () => navegarConFade(context, destino),
       borderRadius: BorderRadius.circular(16),
       child: Card(
         color: Colors.white,

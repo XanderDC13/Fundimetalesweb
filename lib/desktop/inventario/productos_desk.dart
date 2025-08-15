@@ -1,8 +1,7 @@
-import 'package:basefundi/desktop/inventario/editar/categorias_desk.dart';
+import 'dart:async';
 import 'package:basefundi/desktop/inventario/editar/editcant_prod_desk.dart';
 import 'package:basefundi/desktop/inventario/editar/editdatos_prod_desk.dart';
-
-import 'package:basefundi/settings/csv_desk.dart';
+import 'package:basefundi/settings/csv_importar_desk.dart';
 import 'package:basefundi/settings/csv_exportar_desk.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -16,7 +15,7 @@ class Producto {
   double precio;
   num cantidad;
   String categoria;
-  int stockDisponible;
+  Map<String, int> stockPorProceso;
 
   Producto({
     required this.codigo,
@@ -25,7 +24,7 @@ class Producto {
     required this.precio,
     required this.cantidad,
     required this.categoria,
-    this.stockDisponible = 0,
+    this.stockPorProceso = const {},
   });
 
   static Producto fromMap(Map<String, dynamic> map) {
@@ -36,7 +35,7 @@ class Producto {
       precio: (map['precio'] ?? 0).toDouble(),
       cantidad: map['general'] ?? map['cantidad'] ?? 0,
       categoria: map['categoria'] ?? 'Sin categoría',
-      stockDisponible: 0,
+      stockPorProceso: {},
     );
   }
 
@@ -52,6 +51,22 @@ class Producto {
   }
 }
 
+class Proceso {
+  String id;
+  String nombre;
+  int orden;
+
+  Proceso({required this.id, required this.nombre, required this.orden});
+
+  static Proceso fromMap(String id, Map<String, dynamic> map) {
+    return Proceso(
+      id: id,
+      nombre: map['nombre'] ?? '',
+      orden: map['orden'] ?? 0,
+    );
+  }
+}
+
 class TotalInvDeskScreen extends StatefulWidget {
   const TotalInvDeskScreen({super.key});
 
@@ -64,8 +79,40 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
   String searchQuery = '';
   List<String> categorias = ['Todas'];
   String categoriaSeleccionada = 'Todas';
+  String procesoSeleccionado = 'Todos';
   int totalProductosFiltrados = 0;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  List<Proceso> procesos = [];
+  StreamSubscription<QuerySnapshot>? _ventasSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarProcesos();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _ventasSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _cargarProcesos() async {
+    try {
+      final snapshot =
+          await _firestore.collection('procesos').orderBy('orden').get();
+
+      setState(() {
+        procesos =
+            snapshot.docs
+                .map((doc) => Proceso.fromMap(doc.id, doc.data()))
+                .toList();
+      });
+    } catch (e) {
+      print('Error cargando procesos: $e');
+    }
+  }
 
   Future<T?> _navegarConFade<T>(BuildContext context, Widget pantalla) {
     return Navigator.of(context).push<T>(
@@ -79,60 +126,77 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
     );
   }
 
-  Future<Map<String, int>> _cargarStockMultiplesProductos(
-    List<String> referencias,
+  Future<Map<String, Map<String, int>>> _cargarStockPorProcesos(
+    List<String> codigosProductos,
   ) async {
-    Map<String, int> stockMap = {};
+    Map<String, Map<String, int>> stockMap = {};
 
-    for (String referencia in referencias) {
-      stockMap[referencia] = 0;
-    }
-    final listaReferencias = referencias.take(10).toList();
-
-    if (listaReferencias.isEmpty) {
-      return {};
-    }
-
-    final historialSnapshot =
-        await FirebaseFirestore.instance
-            .collection('historial_inventario_general')
-            .where('referencia', whereIn: referencias.take(10).toList())
-            .get();
-
-    for (var doc in historialSnapshot.docs) {
-      final data = doc.data();
-      final referencia = data['referencia']?.toString() ?? '';
-      final tipo = (data['tipo'] ?? 'entrada').toString();
-      final cantidad = (data['cantidad'] ?? 0) as int;
-
-      if (stockMap.containsKey(referencia)) {
-        if (tipo == 'salida') {
-          stockMap[referencia] = stockMap[referencia]! - cantidad;
-        } else {
-          stockMap[referencia] = stockMap[referencia]! + cantidad;
-        }
+    // Inicializar el mapa para todos los productos y procesos
+    for (String codigo in codigosProductos) {
+      stockMap[codigo] = {};
+      for (var proceso in procesos) {
+        stockMap[codigo]![proceso.id] = 0;
       }
     }
 
-    final ventasSnapshot =
-        await FirebaseFirestore.instance.collection('ventas').get();
+    // Cargar stock de inventarios por proceso
+    for (var proceso in procesos) {
+      try {
+        final inventarioSnapshot =
+            await _firestore
+                .collection('inventarios')
+                .doc(proceso.id)
+                .collection('productos')
+                .where(
+                  FieldPath.documentId,
+                  whereIn: codigosProductos.take(10).toList(),
+                )
+                .get();
 
-    for (var venta in ventasSnapshot.docs) {
-      final productos = List<Map<String, dynamic>>.from(venta['productos']);
-      for (var producto in productos) {
-        final referencia = producto['referencia']?.toString() ?? '';
-        final cantidadVendida = (producto['cantidad'] ?? 0) as int;
+        for (var doc in inventarioSnapshot.docs) {
+          final codigo = doc.id;
+          final cantidad = (doc.data()['cantidad'] ?? 0) as int;
+          if (stockMap.containsKey(codigo)) {
+            stockMap[codigo]![proceso.id] = cantidad;
+          }
+        }
+      } catch (e) {
+        print('Error cargando inventario para proceso ${proceso.id}: $e');
+      }
+    }
 
-        if (stockMap.containsKey(referencia)) {
-          stockMap[referencia] = stockMap[referencia]! - cantidadVendida;
+    // Restar rezagos
+    try {
+      for (var proceso in procesos) {
+        final rezagosSnapshot =
+            await _firestore
+                .collection('inventarios')
+                .doc('rezagos')
+                .collection('productos')
+                .where(
+                  FieldPath.documentId,
+                  whereIn: codigosProductos.take(10).toList(),
+                )
+                .get();
+
+        for (var doc in rezagosSnapshot.docs) {
+          final codigo = doc.id;
+          final cantidad = (doc.data()['cantidad'] ?? 0) as int;
+          if (stockMap.containsKey(codigo) &&
+              stockMap[codigo]!.containsKey(proceso.id)) {
+            stockMap[codigo]![proceso.id] =
+                (stockMap[codigo]![proceso.id] ?? 0) - cantidad;
+          }
         }
       }
+    } catch (e) {
+      print('Error procesando rezagos: $e');
     }
 
     return stockMap;
   }
 
-  Future<void> eliminarProductoPorNombre(String nombre) async {
+  Future<void> eliminarProductoPorCodigo(String codigo, String nombre) async {
     bool confirmar =
         await showDialog(
           context: context,
@@ -164,7 +228,7 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                   ],
                 ),
                 content: const Text(
-                  '¿Estás seguro de eliminar este producto? Se eliminarán todos los registros en Fundición, Pintura y General.',
+                  '¿Estás seguro de eliminar este producto? Se eliminarán todos los registros de inventario en todos los procesos.',
                   style: TextStyle(fontSize: 16),
                 ),
                 actionsPadding: const EdgeInsets.symmetric(
@@ -214,39 +278,58 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
 
     if (!confirmar) return;
 
-    List<String> colecciones = [
-      'inventario_general',
-      'inventario_fundicion',
-      'inventario_pintura',
-      'historial_inventario_general',
-    ];
     final FirebaseAuth _auth = FirebaseAuth.instance;
     final user = _auth.currentUser;
     final nombreUsuario = 'Administrador';
     final usuarioUid = user?.uid ?? 'Desconocido';
 
-    for (String col in colecciones) {
-      QuerySnapshot snapshot =
-          await _firestore
-              .collection(col)
-              .where('nombre', isEqualTo: nombre)
-              .get();
+    try {
+      // Eliminar de la colección productos
+      await _firestore.collection('productos').doc(codigo).delete();
 
-      for (var doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final cantidadEliminada = data['cantidad'] ?? 0;
-
-        await _firestore.collection(col).doc(doc.id).delete();
-
-        await _firestore.collection('auditoria_general').add({
-          'accion': 'Producto eliminado',
-          'detalle':
-              'Producto: $nombre, Cantidad eliminada: $cantidadEliminada',
-          'fecha': Timestamp.now(),
-          'usuario_nombre': nombreUsuario,
-          'usuario_uid': usuarioUid,
-        });
+      // Eliminar inventarios de todos los procesos
+      for (var proceso in procesos) {
+        await _firestore
+            .collection('inventarios')
+            .doc(proceso.id)
+            .collection('productos')
+            .doc(codigo)
+            .delete();
       }
+
+      // Eliminar de rezagos
+      await _firestore
+          .collection('inventarios')
+          .doc('rezagos')
+          .collection('productos')
+          .doc(codigo)
+          .delete();
+
+      // Registrar en auditoría
+      await _firestore.collection('auditoria_general').add({
+        'accion': 'Producto eliminado',
+        'detalle':
+            'Producto: $nombre (Código: $codigo) - Eliminado de todos los procesos',
+        'fecha': Timestamp.now(),
+        'usuario_nombre': nombreUsuario,
+        'usuario_uid': usuarioUid,
+      });
+
+      // Mostrar mensaje de éxito
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Producto eliminado exitosamente'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('Error eliminando producto: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error al eliminar el producto'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -261,16 +344,17 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
     );
 
     if (resultado != null) {
-      await _firestore
-          .collection('inventario_general')
+      await FirebaseFirestore.instance
+          .collection('productos')
           .doc(resultado['codigo'])
           .set({
             'codigo': resultado['codigo'],
+            'referencia': resultado['referencia'],
             'nombre': resultado['nombre'],
-            'precio': resultado['precio'],
+            'costo': resultado['costo'],
+            'precios': resultado['precios'],
             'categoria': resultado['categoria'],
             'fecha_creacion': Timestamp.now(),
-            'estado': 'en_proceso',
           });
     }
   }
@@ -298,12 +382,10 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                       Navigator.pop(context);
                     },
                   ),
-
-                  // Título centrado (expande para mantenerlo en el centro)
                   Expanded(
                     child: Center(
                       child: Text(
-                        'Inventario General',
+                        'Inventario',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 24,
@@ -330,7 +412,7 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                       children: [
                         const SizedBox(height: 20),
 
-                        // Barra de búsqueda + botones de acción
+                        // Barra de búsqueda + filtros + botones de acción
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 32),
                           child: Row(
@@ -362,6 +444,80 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                               ),
                               const SizedBox(width: 16),
 
+                    
+                              // Dropdown de categorías
+                              FutureBuilder<QuerySnapshot>(
+                                future:
+                                    FirebaseFirestore.instance
+                                        .collection('categorias')
+                                        .get(),
+                                builder: (context, snapshot) {
+                                  List<String> todasCategorias = ['Todas'];
+
+                                  if (snapshot.hasData) {
+                                    final firestoreCategorias =
+                                        snapshot.data!.docs
+                                            .map(
+                                              (doc) => doc['nombre'] as String,
+                                            )
+                                            .toList()
+                                          ..sort(
+                                            (a, b) => a.toLowerCase().compareTo(
+                                              b.toLowerCase(),
+                                            ),
+                                          );
+                                    todasCategorias.addAll(firestoreCategorias);
+                                  }
+
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: const Color(0xFFFFFFFF),
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
+                                      color: Colors.white,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    child: DropdownButton<String>(
+                                      value: categoriaSeleccionada,
+                                      hint: const Text('Categoría'),
+                                      underline: Container(),
+                                      dropdownColor: Colors.white,
+                                      icon: const Icon(
+                                        Icons.filter_list,
+                                        color: Color(0xFF4682B4),
+                                      ),
+                                      items:
+                                          todasCategorias.map((
+                                            String categoria,
+                                          ) {
+                                            return DropdownMenuItem<String>(
+                                              value: categoria,
+                                              child: Text(
+                                                categoria,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            );
+                                          }).toList(),
+                                      onChanged: (String? nuevaCategoria) {
+                                        if (nuevaCategoria != null) {
+                                          setState(() {
+                                            categoriaSeleccionada =
+                                                nuevaCategoria;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              const SizedBox(width: 12),
+
                               // Botón agregar producto manual
                               ElevatedButton.icon(
                                 onPressed: agregarProductoManual,
@@ -390,7 +546,6 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                     const ImportarProductosDeskScreen(),
                                   );
                                 },
-
                                 icon: const Icon(Icons.file_upload),
                                 label: const Text('Importar'),
                                 style: ElevatedButton.styleFrom(
@@ -414,9 +569,7 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                 icon: const Icon(Icons.download),
                                 label: const Text('Exportar'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(
-                                    0xFF4682B4,
-                                  ), // azul que quieres
+                                  backgroundColor: const Color(0xFF4682B4),
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
@@ -433,178 +586,11 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
 
                         const SizedBox(height: 20),
 
-                        // Filtros de categorías
-                        Container(
-                          height: 33,
-                          margin: const EdgeInsets.symmetric(horizontal: 32),
-                          child: FutureBuilder<QuerySnapshot>(
-                            future:
-                                FirebaseFirestore.instance
-                                    .collection('categorias')
-                                    .get(),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return const Center(
-                                  child: CircularProgressIndicator(),
-                                );
-                              }
-
-                              if (snapshot.hasData) {
-                                final firestoreCategorias =
-                                    snapshot.data!.docs
-                                        .map((doc) => doc['nombre'] as String)
-                                        .toList()
-                                      ..sort(
-                                        (a, b) => a.toLowerCase().compareTo(
-                                          b.toLowerCase(),
-                                        ),
-                                      );
-
-                                final todasCategorias = [
-                                  'Todas',
-                                  ...firestoreCategorias,
-                                ];
-
-                                return Row(
-                                  children: [
-                                    ElevatedButton.icon(
-                                      onPressed: () {
-                                        _navegarConFade(
-                                          context,
-                                          const CategoriasDeskScreen(),
-                                        );
-                                      },
-
-                                      icon: const Icon(Icons.edit, size: 18),
-                                      label: const Text('Editar Categorías'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                          0xFF4682B4,
-                                        ),
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-
-                                    Expanded(
-                                      child: ListView.separated(
-                                        scrollDirection: Axis.horizontal,
-                                        itemCount: todasCategorias.length,
-                                        separatorBuilder:
-                                            (_, __) => const SizedBox(width: 8),
-                                        itemBuilder: (context, index) {
-                                          final categoria =
-                                              todasCategorias[index];
-                                          final isSelected =
-                                              categoria ==
-                                              categoriaSeleccionada;
-
-                                          return GestureDetector(
-                                            onTap: () {
-                                              setState(() {
-                                                categoriaSeleccionada =
-                                                    categoria;
-                                              });
-                                            },
-                                            child: AnimatedContainer(
-                                              duration: const Duration(
-                                                milliseconds: 200,
-                                              ),
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 10,
-                                                vertical:
-                                                    4, // Más delgado verticalmente
-                                              ),
-                                              constraints: const BoxConstraints(
-                                                minHeight:
-                                                    28, // Opcional: ajusta la altura mínima
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    isSelected
-                                                        ? const Color(
-                                                          0xFF4682B4,
-                                                        )
-                                                        : Colors.white,
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                                border: Border.all(
-                                                  color:
-                                                      isSelected
-                                                          ? const Color(
-                                                            0xFF4682B4,
-                                                          )
-                                                          : Colors
-                                                              .grey
-                                                              .shade300,
-                                                ),
-                                                boxShadow:
-                                                    isSelected
-                                                        ? [
-                                                          BoxShadow(
-                                                            color: Colors.blue
-                                                                .withOpacity(
-                                                                  0.3,
-                                                                ),
-                                                            blurRadius: 8,
-                                                            offset:
-                                                                const Offset(
-                                                                  0,
-                                                                  3,
-                                                                ),
-                                                          ),
-                                                        ]
-                                                        : [],
-                                              ),
-                                              child: Center(
-                                                child: Text(
-                                                  categoria,
-                                                  style: TextStyle(
-                                                    color:
-                                                        isSelected
-                                                            ? Colors.white
-                                                            : Colors.black87,
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize:
-                                                        12, // También puedes bajar un punto la fuente
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              } else {
-                                return const Center(
-                                  child: Text('Sin categorías'),
-                                );
-                              }
-                            },
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Lista de productos con stock calculado
+                        // Lista de productos con stock por proceso
                         Expanded(
                           child: StreamBuilder<QuerySnapshot>(
                             stream:
-                                _firestore
-                                    .collection('inventario_general')
-                                    .snapshots(),
+                                _firestore.collection('productos').snapshots(),
                             builder: (context, snapshot) {
                               if (!snapshot.hasData) {
                                 return const Center(
@@ -669,10 +655,12 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 32,
                                       ),
-                                      child: FutureBuilder<Map<String, int>>(
-                                        future: _cargarStockMultiplesProductos(
+                                      child: FutureBuilder<
+                                        Map<String, Map<String, int>>
+                                      >(
+                                        future: _cargarStockPorProcesos(
                                           productos
-                                              .map((p) => p.referencia)
+                                              .map((p) => p.codigo)
                                               .toList(),
                                         ),
                                         builder: (context, stockSnapshot) {
@@ -686,7 +674,7 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                   CircularProgressIndicator(),
                                                   SizedBox(height: 16),
                                                   Text(
-                                                    'Calculando stocks disponibles...',
+                                                    'Calculando stocks por proceso...',
                                                   ),
                                                 ],
                                               ),
@@ -698,76 +686,95 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
 
                                           return GridView.builder(
                                             padding: const EdgeInsets.only(
-                                              bottom: 20,
+                                              bottom: 10,
                                             ),
                                             itemCount: productos.length,
                                             gridDelegate:
                                                 const SliverGridDelegateWithFixedCrossAxisCount(
                                                   crossAxisCount:
-                                                      5, // Más columnas para desktop
-                                                  crossAxisSpacing: 16,
-                                                  mainAxisSpacing: 16,
-                                                  childAspectRatio: 0.75,
+                                                      6, // Cambiado de 4 a 6
+                                                  crossAxisSpacing:
+                                                      12, // Reducido de 16 a 12
+                                                  mainAxisSpacing:
+                                                      12, // Reducido de 16 a 12
+                                                  childAspectRatio:
+                                                      1.2, // Reducido de 0.8 a 0.7
                                                 ),
                                             itemBuilder: (context, index) {
                                               final producto = productos[index];
-                                              final stockDisponible =
-                                                  stockMap[producto
-                                                      .referencia] ??
-                                                  0;
+                                              final stockPorProceso =
+                                                  stockMap[producto.codigo] ??
+                                                  {};
+
+                                              // Calcular stock total
+                                              stockPorProceso
+                                                  .values
+                                                  .fold(
+                                                    0,
+                                                    (sum, stock) => sum + stock,
+                                                  );
 
                                               return GestureDetector(
                                                 onTap: () {
-                                                  _navegarConFade(
-                                                    context,
-                                                    EditInvProdDeskScreen(
-                                                      producto: producto,
-                                                    ),
+                                                  showDialog(
+                                                    context: context,
+                                                    builder: (context) {
+                                                      return Dialog(
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                12,
+                                                              ),
+                                                        ),
+                                                        child: SizedBox(
+                                                          width: 400,
+                                                          child:
+                                                              EditInvProdDeskScreen(
+                                                                producto:
+                                                                    producto,
+                                                              ),
+                                                        ),
+                                                      );
+                                                    },
                                                   );
                                                 },
-
                                                 child: Container(
                                                   decoration: BoxDecoration(
                                                     color: Colors.white,
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                          16,
-                                                        ),
+                                                          12,
+                                                        ), // Reducido de 16 a 12
                                                     border: Border.all(
                                                       color:
-                                                          stockDisponible <= 0
-                                                              ? Colors
-                                                                  .red
-                                                                  .shade300
-                                                              : stockDisponible <
-                                                                  5
-                                                              ? Colors
-                                                                  .orange
-                                                                  .shade300
-                                                              : Colors
-                                                                  .green
-                                                                  .shade300,
-                                                      width: 2,
+                                                          Colors
+                                                              .grey
+                                                              .shade400, // gris/plomo
+                                                      width: 1.5,
                                                     ),
+
                                                     boxShadow: [
                                                       BoxShadow(
                                                         color: Colors.grey
-                                                            .withOpacity(0.1),
-                                                        blurRadius: 8,
+                                                            .withOpacity(
+                                                              0.08,
+                                                            ), // Reducido de 0.1 a 0.08
+                                                        blurRadius:
+                                                            6, // Reducido de 8 a 6
                                                         offset: const Offset(
                                                           0,
-                                                          2,
-                                                        ),
+                                                          1,
+                                                        ), // Reducido de (0, 2) a (0, 1)
                                                       ),
                                                     ],
                                                   ),
                                                   padding: const EdgeInsets.all(
-                                                    12,
-                                                  ),
+                                                    6,
+                                                  ), // Reducido de 8 a 6
                                                   child: Column(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
+                                                    mainAxisSize:
+                                                        MainAxisSize
+                                                            .min, // Añadido para compactar
                                                     children: [
                                                       // Ícono del producto
                                                       Container(
@@ -778,22 +785,25 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                                   .shade50,
                                                           borderRadius:
                                                               BorderRadius.circular(
-                                                                12,
-                                                              ),
+                                                                8,
+                                                              ), // Reducido de 12 a 8
                                                         ),
                                                         padding:
                                                             const EdgeInsets.all(
-                                                              8,
-                                                            ),
+                                                              4,
+                                                            ), // Reducido de 6 a 4
                                                         child: const Icon(
                                                           Icons.construction,
-                                                          size: 32,
+                                                          size:
+                                                              24, // Reducido de 24 a 20
                                                           color: Color(
                                                             0xFF2C3E50,
                                                           ),
                                                         ),
                                                       ),
-
+                                                      const SizedBox(
+                                                        height: 4,
+                                                      ), // Reducido de 6 a 4
                                                       // Nombre del producto
                                                       Text(
                                                         producto.nombre,
@@ -806,7 +816,8 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                         style: const TextStyle(
                                                           fontWeight:
                                                               FontWeight.w600,
-                                                          fontSize: 12,
+                                                          fontSize:
+                                                              12, // Reducido de 11 a 10
                                                           color: Color(
                                                             0xFF2C3E50,
                                                           ),
@@ -816,7 +827,10 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                       // Referencia si existe
                                                       if (producto
                                                           .referencia
-                                                          .isNotEmpty)
+                                                          .isNotEmpty) ...[
+                                                        const SizedBox(
+                                                          height: 2,
+                                                        ), // Añadido pequeño espacio
                                                         Text(
                                                           'Ref: ${producto.referencia}',
                                                           textAlign:
@@ -825,68 +839,20 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                           overflow:
                                                               TextOverflow
                                                                   .ellipsis,
-                                                          style:
-                                                              const TextStyle(
-                                                                fontSize: 10,
-                                                                color:
-                                                                    Colors.grey,
-                                                                fontStyle:
-                                                                    FontStyle
-                                                                        .italic,
-                                                              ),
-                                                        ),
-
-                                                      // Stock disponible
-                                                      Container(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 8,
-                                                              vertical: 4,
-                                                            ),
-                                                        decoration: BoxDecoration(
-                                                          color:
-                                                              stockDisponible <=
-                                                                      0
-                                                                  ? Colors
-                                                                      .red
-                                                                      .shade100
-                                                                  : stockDisponible <
-                                                                      5
-                                                                  ? Colors
-                                                                      .orange
-                                                                      .shade100
-                                                                  : Colors
-                                                                      .green
-                                                                      .shade100,
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                12,
-                                                              ),
-                                                        ),
-                                                        child: Text(
-                                                          'Disponible: $stockDisponible',
-                                                          style: TextStyle(
-                                                            fontSize: 10,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            color:
-                                                                stockDisponible <=
-                                                                        0
-                                                                    ? Colors
-                                                                        .red
-                                                                        .shade700
-                                                                    : stockDisponible <
-                                                                        5
-                                                                    ? Colors
-                                                                        .orange
-                                                                        .shade700
-                                                                    : Colors
-                                                                        .green
-                                                                        .shade700,
+                                                          style: const TextStyle(
+                                                            fontSize:
+                                                                10, // Reducido de 9 a 8
+                                                            color: Colors.grey,
+                                                            fontStyle:
+                                                                FontStyle
+                                                                    .italic,
                                                           ),
                                                         ),
-                                                      ),
+                                                      ],
 
+                                                      const SizedBox(
+                                                        height: 30,
+                                                      ), // Reducido de 10 a 6
                                                       // Botones de acción
                                                       Row(
                                                         mainAxisAlignment:
@@ -898,8 +864,8 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                             child: InkWell(
                                                               borderRadius:
                                                                   BorderRadius.circular(
-                                                                    12,
-                                                                  ),
+                                                                    8,
+                                                                  ), // Reducido de 12 a 8
                                                               onTap: () async {
                                                                 final resultado = await _navegarConFade(
                                                                   context,
@@ -920,7 +886,7 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                                     null) {
                                                                   await _firestore
                                                                       .collection(
-                                                                        'inventario_general',
+                                                                        'productos',
                                                                       )
                                                                       .doc(
                                                                         resultado['codigo'],
@@ -943,19 +909,19 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                                       });
                                                                 }
                                                               },
-
                                                               child: const Padding(
                                                                 padding:
                                                                     EdgeInsets.all(
-                                                                      8,
-                                                                    ),
+                                                                      4,
+                                                                    ), // Reducido de 6 a 4
                                                                 child: Icon(
                                                                   Icons
                                                                       .edit_outlined,
                                                                   color: Color(
                                                                     0xFF4682B4,
                                                                   ),
-                                                                  size: 20,
+                                                                  size:
+                                                                      20, // Reducido de 18 a 16
                                                                 ),
                                                               ),
                                                             ),
@@ -965,25 +931,29 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                             child: InkWell(
                                                               borderRadius:
                                                                   BorderRadius.circular(
-                                                                    12,
-                                                                  ),
-                                                              onTap:
-                                                                  () => eliminarProductoPorNombre(
-                                                                    producto
-                                                                        .nombre,
-                                                                  ),
+                                                                    8,
+                                                                  ), // Reducido de 12 a 8
+                                                              onTap: () {
+                                                                eliminarProductoPorCodigo(
+                                                                  producto
+                                                                      .codigo,
+                                                                  producto
+                                                                      .nombre,
+                                                                );
+                                                              },
                                                               child: const Padding(
                                                                 padding:
                                                                     EdgeInsets.all(
-                                                                      8,
-                                                                    ),
+                                                                      4,
+                                                                    ), // Reducido de 6 a 4
                                                                 child: Icon(
                                                                   Icons
                                                                       .delete_outline,
                                                                   color:
                                                                       Colors
                                                                           .redAccent,
-                                                                  size: 20,
+                                                                  size:
+                                                                      20, // Reducido de 18 a 16
                                                                 ),
                                                               ),
                                                             ),

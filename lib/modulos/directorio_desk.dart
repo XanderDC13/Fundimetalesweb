@@ -3,6 +3,7 @@ import 'package:basefundi/desktop/directorio/pedidos_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas_desk.dart';
 import 'package:basefundi/desktop/directorio/proveedores_desk.dart';
 import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/settings/transition.dart';
 import 'package:flutter/material.dart';
 
 class DirectorioDeskScreen extends StatefulWidget {
@@ -10,18 +11,6 @@ class DirectorioDeskScreen extends StatefulWidget {
 
   @override
   State<DirectorioDeskScreen> createState() => _DirectorioDeskScreenState();
-}
-
-void _navegarConFade(BuildContext context, Widget pantalla) {
-  Navigator.of(context).push(
-    PageRouteBuilder(
-      pageBuilder: (context, animation, secondaryAnimation) => pantalla,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(opacity: animation, child: child);
-      },
-      transitionDuration: const Duration(milliseconds: 150),
-    ),
-  );
 }
 
 class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
@@ -149,7 +138,7 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
   }) {
     return InkWell(
       onTap: () {
-        _navegarConFade(context, destination);
+        navegarConFade(context, destination);
       },
       borderRadius: BorderRadius.circular(16),
       child: Card(
