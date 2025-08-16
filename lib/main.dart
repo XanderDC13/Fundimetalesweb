@@ -23,24 +23,27 @@ void main() async {
 }
 
 final GoRouter _router = GoRouter(
-  initialLocation: '/dashboard',
+  initialLocation: '/login',
   redirect: (context, state) {
     final user = FirebaseAuth.instance.currentUser;
-
-    final loggingIn =
-        state.fullPath == '/login' || state.fullPath == '/register';
-
-    if (user == null && !loggingIn) {
+    final isLoggedIn = user != null;
+    final isOnLoginPage = state.fullPath == '/login';
+    final isOnRegisterPage = state.fullPath == '/register';
+    
+    // Si no hay usuario y está intentando acceder a páginas protegidas
+    if (!isLoggedIn && !isOnLoginPage && !isOnRegisterPage) {
       return '/login';
     }
-    if (user != null && loggingIn) {
-      return '/dashboard';
-    }
-
+    
+    // No hacer redirección automática al dashboard
+    // Dejar que el usuario navegue manualmente después del login
     return null;
   },
   routes: [
-    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginScreen(),
+    ),
     GoRoute(
       path: '/register',
       builder: (context, state) => const RegisterScreen(),

@@ -27,7 +27,6 @@ class _RegisterScreenState extends State<RegisterScreen>
   String? _selectedRole;
   String? _selectedSede;
   String? _errorMessage;
-  String? _successMessage;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -80,12 +79,130 @@ class _RegisterScreenState extends State<RegisterScreen>
     }
   }
 
+  // Método para mostrar el popup elegante
+  void _showSuccessDialog() {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext context) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          width: 320, // 👈 ancho fijo más compacto
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icono de éxito
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(40),
+                ),
+                child: const Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Título
+              const Text(
+                '¡Registro Exitoso!',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2C3E50),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+
+              // Mensaje principal
+              const Text(
+                'Debes verificar tu correo y esperar la verificación de un administrador para poder ingresar.',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF5D6D7E),
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+
+              // Mensaje de agradecimiento
+              Text(
+                'Gracias por registrarte',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+
+              // Botón de aceptar
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Cerrar el diálogo
+                    context.go('/login'); // Navegar al login
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4682B4),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Aceptar',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
   Future<void> _register() async {
     if (_formKey.currentState!.validate() && !_isLoading) {
       setState(() {
         _isLoading = true;
         _errorMessage = null;
-        _successMessage = null;
       });
 
       try {
@@ -114,18 +231,18 @@ class _RegisterScreenState extends State<RegisterScreen>
               'fechaRegistro': FieldValue.serverTimestamp(),
             });
 
+        // CERRAR SESIÓN INMEDIATAMENTE antes de cualquier cambio de UI
+        await _auth.signOut();
+
         setState(() {
           _isLoading = false;
-          _successMessage =
-              'Te hemos enviado un correo de verificación. Verifícalo y espera la aprobación del administrador.';
         });
 
-        // Navegar después de 3 segundos
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted) {
-            Navigator.pop(context);
-          }
-        });
+        // Mostrar el popup elegante después de cerrar sesión
+        if (mounted) {
+          _showSuccessDialog();
+        }
+
       } on FirebaseAuthException catch (e) {
         String errorMessage = 'Error al registrar';
         if (e.code == 'email-already-in-use') {
@@ -534,7 +651,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
                                       const SizedBox(height: 16),
 
-                                      // Mensajes de estado
+                                      // Mensajes de error (mantener solo los errores)
                                       if (_errorMessage != null)
                                         Container(
                                           width: double.infinity,
@@ -564,45 +681,6 @@ class _RegisterScreenState extends State<RegisterScreen>
                                                   _errorMessage!,
                                                   style: TextStyle(
                                                     color: Colors.red.shade800,
-                                                    fontWeight: FontWeight.w500,
-                                                    fontSize: 13,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-
-                                      if (_successMessage != null)
-                                        Container(
-                                          width: double.infinity,
-                                          padding: const EdgeInsets.all(12),
-                                          margin: const EdgeInsets.only(
-                                            bottom: 12,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green.shade50,
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.green.shade200,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.check_circle_outline,
-                                                color: Colors.green.shade600,
-                                                size: 18,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Text(
-                                                  _successMessage!,
-                                                  style: TextStyle(
-                                                    color:
-                                                        Colors.green.shade800,
                                                     fontWeight: FontWeight.w500,
                                                     fontSize: 13,
                                                   ),

@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:basefundi/desktop/dashboard_desk.dart';
 import 'package:go_router/go_router.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -70,76 +69,103 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _login() async {
-    if (_formKey.currentState!.validate() && !_isLoading) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
+  if (_formKey.currentState!.validate() && !_isLoading) {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-      try {
-        User? user = await AuthService().signInWithEmailAndPassword(
-          _usernameController.text.trim(),
-          _passwordController.text.trim(),
-        );
+    try {
+      User? user = await AuthService().signInWithEmailAndPassword(
+        _usernameController.text.trim(),
+        _passwordController.text.trim(),
+      );
 
-        if (user != null) {
-          await user.reload();
-          user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await user.reload();
+        user = FirebaseAuth.instance.currentUser;
 
-          if (!user!.emailVerified) {
-            await FirebaseAuth.instance.signOut();
+        if (!user!.emailVerified) {
+          await FirebaseAuth.instance.signOut();
+          if (mounted) {
             setState(() {
               _errorMessage =
                   'Debes verificar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.';
               _isLoading = false;
             });
-            return;
           }
-
-          final doc =
-              await FirebaseFirestore.instance
-                  .collection('usuarios_activos')
-                  .doc(user.uid)
-                  .get();
-
-          if (!doc.exists) {
-            await FirebaseAuth.instance.signOut();
-            setState(() {
-              _errorMessage =
-                  'Tu cuenta está en revisión por un administrador.';
-              _isLoading = false;
-            });
-            return;
-          }
-
-          final data = doc.data();
-          final String estado = data?['estado'] ?? 'pendiente';
-
-          if (estado != 'aceptado') {
-            await FirebaseAuth.instance.signOut();
-            setState(() {
-              _errorMessage =
-                  'Tu cuenta está en revisión por un administrador.';
-              _isLoading = false;
-            });
-            return;
-          }
-if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const DashboardDeskScreen(),
-            ),
-          );
+          return;
         }
-      } on FirebaseAuthException catch (e) {
+
+        final doc = await FirebaseFirestore.instance
+            .collection('usuarios_activos')
+            .doc(user.uid)
+            .get();
+
+        if (!doc.exists) {
+          await FirebaseAuth.instance.signOut();
+          if (mounted) {
+            setState(() {
+              _errorMessage =
+                  'Tu cuenta está en revisión por un administrador.';
+              _isLoading = false;
+            });
+          }
+          return;
+        }
+
+        final data = doc.data();
+        final String estado = data?['estado'] ?? 'pendiente';
+
+        if (estado != 'aceptado') {
+          await FirebaseAuth.instance.signOut();
+          if (mounted) {
+            setState(() {
+              _errorMessage =
+                  'Tu cuenta está en revisión por un administrador.';
+              _isLoading = false;
+            });
+          }
+          return;
+        }
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          context.go('/dashboard'); 
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Usuario o contraseña incorrectos';
+            _isLoading = false;
+          });
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
         setState(() {
-          _errorMessage = e.message ?? 'Error al iniciar sesión.';
+          if (e.code == 'user-not-found' ||
+              e.code == 'wrong-password' ||
+              e.code == 'invalid-credential' ||
+              e.code == 'invalid-email') {
+            _errorMessage = 'Usuario o contraseña incorrectos';
+          } else {
+            _errorMessage = e.message ?? 'Error al iniciar sesión.';
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error al iniciar sesión. Intenta nuevamente.';
           _isLoading = false;
         });
       }
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
