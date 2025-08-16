@@ -1,0 +1,11 @@
+{
+    "name": "basefundi",
+    "short_name": "basefundi",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#0175C2",
+    "theme_color": "#0175C2",
+    "description": "APliccación para la gestión de datos de Fundimetales",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false
+}
