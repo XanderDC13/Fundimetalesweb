@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -246,30 +247,29 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
   }
 
   Future<void> _previsualizarNumeroProforma() async {
-  final fechaHoy = DateTime.now();
-  final fechaFormateada =
-      "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
+    final fechaHoy = DateTime.now();
+    final fechaFormateada =
+        "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
 
-  final counterRef = FirebaseFirestore.instance
-      .collection('proformas_ventas_counter')
-      .doc(fechaFormateada);
+    final counterRef = FirebaseFirestore.instance
+        .collection('proformas_ventas_counter')
+        .doc(fechaFormateada);
 
-  final counterDoc = await counterRef.get();
+    final counterDoc = await counterRef.get();
 
-  int numero = 1;
+    int numero = 1;
 
-  if (counterDoc.exists) {
-    numero = counterDoc['contador'] + 1;
-  } else {
-    // ⚠️ Crear el documento si no existe
-    await counterRef.set({'contador': 0});
+    if (counterDoc.exists) {
+      numero = counterDoc['contador'] + 1;
+    } else {
+      // ⚠️ Crear el documento si no existe
+      await counterRef.set({'contador': 0});
+    }
+
+    setState(() {
+      _numeroProforma = "PROFORMA N-$fechaFormateada-$numero";
+    });
   }
-
-  setState(() {
-    _numeroProforma = "PROFORMA N-$fechaFormateada-$numero";
-  });
-}
-
 
   Widget _buildMobileClienteSection() {
     return _buildMobileSection(
@@ -906,7 +906,7 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
     );
   }
 
-  Widget  _buildMobileTotalesSection() {
+  Widget _buildMobileTotalesSection() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[50],
@@ -1915,7 +1915,6 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
   }
 
   void _mostrarOpcionesGuardar() async {
-    // Generar el PDF una sola vez
     final pdf = await _generarPDF();
     final pdfBytes = await pdf.save();
 
@@ -1960,10 +1959,6 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
                         final numeroProformaFinal =
                             "PROFORMA N-$fechaFormateada-$numero";
 
-                        print(
-                          '✅ Número de proforma reservado: $numeroProformaFinal',
-                        );
-
                         // 👉 2. Preparar datos SIN PDF
                         final proformaData = {
                           'numero': numeroProformaFinal,
@@ -1995,14 +1990,38 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
                           'subtotal_0': _subtotalCeroController.text,
                         };
 
-                        // 👉 3. Guardar en Firestore
+                        final user = FirebaseAuth.instance.currentUser;
+
+                        // Buscar el nombre en la colección usuarios_activos
+                        final usuarioDoc =
+                            await FirebaseFirestore.instance
+                                .collection('usuarios_activos')
+                                .doc(user?.uid)
+                                .get();
+
+                        final usuarioNombre =
+                            usuarioDoc.exists
+                                ? (usuarioDoc['nombre'] ?? 'Desconocido')
+                                : 'Desconocido';
+
+                        // Guardar la proforma
                         await FirebaseFirestore.instance
                             .collection('proformasventas')
                             .add(proformaData);
 
-                        print(
-                          '✅ Proforma guardada en Firestore: $numeroProformaFinal',
-                        );
+                        // Guardar auditoría
+                        final auditoriaRef =
+                            FirebaseFirestore.instance
+                                .collection('auditoria_general')
+                                .doc();
+
+                        await auditoriaRef.set({
+                          'fecha': FieldValue.serverTimestamp(),
+                          'usuario_nombre': usuarioNombre,
+                          'usuario_uid': user?.uid ?? 'uid_desconocido',
+                          'accion': 'Nueva proforma ventas',
+                          'detalle': 'Número de proforma: $numeroProformaFinal',
+                        });
 
                         // 👉 4. Limpiar campos
                         _clienteController.clear();
@@ -2045,6 +2064,7 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
                       foregroundColor: Colors.white,
                     ),
                   ),
+
                   ElevatedButton.icon(
                     onPressed: () async {
                       Navigator.pop(context);

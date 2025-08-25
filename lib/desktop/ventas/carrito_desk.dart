@@ -1,5 +1,5 @@
 import 'package:basefundi/desktop/ventas/carrito_controller_desk.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -116,7 +116,9 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                                                   CircleAvatar(
                                                     backgroundColor:
                                                         producto.exentoIva
-                                                            ? const Color(0xFF3498DB)
+                                                            ? const Color(
+                                                              0xFF3498DB,
+                                                            )
                                                             : Colors.grey,
                                                     child: Icon(
                                                       producto.exentoIva
@@ -154,7 +156,11 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                                                                 ),
                                                             decoration: BoxDecoration(
                                                               color:
-                                                                  const Color(0xFF3498DB).withOpacity(0.1),
+                                                                  const Color(
+                                                                    0xFF3498DB,
+                                                                  ).withOpacity(
+                                                                    0.1,
+                                                                  ),
                                                               borderRadius:
                                                                   BorderRadius.circular(
                                                                     4,
@@ -164,8 +170,9 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                                                               'EXENTO IVA',
                                                               style: TextStyle(
                                                                 fontSize: 10,
-                                                                color:
-                                                                    Color(0xFF3498DB),
+                                                                color: Color(
+                                                                  0xFF3498DB,
+                                                                ),
                                                                 fontWeight:
                                                                     FontWeight
                                                                         .bold,
@@ -558,6 +565,7 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
     final cliente = _clienteController.text.trim();
     final productos = carrito.items;
     final usuario = FirebaseAuth.instance.currentUser;
+    bool procesandoVenta = false; // ← MOVER AQUÍ, FUERA DEL BUILDER
 
     showModalBottomSheet(
       context: context,
@@ -567,6 +575,8 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
+            // ← QUITAR LA DECLARACIÓN DE AQUÍ
+
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               child: Column(
@@ -596,65 +606,6 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-
-                  // Resumen de la venta
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      children: [
-                        if (carrito.tieneProductosExentos)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Exento IVA:'),
-                              Text(
-                                '\$${carrito.subtotalExento.toStringAsFixed(2)}',
-                              ),
-                            ],
-                          ),
-                        if (carrito.tieneProductosGravables)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Gravable:'),
-                              Text(
-                                '\$${carrito.subtotalGravable.toStringAsFixed(2)}',
-                              ),
-                            ],
-                          ),
-                        if (carrito.ivaActivado && carrito.totalIva > 0)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('IVA (15%):'),
-                              Text('\$${carrito.totalIva.toStringAsFixed(2)}'),
-                            ],
-                          ),
-                        const Divider(),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'TOTAL:',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              '\$${carrito.total.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
 
                   /// 🔑 Mostrar vendedor autenticado
                   FutureBuilder<DocumentSnapshot>(
@@ -695,35 +646,84 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4682B4),
+                        backgroundColor:
+                            procesandoVenta
+                                ? Colors.grey
+                                : const Color(0xFF4682B4),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                       onPressed:
-                          productos.isEmpty
+                          (productos.isEmpty || procesandoVenta)
                               ? null
                               : () async {
-                                await _guardarVentaEnFirebase(
-                                  productos,
-                                  carrito,
-                                  cliente,
-                                  metodoSeleccionado,
-                                );
-                                carrito.limpiarCarrito();
-                                Navigator.pop(context);
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Venta registrada con éxito'),
-                                  ),
-                                );
+                                setState(() {
+                                  procesandoVenta = true;
+                                });
+
+                                try {
+                                  await _guardarVentaEnFirebase(
+                                    productos,
+                                    carrito,
+                                    cliente,
+                                    metodoSeleccionado,
+                                  );
+                                  carrito.limpiarCarrito();
+                                  Navigator.pop(context);
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Venta registrada con éxito',
+                                      ),
+                                    ),
+                                  );
+                                } catch (e) {
+                                  setState(() {
+                                    procesandoVenta = false;
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Error al registrar venta: $e',
+                                      ),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
                               },
-                      child: const Text(
-                        'CREAR VENTA',
-                        style: TextStyle(color: Colors.white, fontSize: 16),
-                      ),
+                      child:
+                          procesandoVenta
+                              ? const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'PROCESANDO...',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              )
+                              : const Text(
+                                'CREAR VENTA',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
                     ),
                   ),
                 ],
@@ -774,63 +774,53 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
 
   // En VerCarritoDeskScreen - Método _actualizarInventarioDespuesVenta corregido
 
-Future<void> _actualizarInventarioDespuesVenta(
-  List productos,
-  CarritoController carrito,
-) async {
-  final firestore = FirebaseFirestore.instance;
-  
-  for (var producto in productos) {
-    final referencia = producto.referencia;
-    final cantidadVendida = producto.cantidad;
-    
-    print('🔍 Actualizando inventario: $referencia, cantidad: $cantidadVendida, exentoIva: ${producto.exentoIva}');
-    
-    if (!producto.exentoIva) {
-      // ✅ USAR LA REFERENCIA COMO ID DEL DOCUMENTO
-      final inventarioRef = firestore
-          .collection('inventarios')
-          .doc('bodega')
-          .collection('productos')
-          .doc(referencia); // ← Usar directamente la referencia como ID
-      
-      try {
-        final docSnapshot = await inventarioRef.get();
-        if (docSnapshot.exists) {
-          final cantidadActual = (docSnapshot.data()?['cantidad'] ?? 0) as int;
-          print('📦 Cantidad actual en inventario: $cantidadActual');
-          print('📤 Cantidad a restar: $cantidadVendida');
-          
-          // ✅ CORREGIDO: Usar update en lugar de batch para operación individual
-          final nuevaCantidad = (cantidadActual - cantidadVendida).clamp(0, double.infinity).toInt();
-          
-          await inventarioRef.update({
-            'cantidad': nuevaCantidad,
-            'ultima_actualizacion': Timestamp.now(),
-            'ultima_venta': DateTime.now().toIso8601String(),
-          });
-          
-          print('✅ Inventario actualizado: $referencia, nueva cantidad: $nuevaCantidad');
-        } else {
-          print('⚠️ Documento de inventario no existe para: $referencia');
-          // ✅ Opcional: Crear el documento si no existe
-          await inventarioRef.set({
-            'cantidad': 0, // Ya vendido, cantidad 0
-            'referencia': referencia,
-            'ultima_actualizacion': Timestamp.now(),
-            'ultima_venta': DateTime.now().toIso8601String(),
-          });
+  Future<void> _actualizarInventarioDespuesVenta(
+    List productos,
+    CarritoController carrito,
+  ) async {
+    final firestore = FirebaseFirestore.instance;
+
+    for (var producto in productos) {
+      final referencia = producto.referencia;
+      final cantidadVendida = producto.cantidad;
+
+      if (!producto.exentoIva) {
+        // ✅ USAR LA REFERENCIA COMO ID DEL DOCUMENTO
+        final inventarioRef = firestore
+            .collection('inventarios')
+            .doc('bodega')
+            .collection('productos')
+            .doc(referencia); // ← Usar directamente la referencia como ID
+
+        {
+          final docSnapshot = await inventarioRef.get();
+          if (docSnapshot.exists) {
+            final cantidadActual =
+                (docSnapshot.data()?['cantidad'] ?? 0) as int;
+            // ✅ CORREGIDO: Usar update en lugar de batch para operación individual
+            final nuevaCantidad =
+                (cantidadActual - cantidadVendida)
+                    .clamp(0, double.infinity)
+                    .toInt();
+
+            await inventarioRef.update({
+              'cantidad': nuevaCantidad,
+              'ultima_actualizacion': Timestamp.now(),
+              'ultima_venta': DateTime.now().toIso8601String(),
+            });
+          } else {
+            await inventarioRef.set({
+              'cantidad': 0, // Ya vendido, cantidad 0
+              'referencia': referencia,
+              'ultima_actualizacion': Timestamp.now(),
+              'ultima_venta': DateTime.now().toIso8601String(),
+            });
+          }
+          // ignore: empty_catches
         }
-      } catch (e) {
-        print('❌ Error al actualizar inventario para $referencia: $e');
-      }
-    } else {
-      print('🚛 Producto de transporte, no se actualiza inventario: $referencia');
+      } else {}
     }
   }
-  
-  print('✅ Proceso de actualización de inventario completado');
-}
 
   Future<void> _guardarVentaEnFirebase(
     List productos,
@@ -927,7 +917,6 @@ Future<void> _actualizarInventarioDespuesVenta(
       'usuario_uid': currentUser.uid,
       'usuario_nombre': nombreUsuario,
     });
-    // Al final del método _guardarVentaEnFirebase, después de la auditoría
     await _actualizarInventarioDespuesVenta(productos, carrito);
   }
 }

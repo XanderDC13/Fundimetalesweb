@@ -9,8 +9,8 @@ import 'package:basefundi/modulos/inventario_desk.dart';
 import 'package:basefundi/modulos/personal_desk.dart';
 import 'package:basefundi/modulos/reportes_desk.dart';
 import 'package:basefundi/modulos/ventas_desk.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
-import 'package:basefundi/settings/transition.dart';
+import 'package:basefundi/services/navbar_desk.dart';
+import 'package:basefundi/services/transition.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart'
@@ -386,9 +386,39 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             () => navegarConFade(context, const InventarioDeskScreen()),
           ),
           _gridButton(
+            Icons.calculate,
+            'Directorio',
+            () => navegarConFade(context, const DirectorioDeskScreen()),
+          ),
+          _gridButton(
             Icons.bar_chart,
             'Reportes',
             () => navegarConFade(context, const ReportesDeskScreen()),
+          ),
+          _gridButton(
+            Icons.settings,
+            'Ajustes',
+            () => navegarConFade(context, const SettingsDeskScreen()),
+          ),
+        ];
+        break;
+      
+      case 'Vendedor':
+        botones = [
+          _gridButton(
+            Icons.attach_money,
+            'Ventas',
+            () => navegarConFade(context, const VentasDeskScreen()),
+          ),
+          _gridButton(
+            Icons.inventory_2,
+            'Inventario',
+            () => navegarConFade(context, const InventarioDeskScreen()),
+          ),
+          _gridButton(
+            Icons.calculate,
+            'Directorio',
+            () => navegarConFade(context, const DirectorioDeskScreen()),
           ),
           _gridButton(
             Icons.settings,

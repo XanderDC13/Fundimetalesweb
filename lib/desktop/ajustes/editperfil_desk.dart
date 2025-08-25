@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 
 class EditarPerfilDeskScreen extends StatefulWidget {
   const EditarPerfilDeskScreen({super.key});
@@ -112,8 +112,9 @@ class _EditarPerfilDeskScreenState extends State<EditarPerfilDeskScreen> {
   }) {
     return Card(
       color: Colors.white,
-      elevation: 0,
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      elevation: 4, // 👈 le damos sombra
+      shadowColor: Colors.black.withOpacity(0.1), // 👈 sombra suave
+      margin: const EdgeInsets.symmetric(vertical: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ListTile(
         leading: Icon(icon, color: const Color(0xFF2C3E50)),
@@ -123,7 +124,7 @@ class _EditarPerfilDeskScreenState extends State<EditarPerfilDeskScreen> {
           obscureText: obscure,
           decoration: InputDecoration(
             hintText: label,
-            border: InputBorder.none,
+            border: InputBorder.none, // 👈 sin borde
             isDense: true,
           ),
           validator: validator,
@@ -223,8 +224,11 @@ class _EditarPerfilDeskScreenState extends State<EditarPerfilDeskScreen> {
                               ),
                               Card(
                                 color: Colors.white,
-                                elevation: 0,
-                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                elevation: 4, // 👈 sombra
+                                shadowColor: Colors.black.withOpacity(0.1),
+                                margin: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -241,11 +245,9 @@ class _EditarPerfilDeskScreenState extends State<EditarPerfilDeskScreen> {
                                         Icons.location_city,
                                         color: Color(0xFF2C3E50),
                                       ),
-                                      border: InputBorder.none,
+                                      border: InputBorder.none, // 👈 sin borde
                                     ),
-                                    dropdownColor:
-                                        Colors
-                                            .white, // Color del menú desplegable
+                                    dropdownColor: Colors.white,
                                     items:
                                         listaSedes.map((sede) {
                                           return DropdownMenuItem(
@@ -271,6 +273,7 @@ class _EditarPerfilDeskScreenState extends State<EditarPerfilDeskScreen> {
                                   ),
                                 ),
                               ),
+
                               const SizedBox(height: 30),
                               ElevatedButton.icon(
                                 onPressed: _guardarCambios,

@@ -1,9 +1,10 @@
-import 'package:basefundi/desktop/inventario/tablas/tablainv_procesos_desk.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
-import 'package:basefundi/settings/transition.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class InventarioProcesoDeskScreen extends StatefulWidget {
   const InventarioProcesoDeskScreen({super.key});
@@ -18,11 +19,11 @@ class _InventarioProcesoDeskScreenState
     with SingleTickerProviderStateMixin {
   String searchQuery = '';
   String procesoSeleccionado = 'todos';
+  DateTimeRange? _rangoFechas;
 
   late final AnimationController _controller;
   late final Animation<double> _fadeAnimation;
 
-  // ✅ Lista de procesos disponibles
   final List<Map<String, String>> procesos = [
     {'value': 'todos', 'label': 'Todos los procesos'},
     {'value': 'bruto', 'label': 'Bruto'},
@@ -46,6 +47,19 @@ class _InventarioProcesoDeskScreenState
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  DateTime? parseFechaCampo(dynamic fechaCampo) {
+    if (fechaCampo is Timestamp) {
+      return fechaCampo.toDate();
+    } else if (fechaCampo is String) {
+      try {
+        return DateTime.parse(fechaCampo);
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
   }
 
   @override
@@ -98,7 +112,8 @@ class _InventarioProcesoDeskScreenState
                   padding: const EdgeInsets.all(32),
                   child: Column(
                     children: [
-                      _buildBarraBusquedaYFiltro(), // ✅ Nueva barra con filtro
+                      _buildBarraBusquedaYFiltro(),
+                      _buildFiltroFechaYExportarPDF(),
                       const SizedBox(height: 8),
                       Expanded(child: _buildTablaProcesos()),
                     ],
@@ -112,13 +127,11 @@ class _InventarioProcesoDeskScreenState
     );
   }
 
-  // ✅ NUEVA BARRA CON BÚSQUEDA Y FILTRO
   Widget _buildBarraBusquedaYFiltro() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          // Campo de búsqueda
           Expanded(
             flex: 2,
             child: TextField(
@@ -137,14 +150,13 @@ class _InventarioProcesoDeskScreenState
             ),
           ),
           const SizedBox(width: 16),
-          // Filtro de procesos
           Expanded(
             flex: 1,
             child: DropdownButtonFormField<String>(
               value: procesoSeleccionado,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: Colors.white, // Fuerza fondo blanco
+                fillColor: Colors.white,
                 prefixIcon: const Icon(
                   Icons.filter_list,
                   color: Color(0xFF4682B4),
@@ -169,7 +181,7 @@ class _InventarioProcesoDeskScreenState
                   vertical: 12,
                 ),
               ),
-              dropdownColor: Colors.white, // Menú blanco
+              dropdownColor: Colors.white,
               items:
                   procesos.map((proceso) {
                     return DropdownMenuItem<String>(
@@ -192,7 +204,75 @@ class _InventarioProcesoDeskScreenState
     );
   }
 
-  // ✅ TABLA QUE MUESTRA TODOS LOS PROCESOS
+  Widget _buildFiltroFechaYExportarPDF() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              TextButton.icon(
+                onPressed: () async {
+                  DateTimeRange? picked;
+                  DateTime? start = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now(),
+                  );
+                  if (start != null) {
+                    DateTime? end = await showDatePicker(
+                      context: context,
+                      initialDate: start,
+                      firstDate: start,
+                      lastDate: DateTime.now(),
+                    );
+                    if (end != null) {
+                      picked = DateTimeRange(start: start, end: end);
+                      setState(() {
+                        _rangoFechas = picked;
+                      });
+                    }
+                  }
+                },
+                icon: const Icon(Icons.date_range, color: Color(0xFF4682B4)),
+                label: Text(
+                  _rangoFechas == null
+                      ? 'Filtrar por fecha'
+                      : 'Desde ${_rangoFechas!.start.toLocal().toString().split(' ')[0]} hasta ${_rangoFechas!.end.toLocal().toString().split(' ')[0]}',
+                  style: const TextStyle(color: Color(0xFF4682B4)),
+                ),
+              ),
+              if (_rangoFechas != null)
+                IconButton(
+                  icon: const Icon(Icons.clear, color: Color(0xFF4682B4)),
+                  onPressed: () {
+                    setState(() {
+                      _rangoFechas = null;
+                    });
+                  },
+                ),
+            ],
+          ),
+          ElevatedButton.icon(
+            onPressed: _exportarPDF,
+            icon: const Icon(Icons.picture_as_pdf),
+            label: const Text('Exportar a PDF'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4682B4),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTablaProcesos() {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _obtenerProductosDeTodosLosProcesos(),
@@ -202,26 +282,34 @@ class _InventarioProcesoDeskScreenState
         }
 
         final todosLosProductos = snapshot.data!;
-
-        // ✅ Aplicar filtros
         final filtered =
             todosLosProductos.where((data) {
               final nombre = data['nombre'].toString().toLowerCase();
               final referencia = data['referencia'].toString().toLowerCase();
               final proceso = data['proceso'].toString();
 
-              // Filtro por búsqueda
               final cumpleBusqueda =
                   searchQuery.isEmpty ||
                   nombre.contains(searchQuery) ||
                   referencia.contains(searchQuery);
-
-              // Filtro por proceso
               final cumpleProceso =
                   procesoSeleccionado == 'todos' ||
                   proceso == procesoSeleccionado;
+              bool cumpleFiltroFecha = true;
+              if (_rangoFechas != null) {
+                final fecha = parseFechaCampo(data['ultima_actualizacion']);
+                if (fecha != null) {
+                  cumpleFiltroFecha =
+                      fecha.isAfter(_rangoFechas!.start) &&
+                      fecha.isBefore(
+                        _rangoFechas!.end.add(const Duration(days: 1)),
+                      );
+                } else {
+                  cumpleFiltroFecha = false;
+                }
+              }
 
-              return cumpleBusqueda && cumpleProceso;
+              return cumpleBusqueda && cumpleProceso && cumpleFiltroFecha;
             }).toList();
 
         if (filtered.isEmpty) {
@@ -231,12 +319,11 @@ class _InventarioProcesoDeskScreenState
         return LayoutBuilder(
           builder: (context, constraints) {
             final totalWidth = constraints.maxWidth;
-            final double anchoNombre = totalWidth * 0.30;
-            final double anchoReferencia = totalWidth * 0.25;
-            // ✅ NO definir anchoProceso fijo, se ajustará automáticamente
-            final double anchoCantidad = totalWidth * 0.15;
-            final double anchoAcciones = totalWidth * 0.15;
-            // El 15% restante se distribuye automáticamente
+            final double anchoFecha = totalWidth * 0.12;
+            final double anchoNombre = totalWidth * 0.25;
+            final double anchoReferencia = totalWidth * 0.20;
+            final double anchoCantidad = totalWidth * 0.12;
+            final double anchoAcciones = totalWidth * 0.12;
 
             return SingleChildScrollView(
               scrollDirection: Axis.vertical,
@@ -251,6 +338,7 @@ class _InventarioProcesoDeskScreenState
                 ),
                 dataTextStyle: const TextStyle(fontSize: 10),
                 columns: const [
+                  DataColumn(label: Text('Fecha')),
                   DataColumn(label: Text('Nombre')),
                   DataColumn(label: Text('Referencia')),
                   DataColumn(
@@ -261,21 +349,30 @@ class _InventarioProcesoDeskScreenState
                 ],
                 rows:
                     filtered.map((data) {
+                      String fechaFormateada = '-';
+                      final fecha = parseFechaCampo(
+                        data['ultima_actualizacion'],
+                      );
+                      if (fecha != null) {
+                        fechaFormateada =
+                            fecha.toLocal().toString().split(' ')[0];
+                      }
+
                       return DataRow(
                         cells: [
                           DataCell(
                             SizedBox(
+                              width: anchoFecha,
+                              child: Text(
+                                fechaFormateada,
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
                               width: anchoNombre,
                               child: GestureDetector(
-                                onTap: () {
-                                  navegarConFade(
-                                    context,
-                                    TablaInvPinturaDeskScreen(
-                                      referencia: data['referencia'],
-                                      nombre: data['nombre'],
-                                    ),
-                                  );
-                                },
                                 child: SingleChildScrollView(
                                   scrollDirection: Axis.horizontal,
                                   child: Text(
@@ -298,25 +395,21 @@ class _InventarioProcesoDeskScreenState
                               ),
                             ),
                           ),
-
-                          // ✅ CELDA DE PROCESO CON ANCHO AUTOMÁTICO
                           DataCell(
                             IntrinsicWidth(
-                              // ✅ Esto ajusta el ancho al contenido
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, // ✅ Padding normal
-                                  vertical: 4, // ✅ Padding normal
+                                  horizontal: 8,
+                                  vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
                                   color: _getColorProceso(data['proceso']),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  data['proceso']
-                                      .toUpperCase(), // ✅ Texto completo
+                                  data['proceso'].toUpperCase(),
                                   style: const TextStyle(
-                                    fontSize: 9, // ✅ Tamaño normal
+                                    fontSize: 9,
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -325,7 +418,6 @@ class _InventarioProcesoDeskScreenState
                               ),
                             ),
                           ),
-
                           DataCell(
                             SizedBox(
                               width: anchoCantidad,
@@ -360,7 +452,6 @@ class _InventarioProcesoDeskScreenState
     );
   }
 
-  // ✅ OBTENER PRODUCTOS DE TODOS LOS PROCESOS
   Future<List<Map<String, dynamic>>>
   _obtenerProductosDeTodosLosProcesos() async {
     final List<Map<String, dynamic>> todosLosProductos = [];
@@ -372,7 +463,6 @@ class _InventarioProcesoDeskScreenState
     ];
 
     try {
-      // ✅ 1. EJECUTAR TODAS LAS CONSULTAS DE INVENTARIO EN PARALELO
       final futures =
           procesosInventario
               .map(
@@ -388,8 +478,6 @@ class _InventarioProcesoDeskScreenState
               .toList();
 
       final resultados = await Future.wait(futures);
-
-      // ✅ 2. RECOPILAR TODAS LAS REFERENCIAS ÚNICAS
       final Set<String> todasLasReferencias = {};
       final List<Map<String, dynamic>> productosConProceso = [];
 
@@ -408,15 +496,15 @@ class _InventarioProcesoDeskScreenState
             'referencia': referencia,
             'proceso': proceso,
             'cantidad': cantidad,
+            'ultima_actualizacion':
+                data['ultima_actualizacion'], 
           });
         }
       }
 
-      // ✅ 3. OBTENER TODOS LOS NOMBRES EN UNA SOLA CONSULTA BATCH
       final Map<String, String> nombresProductos = {};
 
       if (todasLasReferencias.isNotEmpty) {
-        // Dividir en lotes de 10 (límite de Firestore para consultas 'in')
         final lotes = <List<String>>[];
         final listaReferencias = todasLasReferencias.toList();
 
@@ -428,7 +516,6 @@ class _InventarioProcesoDeskScreenState
           lotes.add(listaReferencias.sublist(i, fin));
         }
 
-        // Ejecutar consultas de lotes en paralelo
         final futuresNombres =
             lotes
                 .map(
@@ -451,7 +538,6 @@ class _InventarioProcesoDeskScreenState
         }
       }
 
-      // ✅ 4. COMBINAR DATOS
       for (final producto in productosConProceso) {
         todosLosProductos.add({
           'referencia': producto['referencia'],
@@ -460,6 +546,8 @@ class _InventarioProcesoDeskScreenState
               'Producto no encontrado',
           'proceso': producto['proceso'],
           'cantidad': producto['cantidad'],
+          'ultima_actualizacion':
+              producto['ultima_actualizacion'],
         });
       }
     } catch (e) {
@@ -469,7 +557,214 @@ class _InventarioProcesoDeskScreenState
     return todosLosProductos;
   }
 
-  // ✅ COLOR SEGÚN EL PROCESO
+  Future<void> _exportarPDF() async {
+    try {
+      _mostrarSnackBar('Preparando reporte PDF...');
+      final todosLosProductos = await _obtenerProductosDeTodosLosProcesos();
+      final filtered =
+          todosLosProductos.where((data) {
+            final nombre = data['nombre'].toString().toLowerCase();
+            final referencia = data['referencia'].toString().toLowerCase();
+            final proceso = data['proceso'].toString();
+
+            final cumpleBusqueda =
+                searchQuery.isEmpty ||
+                nombre.contains(searchQuery) ||
+                referencia.contains(searchQuery);
+
+            final cumpleProceso =
+                procesoSeleccionado == 'todos' ||
+                proceso == procesoSeleccionado;
+
+            bool cumpleFiltroFecha = true;
+            if (_rangoFechas != null) {
+              final fecha = parseFechaCampo(data['ultima_actualizacion']);
+              if (fecha != null) {
+                cumpleFiltroFecha =
+                    fecha.isAfter(_rangoFechas!.start) &&
+                    fecha.isBefore(
+                      _rangoFechas!.end.add(const Duration(days: 1)),
+                    );
+              } else {
+                cumpleFiltroFecha = false;
+              }
+            }
+
+            return cumpleBusqueda && cumpleProceso && cumpleFiltroFecha;
+          }).toList();
+
+      if (filtered.isEmpty) {
+        _mostrarSnackBar(
+          'No hay datos para exportar con los filtros aplicados',
+        );
+        return;
+      }
+
+      const maxRegistrosTotal = 1000;
+
+      if (filtered.length > maxRegistrosTotal) {
+        final continuar =
+            await showDialog<bool>(
+              context: context,
+              builder:
+                  (_) => AlertDialog(
+                    title: const Text('Muchos registros'),
+                    content: Text(
+                      'Se encontraron ${filtered.length} registros. Para evitar errores, el PDF se limitará a los primeros $maxRegistrosTotal registros. ¿Continuar?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancelar'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Continuar'),
+                      ),
+                    ],
+                  ),
+            ) ??
+            false;
+
+        if (!continuar) return;
+      }
+
+      final datosParaPDF = filtered.take(maxRegistrosTotal).toList();
+
+      final lista =
+          datosParaPDF.map((data) {
+            String fechaFormateada = '-';
+            final fecha = parseFechaCampo(data['ultima_actualizacion']);
+            if (fecha != null) {
+              fechaFormateada = fecha.toLocal().toString().split(' ')[0];
+            }
+
+            return [
+              fechaFormateada,
+              '${data['referencia'] ?? '-'}',
+              '${data['nombre'] ?? '-'}',
+              '${data['proceso']?.toUpperCase() ?? '-'}',
+              '${data['cantidad'] ?? 0}',
+            ];
+          }).toList();
+
+      String titulo = 'Inventario por Procesos';
+      if (procesoSeleccionado != 'todos') {
+        final procesoLabel =
+            procesos.firstWhere(
+              (p) => p['value'] == procesoSeleccionado,
+            )['label'];
+        titulo += ' - $procesoLabel';
+      }
+      if (_rangoFechas != null) {
+        titulo +=
+            ' (${_rangoFechas!.start.toLocal().toString().split(' ')[0]} - ${_rangoFechas!.end.toLocal().toString().split(' ')[0]})';
+      }
+      if (searchQuery.isNotEmpty) {
+        titulo += ' - Filtro: "$searchQuery"';
+      }
+
+      final pdf = pw.Document();
+      pdf.addPage(
+        _buildReporteInventarioPDF(
+          titulo: titulo,
+          headers: ['Fecha', 'Referencia', 'Nombre', 'Proceso', 'Cantidad'],
+          dataRows: lista,
+          footerText: 'Total de registros: ${datosParaPDF.length}',
+        ),
+      );
+
+      await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+      _mostrarSnackBar('PDF generado exitosamente');
+    } catch (e) {
+      print('Error generando PDF: $e');
+      _mostrarSnackBar('Error al generar PDF: ${e.toString()}');
+    }
+  }
+
+  pw.MultiPage _buildReporteInventarioPDF({
+    required String titulo,
+    required List<String> headers,
+    required List<List<String>> dataRows,
+    String? footerText,
+  }) {
+    return pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(20),
+      header:
+          (context) => pw.Container(
+            padding: const pw.EdgeInsets.only(bottom: 10),
+            decoration: const pw.BoxDecoration(
+              border: pw.Border(
+                bottom: pw.BorderSide(color: PdfColors.grey400, width: 1),
+              ),
+            ),
+            child: pw.Text(
+              titulo,
+              style: pw.TextStyle(
+                fontSize: 16,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.blue900,
+              ),
+            ),
+          ),
+      footer:
+          (context) => pw.Container(
+            padding: const pw.EdgeInsets.only(top: 10),
+            decoration: const pw.BoxDecoration(
+              border: pw.Border(
+                top: pw.BorderSide(color: PdfColors.grey400, width: 1),
+              ),
+            ),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(
+                  footerText ?? '',
+                  style: pw.TextStyle(
+                    fontSize: 9,
+                    color: PdfColors.blueGrey700,
+                  ),
+                ),
+                pw.Text(
+                  'Página ${context.pageNumber} de ${context.pagesCount}',
+                  style: pw.TextStyle(
+                    fontSize: 9,
+                    color: PdfColors.blueGrey700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      build:
+          (context) => [
+            pw.Table.fromTextArray(
+              border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+              cellAlignment: pw.Alignment.centerLeft,
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.white,
+                fontSize: 9,
+              ),
+              headerDecoration: const pw.BoxDecoration(
+                color: PdfColors.blue800,
+              ),
+              cellStyle: const pw.TextStyle(fontSize: 8),
+              cellPadding: const pw.EdgeInsets.all(3),
+              columnWidths: {
+                0: const pw.FixedColumnWidth(60), 
+                1: const pw.FixedColumnWidth(70),
+                2: const pw.FlexColumnWidth(2), 
+                3: const pw.FixedColumnWidth(60), 
+                4: const pw.FixedColumnWidth(50), 
+              },
+              headers: headers,
+              data: dataRows,
+            ),
+          ],
+    );
+  }
+
   Color _getColorProceso(String proceso) {
     switch (proceso.toLowerCase()) {
       case 'bruto':
@@ -485,7 +780,6 @@ class _InventarioProcesoDeskScreenState
     }
   }
 
-  // ✅ ELIMINAR PRODUCTO
   Future<void> _eliminarProducto(
     Map<String, dynamic> data,
     BuildContext context,
@@ -517,47 +811,50 @@ class _InventarioProcesoDeskScreenState
         false;
 
     if (confirmar) {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Usuario no autenticado')));
-        return;
+      try {
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser == null) {
+          _mostrarSnackBar('Usuario no autenticado');
+          return;
+        }
+
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('usuarios_activos')
+                .doc(currentUser.uid)
+                .get();
+
+        final nombreUsuario =
+            userDoc.data()?['nombre'] ?? currentUser.email ?? '---';
+
+        await FirebaseFirestore.instance
+            .collection('inventarios')
+            .doc(data['proceso'])
+            .collection('productos')
+            .doc(data['referencia'])
+            .delete();
+
+        await FirebaseFirestore.instance.collection('auditoria_general').add({
+          'accion':
+              'Eliminación de Inventario ${data['proceso'].toUpperCase()}',
+          'detalle':
+              'Producto: ${data['nombre']}, Referencia: ${data['referencia']}, Cantidad eliminada: ${data['cantidad']}',
+          'fecha': DateTime.now(),
+          'usuario_uid': currentUser.uid,
+          'usuario_nombre': nombreUsuario,
+        });
+
+        _mostrarSnackBar('Producto eliminado correctamente');
+        setState(() {});
+      } catch (e) {
+        _mostrarSnackBar('Error al eliminar producto: $e');
       }
-
-      final userDoc =
-          await FirebaseFirestore.instance
-              .collection('usuarios_activos')
-              .doc(currentUser.uid)
-              .get();
-
-      final nombreUsuario =
-          userDoc.data()?['nombre'] ?? currentUser.email ?? '---';
-
-      // ✅ ELIMINAR DE LA ESTRUCTURA CORRECTA
-      await FirebaseFirestore.instance
-          .collection('inventarios')
-          .doc(data['proceso'])
-          .collection('productos')
-          .doc(data['referencia'])
-          .delete();
-
-      // ✅ Registrar en auditoría
-      await FirebaseFirestore.instance.collection('auditoria_general').add({
-        'accion': 'Eliminación de Inventario ${data['proceso'].toUpperCase()}',
-        'detalle':
-            'Producto: ${data['nombre']}, Referencia: ${data['referencia']}, Cantidad eliminada: ${data['cantidad']}',
-        'fecha': DateTime.now(),
-        'usuario_uid': currentUser.uid,
-        'usuario_nombre': nombreUsuario,
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Producto eliminado correctamente.')),
-      );
-
-      // ✅ Refrescar la vista
-      setState(() {});
     }
+  }
+
+  void _mostrarSnackBar(String mensaje) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(mensaje)));
   }
 }

@@ -1,12 +1,8 @@
-import 'package:basefundi/desktop/inventario/inventario_fundicion_desk.dart';
-import 'package:basefundi/desktop/inventario/inventario_general_desk.dart';
-import 'package:basefundi/desktop/inventario/inventario_procesos_desk.dart';
 import 'package:basefundi/desktop/inventario/productos_desk.dart';
-import 'package:basefundi/desktop/reportes/reporte_transporte_desk.dart';
-import 'package:basefundi/settings/transition.dart';
+import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 
 class InventarioDeskScreen extends StatefulWidget {
   const InventarioDeskScreen({super.key});
@@ -96,53 +92,6 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
                         },
                       ),
                       const SizedBox(height: 20),
-                      _buildBoton(
-                        icon: LucideIcons.flame,
-                        titulo: 'Inventario en Fundición',
-                        subtitulo: 'Registro de fundición',
-                        onTap: () {
-                          navegarConFade(
-                            context,
-                            const InventarioFundicionDeskScreen(),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      _buildBoton(
-                        icon: LucideIcons.paintBucket,
-                        titulo: 'Inventario por Procesos',
-                        subtitulo: 'Registro de inventario en procesos',
-                        onTap: () {
-                          navegarConFade(
-                            context,
-                            const InventarioProcesoDeskScreen(),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      _buildBoton(
-                        icon: LucideIcons.box,
-                        titulo: 'Inventario General',
-                        subtitulo: 'Suma final de productos',
-                        onTap: () {
-                          navegarConFade(
-                            context,
-                            InventarioGeneralDeskScreen(),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      _buildBoton(
-                        icon: LucideIcons.car,
-                        titulo: 'Transporte',
-                        subtitulo: 'Tiempos de entrega',
-                        onTap: () {
-                          navegarConFade(
-                            context,
-                            const ReporteTransporteDeskScreen(),
-                          );
-                        },
-                      ),
                     ],
                   ),
                 ),

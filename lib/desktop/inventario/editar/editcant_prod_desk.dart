@@ -140,6 +140,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
   void _mostrarFormularioEntradaDirecta(BuildContext context, Proceso proceso) {
     final TextEditingController cantidadController = TextEditingController();
     bool puedeGuardar = false;
+    bool procesandoEntrada = false;
 
     showDialog(
       context: context,
@@ -182,34 +183,6 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.amber.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: Colors.amber.shade700,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Entrada directa sin descontar de proceso anterior',
-                              style: TextStyle(
-                                color: Colors.amber.shade700,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
                     TextField(
                       controller: cantidadController,
                       keyboardType: TextInputType.number,
@@ -255,25 +228,62 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                         const SizedBox(width: 12),
                         ElevatedButton.icon(
                           onPressed:
-                              puedeGuardar
+                              (puedeGuardar && !procesandoEntrada)
                                   ? () async {
-                                    final cantidad =
-                                        int.tryParse(cantidadController.text) ??
-                                        0;
-                                    await _procesarEntradaDirecta(
-                                      proceso,
-                                      cantidad,
-                                    );
-                                    if (mounted) Navigator.pop(context);
+                                    setModalState(() {
+                                      procesandoEntrada = true;
+                                    });
+
+                                    try {
+                                      final cantidad =
+                                          int.tryParse(
+                                            cantidadController.text,
+                                          ) ??
+                                          0;
+                                      await _procesarEntradaDirecta(
+                                        proceso,
+                                        cantidad,
+                                      );
+                                      if (mounted) Navigator.pop(context);
+                                    } catch (e) {
+                                      setModalState(() {
+                                        procesandoEntrada = false;
+                                      });
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Error al procesar entrada: $e',
+                                          ),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
                                   }
                                   : null,
-                          icon: const Icon(Icons.add),
-                          label: const Text(
-                            'Agregar entrada',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                          icon:
+                              procesandoEntrada
+                                  ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                  : const Icon(Icons.add),
+                          label: Text(
+                            procesandoEntrada
+                                ? 'Procesando...'
+                                : 'Agregar entrada',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4682B4),
+                            backgroundColor:
+                                procesandoEntrada
+                                    ? Colors.grey
+                                    : const Color(0xFF4682B4),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
                               vertical: 12,
@@ -328,13 +338,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Container(
-                width:
-                    MediaQuery.of(context).size.width *
-                    0.5,
-                constraints: const BoxConstraints(
-                  maxWidth: 1200,
-                ),
-
+                width: 400,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -348,7 +352,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                       children: [
                         Icon(
                           Icons.transfer_within_a_station,
-                          color: const Color(0xFF27AE60),
+                          color: const Color(0xFF4682B4),
                           size: 28,
                         ),
                         const SizedBox(width: 12),
@@ -545,7 +549,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
 
       // Registrar auditoría
       await _guardarAuditoria(
-        accion: 'Entrada directa de inventario',
+        accion: 'Agregar Cantidad Inventario',
         detalle:
             'Producto: ${widget.producto.nombre} (${widget.producto.referencia}), '
             'Proceso: ${proceso.nombre}, Cantidad: $cantidad',
@@ -630,7 +634,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
 
       // Registrar auditoría
       await _guardarAuditoria(
-        accion: 'Movimiento entre procesos',
+        accion: 'Movimiento Cantidad Procesos',
         detalle:
             'Producto: ${widget.producto.nombre} (${widget.producto.referencia}), '
             'De: ${origen.nombre} a ${destino.nombre}, Cantidad: $cantidad',
@@ -686,15 +690,16 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          
+
           const SizedBox(width: 8),
-          
+
           // Botón ENTRADA (más pequeño)
           SizedBox(
             width: 60,
             height: 28,
             child: ElevatedButton(
-              onPressed: () => _mostrarFormularioEntradaDirecta(context, proceso),
+              onPressed:
+                  () => _mostrarFormularioEntradaDirecta(context, proceso),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF4682B4),
                 foregroundColor: Colors.white,
@@ -710,17 +715,18 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
               ),
             ),
           ),
-          
+
           const SizedBox(width: 6),
-          
+
           // Botón MOVER (más pequeño)
           SizedBox(
             width: 50,
             height: 28,
             child: ElevatedButton(
-              onPressed: cantidad > 0
-                  ? () => _mostrarFormularioMovimiento(context, proceso)
-                  : null,
+              onPressed:
+                  cantidad > 0
+                      ? () => _mostrarFormularioMovimiento(context, proceso)
+                      : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF27AE60),
                 foregroundColor: Colors.white,
@@ -736,24 +742,26 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
               ),
             ),
           ),
-          
+
           const SizedBox(width: 8),
-          
+
           // CANTIDAD (más compacta)
           Container(
             width: 80,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: cantidad <= 0
-                  ? Colors.red.shade50
-                  : cantidad < 5
+              color:
+                  cantidad <= 0
+                      ? Colors.red.shade50
+                      : cantidad < 5
                       ? Colors.orange.shade50
                       : Colors.green.shade50,
               borderRadius: BorderRadius.circular(3),
               border: Border.all(
-                color: cantidad <= 0
-                    ? Colors.red.shade200
-                    : cantidad < 5
+                color:
+                    cantidad <= 0
+                        ? Colors.red.shade200
+                        : cantidad < 5
                         ? Colors.orange.shade200
                         : Colors.green.shade200,
                 width: 0.5,
@@ -764,9 +772,10 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
-                color: cantidad <= 0
-                    ? Colors.red.shade700
-                    : cantidad < 5
+                color:
+                    cantidad <= 0
+                        ? Colors.red.shade700
+                        : cantidad < 5
                         ? Colors.orange.shade700
                         : Colors.green.shade700,
               ),
@@ -783,7 +792,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
     return Container(
       width: MediaQuery.of(context).size.width * 0.95, // 95% del ancho
       constraints: const BoxConstraints(
-        maxWidth: 1000,  // Reducido para ser más compacto
+        maxWidth: 1000, // Reducido para ser más compacto
       ),
       padding: const EdgeInsets.all(16), // Menos padding
       decoration: BoxDecoration(
@@ -816,16 +825,19 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
           ),
 
           const SizedBox(height: 25), // Menos espacio
-          
-            // 🎯 NUEVA VISTA: Lista vertical compacta
-            Container(
-              constraints: const BoxConstraints(maxHeight: 300), // Altura máxima
-              child: SingleChildScrollView( // Por si hay muchos procesos
-                child: Column(
-                  children: procesos.map((proceso) => _buildFilaProceso(proceso)).toList(),
-                ),
+          // 🎯 NUEVA VISTA: Lista vertical compacta
+          Container(
+            constraints: const BoxConstraints(maxHeight: 300), // Altura máxima
+            child: SingleChildScrollView(
+              // Por si hay muchos procesos
+              child: Column(
+                children:
+                    procesos
+                        .map((proceso) => _buildFilaProceso(proceso))
+                        .toList(),
               ),
             ),
+          ),
         ],
       ),
     );

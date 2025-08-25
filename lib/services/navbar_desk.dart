@@ -1,33 +1,29 @@
 import 'package:basefundi/desktop/ajustes/editperfil_desk.dart';
 import 'package:basefundi/desktop/ajustes/feedback_desk.dart';
 import 'package:basefundi/desktop/dashboard_desk.dart';
-import 'package:basefundi/desktop/directorio/clientes_desk.dart';
+import 'package:basefundi/desktop/directorio/contactos_desk.dart';
+import 'package:basefundi/desktop/directorio/documentos_desk.dart';
 import 'package:basefundi/desktop/directorio/pedidos_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas_desk.dart';
-import 'package:basefundi/desktop/directorio/proveedores_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareas_cumplir_desk.dart';
-import 'package:basefundi/desktop/inventario/inventario_fundicion_desk.dart';
-import 'package:basefundi/desktop/inventario/inventario_general_desk.dart';
-import 'package:basefundi/desktop/inventario/inventario_procesos_desk.dart';
+import 'package:basefundi/desktop/reportes/reportes%20inventarios/inventario_general_desk.dart';
 import 'package:basefundi/desktop/inventario/productos_desk.dart';
-import 'package:basefundi/desktop/inventario/transporte_desk.dart';
 import 'package:basefundi/desktop/personal/empleados/empleados_registro_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_realizar_desk.dart';
 import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
 import 'package:basefundi/desktop/reportes/auditoria_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_compras_desk.dart';
+import 'package:basefundi/desktop/reportes/reporte_documentos_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_inv_desk.dart';
-import 'package:basefundi/desktop/reportes/reporte_transporte_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_ventas_desk.dart';
 import 'package:basefundi/desktop/ventas/modificar_ventas_desk.dart';
 import 'package:basefundi/desktop/ventas/realizar_venta_desk.dart';
-import 'package:basefundi/desktop/ventas/ventas_totales_desk.dart';
 import 'package:basefundi/modulos/ajustes_desk.dart';
 import 'package:basefundi/modulos/fundicion.dart';
 import 'package:basefundi/modulos/inventario_desk.dart';
 import 'package:basefundi/modulos/reportes_desk.dart';
-import 'package:basefundi/settings/transition.dart';
+import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -74,7 +70,8 @@ class MainDeskLayout extends StatefulWidget {
   State<MainDeskLayout> createState() => _MainDeskLayoutState();
 }
 
-class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAliveClientMixin {
+class _MainDeskLayoutState extends State<MainDeskLayout>
+    with AutomaticKeepAliveClientMixin {
   final MenuStateManager _menuStateManager = MenuStateManager();
   late StreamSubscription<User?> _authSubscription;
 
@@ -109,10 +106,11 @@ class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAlive
     if (user == null) return;
 
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('usuarios_activos')
-          .doc(user.uid)
-          .get();
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('usuarios_activos')
+              .doc(user.uid)
+              .get();
 
       if (doc.exists && mounted) {
         final data = doc.data()!;
@@ -144,8 +142,8 @@ class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAlive
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); 
-    
+    super.build(context);
+
     return Scaffold(
       body: Row(
         children: [
@@ -157,7 +155,7 @@ class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAlive
                 _buildMenuHeader(),
                 Expanded(
                   child: ListView(
-                    key: const ValueKey('menu_list'), 
+                    key: const ValueKey('menu_list'),
                     children: _buildMenuItems(),
                   ),
                 ),
@@ -193,10 +191,7 @@ class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAlive
           const SizedBox(height: 8),
           Text(
             _menuStateManager.rolUsuario,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
         ],
       ),
@@ -207,9 +202,7 @@ class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAlive
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Colors.white24, width: 1),
-        ),
+        border: Border(top: BorderSide(color: Colors.white24, width: 1)),
       ),
       child: TextButton.icon(
         onPressed: () => _logout(context),
@@ -241,6 +234,9 @@ class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAlive
       case 'Gerente Sede':
         menuItems.addAll(_buildGerenteMenuItems());
         break;
+      case 'Vendedor':
+        menuItems.addAll(_buildVendedorMenuItems());
+        break;
       case 'Supervisor Fundición':
         menuItems.addAll(_buildSupervisorFundicionMenuItems());
         break;
@@ -271,25 +267,6 @@ class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAlive
   List<Widget> _buildAdminMenuItems() {
     return [
       _buildExpandableItem(
-        icon: Icons.shopping_cart,
-        title: 'Ventas',
-        menuKey: 'ventas',
-        subItems: [
-          _buildSubItem(
-            label: 'Ventas Totales',
-            onTap: () => _navigateToScreen(const VentasTotalesDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Modificar Ventas',
-            onTap: () => _navigateToScreen(const ModificarVentaDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Realizar Venta',
-            onTap: () => _navigateToScreen(const VentasDetalleDeskScreen()),
-          ),
-        ],
-      ),
-      _buildExpandableItem(
         icon: Icons.inventory,
         title: 'Inventario',
         menuKey: 'inventario',
@@ -298,32 +275,33 @@ class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAlive
             label: 'Productos',
             onTap: () => _navigateToScreen(const TotalInvDeskScreen()),
           ),
+        ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.shopping_cart,
+        title: 'Ventas',
+        menuKey: 'ventas',
+        subItems: [
           _buildSubItem(
-            label: 'General',
-            onTap: () => _navigateToScreen(const InventarioGeneralDeskScreen()),
+            label: 'Realizar Venta',
+            onTap: () => _navigateToScreen(const VentasDetalleDeskScreen()),
           ),
           _buildSubItem(
-            label: 'Fundición',
-            onTap: () => _navigateToScreen(const InventarioFundicionDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Pintura',
-            onTap: () => _navigateToScreen(const InventarioProcesoDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Transporte',
-            onTap: () => _navigateToScreen(const TransporteDeskScreen()),
+            label: 'Modificar Ventas',
+            onTap: () => _navigateToScreen(const ModificarVentaDeskScreen()),
           ),
         ],
       ),
+
       _buildExpandableItem(
         icon: Icons.people,
         title: 'Personal',
         menuKey: 'personal',
         subItems: [
           _buildSubItem(
-            label: 'Empleados',
-            onTap: () => _navigateToScreen(const EmpleadosPendientesDeskScreen()),
+            label: 'Usuarios',
+            onTap:
+                () => _navigateToScreen(const EmpleadosPendientesDeskScreen()),
           ),
           _buildSubItem(
             label: 'Funciones',
@@ -332,6 +310,31 @@ class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAlive
           _buildSubItem(
             label: 'Insumos',
             onTap: () => _navigateToScreen(const InsumosDeskScreen()),
+          ),
+        ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.contacts,
+        title: 'Directorio',
+        menuKey: 'directorio',
+        subItems: [
+          _buildSubItem(
+            label: 'Proformas',
+            onTap: () => _navigateToScreen(const OpcionesProformasDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Documentos',
+            onTap:
+                () =>
+                    _navigateToScreen(const ProformaOrdenDespachoDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Pedidos',
+            onTap: () => _navigateToScreen(const PedidosDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Contactos',
+            onTap: () => _navigateToScreen(const ContactosDeskScreen()),
           ),
         ],
       ),
@@ -349,39 +352,16 @@ class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAlive
             onTap: () => _navigateToScreen(const ReporteInventarioDeskScreen()),
           ),
           _buildSubItem(
-            label: 'Compras',
-            onTap: () => _navigateToScreen(const ReporteComprasDeskScreen()),
+            label: 'Documentos',
+            onTap: () => _navigateToScreen(const ReporteDocumentosDeskScreen()),
           ),
           _buildSubItem(
-            label: 'Transporte',
-            onTap: () => _navigateToScreen(const ReporteTransporteDeskScreen()),
+            label: 'Materia Prima',
+            onTap: () => _navigateToScreen(const ReporteComprasDeskScreen()),
           ),
           _buildSubItem(
             label: 'Auditoría',
             onTap: () => _navigateToScreen(const AuditoriaDeskScreen()),
-          ),
-        ],
-      ),
-      _buildExpandableItem(
-        icon: Icons.contacts,
-        title: 'Directorio',
-        menuKey: 'directorio',
-        subItems: [
-          _buildSubItem(
-            label: 'Proformas',
-            onTap: () => _navigateToScreen(const OpcionesProformasDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Pedidos',
-            onTap: () => _navigateToScreen(const PedidosDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Clientes',
-            onTap: () => _navigateToScreen(const ClientesDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Proveedores',
-            onTap: () => _navigateToScreen(const ProveedoresDeskScreen()),
           ),
         ],
       ),
@@ -420,6 +400,52 @@ class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAlive
     ];
   }
 
+  List<Widget> _buildVendedorMenuItems() {
+    return [
+      _buildExpandableItem(
+        icon: Icons.shopping_cart,
+        title: 'Ventas',
+        menuKey: 'ventas',
+        subItems: [
+          _buildSubItem(
+            label: 'Realizar Venta',
+            onTap: () => _navigateToScreen(const VentasDetalleDeskScreen()),
+          ),
+        ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.inventory,
+        title: 'Inventario',
+        menuKey: 'inventario',
+        subItems: [
+          _buildSubItem(
+            label: 'General',
+            onTap: () => _navigateToScreen(const InventarioGeneralDeskScreen()),
+          ),
+        ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.contacts,
+        title: 'Directorio',
+        menuKey: 'directorio',
+        subItems: [
+          _buildSubItem(
+            label: 'Proformas',
+            onTap: () => _navigateToScreen(const OpcionesProformasDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Pedidos',
+            onTap: () => _navigateToScreen(const PedidosDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Contactos',
+            onTap: () => _navigateToScreen(const ContactosDeskScreen()),
+          ),
+        ],
+      ),
+    ];
+  }
+
   List<Widget> _buildSupervisorFundicionMenuItems() {
     return [
       _buildMainItem(
@@ -440,12 +466,10 @@ class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAlive
       _buildMainItem(
         icon: Icons.task_alt,
         title: 'Tareas',
-        onTap: () => _navigateToScreen(
-          OperadorTareasScreen(
-            operadorId: '',
-            operadorNombre: '',
-          ),
-        ),
+        onTap:
+            () => _navigateToScreen(
+              OperadorTareasScreen(operadorId: '', operadorNombre: ''),
+            ),
       ),
     ];
   }
@@ -526,11 +550,11 @@ class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAlive
     required List<Widget> subItems,
   }) {
     final isExpanded = _menuStateManager.expandedMenu == menuKey;
-    
+
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
-        key: ValueKey(menuKey), 
+        key: ValueKey(menuKey),
         leading: Icon(icon, color: Colors.white),
         title: Text(title, style: const TextStyle(color: Colors.white)),
         trailing: Icon(
@@ -546,10 +570,7 @@ class _MainDeskLayoutState extends State<MainDeskLayout> with AutomaticKeepAlive
     );
   }
 
-  Widget _buildSubItem({
-    required String label, 
-    required VoidCallback onTap
-  }) {
+  Widget _buildSubItem({required String label, required VoidCallback onTap}) {
     return ListTile(
       contentPadding: const EdgeInsets.only(left: 72),
       title: Text(label, style: const TextStyle(color: Colors.white70)),

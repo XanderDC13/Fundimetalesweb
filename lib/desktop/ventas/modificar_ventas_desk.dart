@@ -1,5 +1,6 @@
 import 'package:basefundi/desktop/ventas/editar_ventas_desk.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
+import 'package:basefundi/services/transition.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -385,14 +386,11 @@ class _ModificarVentaDeskScreenState extends State<ModificarVentaDeskScreen>
                                 color: Color(0xFF4682B4),
                               ),
                               onPressed: () {
-                                Navigator.push(
+                                navegarConFade(
                                   context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => EditarVentaDeskScreen(
-                                          ventaId: venta.id,
-                                          datosVenta: data,
-                                        ),
+                                  EditarVentaDeskScreen(
+                                    ventaId: venta.id,
+                                    datosVenta: data,
                                   ),
                                 );
                               },
@@ -419,146 +417,237 @@ class _ModificarVentaDeskScreenState extends State<ModificarVentaDeskScreen>
     );
   }
 
-// Método para restaurar el inventario de bodega
-Future<void> _restaurarInventarioBodega(String referencia, int cantidadRestaurar) async {
-  try {
-    final inventarioRef = FirebaseFirestore.instance
-        .collection('inventarios')
-        .doc('bodega')
-        .collection('productos')
-        .doc(referencia);
-    
-    // Obtener cantidad actual
-    final doc = await inventarioRef.get();
-    
-    if (doc.exists) {
-      final cantidadActual = (doc.data()?['cantidad'] ?? 0) as int;
-      final nuevaCantidad = cantidadActual + cantidadRestaurar;
-      
-      // Actualizar cantidad
-      await inventarioRef.update({
-        'cantidad': nuevaCantidad,
-        'ultima_actualizacion': Timestamp.now(),
-      });
-      
-      print('Inventario restaurado: $referencia - Nueva cantidad: $nuevaCantidad');
-    } else {
-      // Si no existe el documento, crearlo
-      await inventarioRef.set({
-        'referencia': referencia,
-        'cantidad': cantidadRestaurar,
-        'ultima_actualizacion': Timestamp.now(),
-      });
-      
-      print('Inventario creado y restaurado: $referencia - Cantidad: $cantidadRestaurar');
+  // Método para restaurar el inventario de bodega
+  Future<void> _restaurarInventarioBodega(
+    String referencia,
+    int cantidadRestaurar,
+  ) async {
+    {
+      final inventarioRef = FirebaseFirestore.instance
+          .collection('inventarios')
+          .doc('bodega')
+          .collection('productos')
+          .doc(referencia);
+
+      // Obtener cantidad actual
+      final doc = await inventarioRef.get();
+
+      if (doc.exists) {
+        final cantidadActual = (doc.data()?['cantidad'] ?? 0) as int;
+        final nuevaCantidad = cantidadActual + cantidadRestaurar;
+
+        // Actualizar cantidad
+        await inventarioRef.update({
+          'cantidad': nuevaCantidad,
+          'ultima_actualizacion': Timestamp.now(),
+        });
+      } else {
+        // Si no existe el documento, crearlo
+        await inventarioRef.set({
+          'referencia': referencia,
+          'cantidad': cantidadRestaurar,
+          'ultima_actualizacion': Timestamp.now(),
+        });
+      }
     }
-  } catch (e) {
-    print('Error restaurando inventario de bodega para $referencia: $e');
   }
-}
 
   void _confirmarEliminacion(String idVenta) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Confirmar eliminación'),
-            content: const Text(
-              '¿Estás seguro de que deseas eliminar esta venta?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancelar'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  final user = FirebaseAuth.instance.currentUser;
-                  if (user == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Error: usuario no autenticado.'),
-                      ),
-                    );
-                    return;
-                  }
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            bool isDeleting = false;
 
-                  // Obtener datos del usuario actual
-                  final userDoc =
-                      await FirebaseFirestore.instance
-                          .collection('usuarios_activos')
-                          .doc(user.uid)
-                          .get();
+            Future<void> _eliminarVenta() async {
+              setState(() {
+                isDeleting = true;
+              });
 
-                  final usuarioNombre =
-                      userDoc.data()?['nombre'] ?? 'Desconocido';
+              final user = FirebaseAuth.instance.currentUser;
+              if (user == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Error: usuario no autenticado.'),
+                  ),
+                );
+                setState(() {
+                  isDeleting = false;
+                });
+                return;
+              }
 
-                  // Obtener datos de la venta eliminada
-                  final ventaDoc =
-                      await FirebaseFirestore.instance
-                          .collection('ventas')
-                          .doc(idVenta)
-                          .get();
+              try {
+                // Obtener datos del usuario actual
+                final userDoc =
+                    await FirebaseFirestore.instance
+                        .collection('usuarios_activos')
+                        .doc(user.uid)
+                        .get();
 
-                  final ventaData = ventaDoc.data();
+                final usuarioNombre =
+                    userDoc.data()?['nombre'] ?? 'Desconocido';
 
-                  // Restaurar inventario de bodega
-if (ventaData != null && ventaData['productos'] != null) {
-  final productos = List<Map<String, dynamic>>.from(
-    ventaData['productos'],
-  );
+                // Obtener datos de la venta eliminada
+                final ventaDoc =
+                    await FirebaseFirestore.instance
+                        .collection('ventas')
+                        .doc(idVenta)
+                        .get();
 
-  // Restaurar cada producto al inventario de bodega
-  for (final producto in productos) {
-    final referencia = producto['referencia']?.toString() ?? 
-                     producto['codigo']?.toString() ?? '';
-    final cantidadVendida = (producto['cantidad'] ?? 0) as num;
-    
-    if (referencia.isNotEmpty && cantidadVendida > 0) {
-      await _restaurarInventarioBodega(referencia, cantidadVendida.toInt());
-    }
-  }
+                final ventaData = ventaDoc.data();
 
-  // Extraer cliente y total de ventaData
-  final cliente = ventaData['cliente'] ?? 'Sin nombre';
-  final total = ventaData['total'] ?? 0.0;
+                if (ventaData != null && ventaData['productos'] != null) {
+                  final productos = List<Map<String, dynamic>>.from(
+                    ventaData['productos'],
+                  );
 
-  // Resto del código de auditoría...
+                  // Restaurar inventario
+                  for (final producto in productos) {
+                    final referencia =
+                        producto['referencia']?.toString() ??
+                        producto['codigo']?.toString() ??
+                        '';
+                    final cantidadVendida = (producto['cantidad'] ?? 0) as num;
 
-                    // ignore: unused_local_variable
-                    for (final producto in productos) {
-                      final tipoVenta =
-                          ventaData['tipo'] ??
-                          'Venta'; // Por ejemplo: 'Factura' o 'Nota de Venta'
-
-                      await FirebaseFirestore.instance
-                          .collection('auditoria_general')
-                          .add({
-                            'accion': 'Eliminación de $tipoVenta',
-                            'detalle':
-                                'Se eliminó una $tipoVenta del cliente: $cliente, Total: \$${(total as num).toStringAsFixed(2)}',
-                            'fecha': Timestamp.now(),
-                            'usuario_nombre': usuarioNombre,
-                            'usuario_uid': user.uid,
-                          });
+                    if (referencia.isNotEmpty && cantidadVendida > 0) {
+                      await _restaurarInventarioBodega(
+                        referencia,
+                        cantidadVendida.toInt(),
+                      );
                     }
                   }
 
-                  // Eliminar la venta
-                  await FirebaseFirestore.instance
-                      .collection('ventas')
-                      .doc(idVenta)
-                      .delete();
+                  final cliente = ventaData['cliente'] ?? 'Sin nombre';
+                  final tipoVenta = ventaData['tipo'] ?? 'Venta';
+                  final total = ventaData['total'] ?? 0.0;
 
-                  Navigator.pop(context);
-                },
-                child: const Text(
-                  'Eliminar',
-                  style: TextStyle(color: Colors.red),
+                  // Guardar auditoría
+                  await FirebaseFirestore.instance
+                      .collection('auditoria_general')
+                      .add({
+                        'accion': 'Eliminación de $tipoVenta',
+                        'detalle':
+                            'Se eliminó una $tipoVenta del cliente: $cliente, Total: \$${(total as num).toStringAsFixed(2)}',
+                        'fecha': Timestamp.now(),
+                        'usuario_nombre': usuarioNombre,
+                        'usuario_uid': user.uid,
+                      });
+                }
+
+                // Eliminar la venta
+                await FirebaseFirestore.instance
+                    .collection('ventas')
+                    .doc(idVenta)
+                    .delete();
+
+                Navigator.pop(context);
+              } catch (e) {
+                setState(() {
+                  isDeleting = false;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error al eliminar la venta: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 500),
+                child: Dialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  elevation: 12,
+                  backgroundColor: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 24,
+                      horizontal: 28,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.redAccent,
+                          size: 48,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Eliminar venta',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '¿Estás seguro de que deseas eliminar esta venta?',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: Colors.black54),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 28),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.grey[700],
+                              ),
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cancelar'),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    isDeleting ? Colors.grey : Colors.redAccent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              onPressed: isDeleting ? null : _eliminarVenta,
+                              child:
+                                  isDeleting
+                                      ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      )
+                                      : const Text(
+                                        'Eliminar',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ],
-          ),
+            );
+          },
+        );
+      },
     );
   }
 }

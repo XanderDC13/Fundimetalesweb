@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // IMPORTA TU LAYOUT BASE
-import 'package:basefundi/settings/navbar_desk.dart'; // Ajusta la ruta
+import 'package:basefundi/services/navbar_desk.dart'; // Ajusta la ruta
 
 class CategoriasDeskScreen extends StatefulWidget {
   const CategoriasDeskScreen({super.key});

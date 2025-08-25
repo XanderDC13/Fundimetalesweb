@@ -1,9 +1,9 @@
-import 'package:basefundi/desktop/directorio/clientes_desk.dart';
+import 'package:basefundi/desktop/directorio/contactos_desk.dart';
+import 'package:basefundi/desktop/directorio/documentos_desk.dart';
 import 'package:basefundi/desktop/directorio/pedidos_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas_desk.dart';
-import 'package:basefundi/desktop/directorio/proveedores_desk.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
-import 'package:basefundi/settings/transition.dart';
+import 'package:basefundi/services/navbar_desk.dart';
+import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
 
 class DirectorioDeskScreen extends StatefulWidget {
@@ -97,6 +97,15 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
                       const SizedBox(height: 20),
                       _buildCard(
                         context: context,
+                        title: 'Documentos',
+                        subtitle: 'Genera proformas y ordenes de despacho',
+                        icon: Icons.local_shipping,
+                        destination: ProformaOrdenDespachoDeskScreen(),
+                      ),
+                      const SizedBox(height: 20),
+
+                      _buildCard(
+                        context: context,
                         title: 'Pedidos',
                         subtitle: 'Control de nuevos pedidos y envíos',
                         icon: Icons.assignment,
@@ -105,19 +114,12 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
                       const SizedBox(height: 20),
                       _buildCard(
                         context: context,
-                        title: 'Clientes',
-                        subtitle: 'Gestión y contactos de clientes',
+                        title: 'Contactos',
+                        subtitle: 'Gestión y contactos de clientes y proveedores',
                         icon: Icons.people_outline,
-                        destination: const ClientesDeskScreen(),
+                        destination: const ContactosDeskScreen(),
                       ),
                       const SizedBox(height: 20),
-                      _buildCard(
-                        context: context,
-                        title: 'Proveedores',
-                        subtitle: 'Lista de proveedores y suministros',
-                        icon: Icons.analytics,
-                        destination: const ProveedoresDeskScreen(),
-                      ),
                     ],
                   ),
                 ),

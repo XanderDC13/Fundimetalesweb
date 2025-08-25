@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:basefundi/desktop/inventario/editar/editcant_prod_desk.dart';
 import 'package:basefundi/desktop/inventario/editar/editdatos_prod_desk.dart';
-import 'package:basefundi/settings/csv_importar_desk.dart';
-import 'package:basefundi/settings/csv_exportar_desk.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/csv_importar_desk.dart';
+import 'package:basefundi/services/csv_exportar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -283,7 +283,7 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
     final nombreUsuario = 'Administrador';
     final usuarioUid = user?.uid ?? 'Desconocido';
 
-    try {
+    {
       // Eliminar de la colección productos
       await _firestore.collection('productos').doc(codigo).delete();
 
@@ -307,29 +307,13 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
 
       // Registrar en auditoría
       await _firestore.collection('auditoria_general').add({
-        'accion': 'Producto eliminado',
+        'accion': 'Eliminar producto',
         'detalle':
             'Producto: $nombre (Código: $codigo) - Eliminado de todos los procesos',
         'fecha': Timestamp.now(),
         'usuario_nombre': nombreUsuario,
         'usuario_uid': usuarioUid,
       });
-
-      // Mostrar mensaje de éxito
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Producto eliminado exitosamente'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      print('Error eliminando producto: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error al eliminar el producto'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 

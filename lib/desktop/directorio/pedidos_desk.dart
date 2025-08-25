@@ -2,7 +2,7 @@ import 'package:basefundi/desktop/directorio/pedidos/alistar_pedidos_desk.dart';
 import 'package:basefundi/desktop/directorio/pedidos/envio_pedidos_desk.dart';
 import 'package:basefundi/desktop/directorio/pedidos/nuevos_pedidos_desk.dart';
 import 'package:flutter/material.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 
 class PedidosDeskScreen extends StatefulWidget {
   const PedidosDeskScreen({super.key});

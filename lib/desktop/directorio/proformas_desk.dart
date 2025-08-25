@@ -1,9 +1,8 @@
 import 'package:basefundi/desktop/directorio/proformas/proforma_fundicion_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas/proforma_ventas_desk.dart';
-import 'package:basefundi/settings/transition.dart';
+import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
-import 'package:basefundi/desktop/directorio/proformas/proforma_guardadas_desk.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 
 class OpcionesProformasDeskScreen extends StatefulWidget {
   const OpcionesProformasDeskScreen({super.key});
@@ -44,9 +43,6 @@ class _OpcionesProformasDeskScreenState
     return ProformaVentasDeskScreen();
   }
 
-  Widget _getProformaGuardadasScreen() {
-    return ProformasGuardadasDeskScreen();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,17 +105,11 @@ class _OpcionesProformasDeskScreenState
                       const SizedBox(height: 20),
                       _buildBoton(
                         icono: Icons.add_circle_outline,
-                        titulo: 'Proforma Fundición',
+                        titulo: 'Proforma Compra Materia Prima',
                         subtitulo: 'Genera una proforma compra de hierro',
                         destino: _getProformaFundicionScreen(),
                       ),
                       const SizedBox(height: 20),
-                      _buildBoton(
-                        icono: Icons.list_alt_outlined,
-                        titulo: 'Ver Proformas Guardadas de Ventas',
-                        subtitulo: 'Consulta todas las proformas registradas',
-                        destino: _getProformaGuardadasScreen(),
-                      ),
                     ],
                   ),
                 ),

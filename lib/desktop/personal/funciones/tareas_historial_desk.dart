@@ -1,5 +1,5 @@
-import 'package:basefundi/settings/navbar_desk.dart';
-import 'package:basefundi/settings/transition.dart';
+import 'package:basefundi/services/navbar_desk.dart';
+import 'package:basefundi/services/transition.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';

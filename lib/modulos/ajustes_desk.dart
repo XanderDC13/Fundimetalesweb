@@ -1,8 +1,8 @@
 import 'package:basefundi/desktop/ajustes/editperfil_desk.dart';
 import 'package:basefundi/desktop/ajustes/feedback_desk.dart';
-import 'package:basefundi/settings/transition.dart';
+import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 
 class SettingsDeskScreen extends StatefulWidget {
   const SettingsDeskScreen({super.key});

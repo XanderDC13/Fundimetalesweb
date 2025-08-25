@@ -1,7 +1,7 @@
 import 'package:basefundi/desktop/personal/insumos/historial_insumos_desk.dart';
 import 'package:basefundi/desktop/personal/insumos/inventario_insumos_desk.dart';
 import 'package:basefundi/desktop/personal/insumos/solicitud_insumos_desk.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 import 'package:flutter/material.dart';
 
 class InsumosDeskScreen extends StatefulWidget {

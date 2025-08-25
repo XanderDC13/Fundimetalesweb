@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -141,30 +142,29 @@ class _ProformaFundicionDeskScreenState
   }
 
   Future<void> _previsualizarNumeroProforma() async {
-  final fechaHoy = DateTime.now();
-  final fechaFormateada =
-      "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
+    final fechaHoy = DateTime.now();
+    final fechaFormateada =
+        "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
 
-  final counterRef = FirebaseFirestore.instance
-      .collection('proformas_compras_counter')
-      .doc(fechaFormateada);
+    final counterRef = FirebaseFirestore.instance
+        .collection('proformas_compras_counter')
+        .doc(fechaFormateada);
 
-  final counterDoc = await counterRef.get();
+    final counterDoc = await counterRef.get();
 
-  int numero = 1;
+    int numero = 1;
 
-  if (counterDoc.exists) {
-    numero = counterDoc['contador'] + 1;
-  } else {
-    // Inicializar el documento con contador 0 si no existe
-    await counterRef.set({'contador': 0});
+    if (counterDoc.exists) {
+      numero = counterDoc['contador'] + 1;
+    } else {
+      // Inicializar el documento con contador 0 si no existe
+      await counterRef.set({'contador': 0});
+    }
+
+    setState(() {
+      _numeroProforma = "ORDEN N-$fechaFormateada-$numero";
+    });
   }
-
-  setState(() {
-    _numeroProforma = "PROFORMA N-$fechaFormateada-$numero";
-  });
-}
-
 
   Widget _buildMobileClienteSection() {
     return _buildMobileSection(
@@ -329,6 +329,7 @@ class _ProformaFundicionDeskScreenState
                   child: _buildItemInputField(
                     controller: item.descripcionController,
                     label: 'Descripción',
+                    options: ["CHATARRA", "ALUMINIO", "HIERRO"],
                   ),
                 ),
                 SizedBox(width: 8),
@@ -377,35 +378,125 @@ class _ProformaFundicionDeskScreenState
   Widget _buildItemInputField({
     required TextEditingController controller,
     required String label,
+    List<String>? options, // 👈 lista de opciones
     TextInputType keyboardType = TextInputType.text,
     bool readOnly = false,
     TextStyle? style,
     Function(String)? onChanged,
   }) {
+    if (options != null && options.isNotEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Autocomplete<String>(
+          initialValue: TextEditingValue(text: controller.text),
+          optionsBuilder: (TextEditingValue textEditingValue) {
+            if (textEditingValue.text.isEmpty) {
+              return options;
+            }
+            return options.where(
+              (option) => option.toLowerCase().contains(
+                textEditingValue.text.toLowerCase(),
+              ),
+            );
+          },
+          onSelected: (String selection) {
+            controller.text = selection;
+            if (onChanged != null) onChanged(selection);
+          },
+          fieldViewBuilder: (
+            context,
+            textEditingController,
+            focusNode,
+            onFieldSubmitted,
+          ) {
+            // Mantener el controlador original sincronizado
+            textEditingController.text = controller.text;
+            textEditingController.selection = TextSelection.collapsed(
+              offset: textEditingController.text.length,
+            );
+
+            textEditingController.addListener(() {
+              controller.text = textEditingController.text;
+              if (onChanged != null) onChanged(controller.text);
+            });
+
+            return TextField(
+              controller: textEditingController,
+              focusNode: focusNode,
+              keyboardType: keyboardType,
+              readOnly: readOnly,
+              style: style ?? const TextStyle(fontSize: 14),
+              decoration: InputDecoration(
+                labelText: label,
+                labelStyle: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                border: InputBorder.none,
+              ),
+            );
+          },
+          // 👇 Aquí se personaliza la lista de opciones
+          optionsViewBuilder: (context, onSelected, options) {
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.white, // 👈 Fondo blanco fijo
+                child: SizedBox(
+                  width:
+                      MediaQuery.of(context).size.width *
+                      0.6, // ajusta si quieres
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    itemBuilder: (context, index) {
+                      final option = options.elementAt(index);
+                      return InkWell(
+                        onTap: () => onSelected(option),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Text(
+                            option,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    // 🔹 Caso normal sin lista
     return Container(
-      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.grey[100],
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey[300]!),
       ),
-      alignment: Alignment.centerLeft,
-      padding: EdgeInsets.symmetric(horizontal: 12),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         readOnly: readOnly,
         onChanged: onChanged,
-        style: style ?? TextStyle(fontSize: 14),
+        style: style ?? const TextStyle(fontSize: 14),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.normal,
-            color: Colors.grey[700],
-          ),
+          labelStyle: TextStyle(fontSize: 14, color: Colors.grey[700]),
           border: InputBorder.none,
-          isDense: true,
         ),
       ),
     );
@@ -701,26 +792,31 @@ class _ProformaFundicionDeskScreenState
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(36),
+        margin: const pw.EdgeInsets.all(40),
         build: (pw.Context context) {
-          return pw.Column(
-            children: [
-              pw.Expanded(
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    _buildPDFHeader(),
-                    pw.SizedBox(height: 10),
-                    _buildPDFClienteInfo(),
-                    pw.SizedBox(height: 10),
-                    _buildPDFItemsTable(),
-                    pw.SizedBox(height: 10),
-                    _buildPDFTotales(),
-                    pw.SizedBox(height: 40),
-                  ],
-                ),
+          return pw.Container(
+            width: double.infinity,
+            height: PdfPageFormat.a4.height / 2, // Solo la mitad de la página
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey400, width: 1),
+            ),
+            child: pw.Padding(
+              padding: pw.EdgeInsets.all(15),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  _buildSimplePDFHeader(),
+                  pw.SizedBox(height: 15),
+                  _buildSimpleClienteInfo(),
+                  pw.SizedBox(height: 15),
+                  pw.Expanded(child: _buildSimpleItemsTable()),
+                  pw.SizedBox(height: 10),
+                  _buildSimpleTotales(),
+                  pw.SizedBox(height: 15),
+                  _buildSimpleFooter(),
+                ],
               ),
-            ],
+            ),
           );
         },
       ),
@@ -729,49 +825,78 @@ class _ProformaFundicionDeskScreenState
     return pdf;
   }
 
-  pw.Widget _buildPDFHeader() {
+  pw.Widget _buildSimplePDFHeader() {
     return pw.Container(
       width: double.infinity,
       child: pw.Column(
         children: [
+          // Header principal
           pw.Container(
             width: double.infinity,
-            padding: pw.EdgeInsets.all(10), // tamaño intermedio
-            color: PdfColor.fromHex('#4682B4'),
+            padding: pw.EdgeInsets.all(12),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey200,
+              border: pw.Border.all(color: PdfColors.grey400),
+            ),
             child: pw.Text(
               'COMPRA DE MATERIA PRIMA',
-              style: pw.TextStyle(
-                color: PdfColors.white,
-                fontSize: 12, // intermedio: antes 14, grande era 20
-                fontWeight: pw.FontWeight.bold,
-              ),
+              style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
               textAlign: pw.TextAlign.center,
             ),
           ),
+          // Información de la empresa
           pw.Container(
             width: double.infinity,
-            padding: pw.EdgeInsets.all(8),
-            color: PdfColor.fromHex('#f8f9fa'),
-            child: pw.Column(
+            padding: pw.EdgeInsets.all(10),
+            decoration: pw.BoxDecoration(
+              border: pw.Border(
+                left: pw.BorderSide(color: PdfColors.grey400),
+                right: pw.BorderSide(color: PdfColors.grey400),
+                bottom: pw.BorderSide(color: PdfColors.grey400),
+              ),
+            ),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text(
-                  'FUNDIMETALES DEL NORTE',
-                  style: pw.TextStyle(
-                    fontSize: 10, // antes 10
-                    fontWeight: pw.FontWeight.bold,
-                  ),
+                // Información de la empresa
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'FUNDIMETALES DEL NORTE',
+                      style: pw.TextStyle(
+                        fontSize: 11,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                      'Av Brasil y Panamá - Tulcán, Ecuador',
+                      style: pw.TextStyle(fontSize: 9),
+                    ),
+                    pw.Text(
+                      'Tel: (06) 296-2017',
+                      style: pw.TextStyle(fontSize: 9),
+                    ),
+                  ],
                 ),
-                pw.SizedBox(height: 3),
-                pw.Text(_numeroProforma, style: pw.TextStyle(fontSize: 10)),
-                pw.SizedBox(height: 3),
-                pw.Text(
-                  'Dirección: Av Brasil y Panamá - (Tulcán Ecuador) - telf: 2962017',
-                  style: pw.TextStyle(fontSize: 9),
-                ),
-                pw.SizedBox(height: 3),
-                pw.Text(
-                  'Fecha: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
-                  style: pw.TextStyle(fontSize: 9),
+                // Información del documento
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      'Documento: $_numeroProforma',
+                      style: pw.TextStyle(
+                        fontSize: 9,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                      'Fecha: ${DateTime.now().day.toString().padLeft(2, '0')}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year}',
+                      style: pw.TextStyle(fontSize: 9),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -781,57 +906,36 @@ class _ProformaFundicionDeskScreenState
     );
   }
 
-  pw.Widget _buildPDFClienteInfo() {
+  pw.Widget _buildSimpleClienteInfo() {
     return pw.Container(
+      width: double.infinity,
       padding: pw.EdgeInsets.all(8),
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.grey400),
-        borderRadius: pw.BorderRadius.circular(6),
       ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text(
-            'RECIBE CLIENTE',
-            style: pw.TextStyle(
-              fontSize: 10, // intermedio
-              fontWeight: pw.FontWeight.bold,
-            ),
-          ),
-          pw.SizedBox(height: 4),
-          pw.Row(
-            children: [
-              pw.Expanded(
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(
-                      'Cliente: ${_clienteController.text.toUpperCase()}',
-                      style: pw.TextStyle(fontSize: 9),
-                    ),
-                    pw.SizedBox(height: 3),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+      child: pw.Text(
+        'CLIENTE: ${_clienteController.text.toUpperCase()}',
+        style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
       ),
     );
   }
 
-  pw.Widget _buildPDFItemsTable() {
+  pw.Widget _buildSimpleItemsTable() {
     return pw.Container(
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.grey400),
-        borderRadius: pw.BorderRadius.circular(6),
       ),
       child: pw.Column(
         children: [
           // Header
           pw.Container(
-            padding: pw.EdgeInsets.all(6),
-            color: PdfColor.fromHex('#f8f9fa'),
+            padding: pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey200,
+              border: pw.Border(
+                bottom: pw.BorderSide(color: PdfColors.grey400),
+              ),
+            ),
             child: pw.Row(
               children: [
                 pw.Expanded(
@@ -852,6 +956,7 @@ class _ProformaFundicionDeskScreenState
                       fontSize: 9,
                       fontWeight: pw.FontWeight.bold,
                     ),
+                    textAlign: pw.TextAlign.center,
                   ),
                 ),
                 pw.Expanded(
@@ -862,6 +967,7 @@ class _ProformaFundicionDeskScreenState
                       fontSize: 9,
                       fontWeight: pw.FontWeight.bold,
                     ),
+                    textAlign: pw.TextAlign.center,
                   ),
                 ),
                 pw.Expanded(
@@ -872,14 +978,16 @@ class _ProformaFundicionDeskScreenState
                       fontSize: 9,
                       fontWeight: pw.FontWeight.bold,
                     ),
+                    textAlign: pw.TextAlign.right,
                   ),
                 ),
               ],
             ),
           ),
+          // Filas de items
           ...items.map(
             (item) => pw.Container(
-              padding: pw.EdgeInsets.all(6),
+              padding: pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
               decoration: pw.BoxDecoration(
                 border: pw.Border(
                   bottom: pw.BorderSide(color: PdfColors.grey300),
@@ -899,6 +1007,7 @@ class _ProformaFundicionDeskScreenState
                     child: pw.Text(
                       item.kilosController.text,
                       style: pw.TextStyle(fontSize: 8),
+                      textAlign: pw.TextAlign.center,
                     ),
                   ),
                   pw.Expanded(
@@ -906,6 +1015,7 @@ class _ProformaFundicionDeskScreenState
                     child: pw.Text(
                       '\$${item.precioController.text}',
                       style: pw.TextStyle(fontSize: 8),
+                      textAlign: pw.TextAlign.center,
                     ),
                   ),
                   pw.Expanded(
@@ -913,6 +1023,7 @@ class _ProformaFundicionDeskScreenState
                     child: pw.Text(
                       '\$${item.totalController.text}',
                       style: pw.TextStyle(fontSize: 8),
+                      textAlign: pw.TextAlign.right,
                     ),
                   ),
                 ],
@@ -924,56 +1035,50 @@ class _ProformaFundicionDeskScreenState
     );
   }
 
-  pw.Widget _buildPDFTotales() {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.end,
+  pw.Widget _buildSimpleTotales() {
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.end,
       children: [
         pw.Container(
-          width: 180, // intermedio
-          padding: pw.EdgeInsets.all(10),
+          width: 150,
+          padding: pw.EdgeInsets.all(8),
           decoration: pw.BoxDecoration(
             border: pw.Border.all(color: PdfColors.grey400),
-            borderRadius: pw.BorderRadius.circular(6),
           ),
           child: pw.Column(
             children: [
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text(
-                    'Subtotal:',
-                    style: pw.TextStyle(
-                      fontSize: 10,
-                      fontWeight: pw.FontWeight.normal,
-                    ),
-                  ),
+                  pw.Text('Subtotal:', style: pw.TextStyle(fontSize: 9)),
                   pw.Text(
                     '\$${_calcularSubtotal()}',
-                    style: pw.TextStyle(
-                      fontSize: 10,
-                      fontWeight: pw.FontWeight.normal,
-                    ),
+                    style: pw.TextStyle(fontSize: 9),
                   ),
                 ],
               ),
-              pw.SizedBox(height: 8),
+              pw.SizedBox(height: 5),
               pw.Container(
+                width: double.infinity,
                 padding: pw.EdgeInsets.symmetric(vertical: 4),
-                color: PdfColor.fromHex('#fff3cd'),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.grey200,
+                  border: pw.Border.all(color: PdfColors.grey400),
+                ),
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Text(
                       'TOTAL:',
                       style: pw.TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: pw.FontWeight.bold,
                       ),
                     ),
                     pw.Text(
                       '\$${_calcularTotalFinal()}',
                       style: pw.TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: pw.FontWeight.bold,
                       ),
                     ),
@@ -983,26 +1088,25 @@ class _ProformaFundicionDeskScreenState
             ],
           ),
         ),
-        pw.SizedBox(height: 30),
-        pw.Center(
-          child: pw.Column(
-            children: [
-              pw.Container(
-                width: 180,
-                child: pw.Divider(thickness: 0.8, color: PdfColors.black),
-              ),
-              pw.SizedBox(height: 4),
-              pw.Text(
-                'Firma',
-                style: pw.TextStyle(
-                  fontSize: 10,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
+    );
+  }
+
+  pw.Widget _buildSimpleFooter() {
+    return pw.Center(
+      child: pw.Column(
+        children: [
+          pw.Container(
+            width: 120,
+            child: pw.Divider(thickness: 1, color: PdfColors.black),
+          ),
+          pw.SizedBox(height: 5),
+          pw.Text(
+            'Firma Autorizada',
+            style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1026,8 +1130,7 @@ class _ProformaFundicionDeskScreenState
         await counterRef.set({'contador': numero});
       }
 
-      final numeroProformaFinal = "PROFORMA N-$fechaFormateada-$numero";
-      print('✅ Número de proforma reservado: $numeroProformaFinal');
+      final numeroProformaFinal = "Orden N-$fechaFormateada-$numero";
 
       final proformaData = {
         'numero': numeroProformaFinal,
@@ -1046,11 +1149,33 @@ class _ProformaFundicionDeskScreenState
         'fecha': Timestamp.now(),
       };
 
+      final user = FirebaseAuth.instance.currentUser;
+
+      // Buscar el nombre en la colección usuarios_activos
+      final usuarioDoc =
+          await FirebaseFirestore.instance
+              .collection('usuarios_activos')
+              .doc(user?.uid)
+              .get();
+
+      final usuarioNombre =
+          usuarioDoc.exists
+              ? (usuarioDoc['nombre'] ?? 'Desconocido')
+              : 'Desconocido';
+
+      final auditoriaRef =
+          FirebaseFirestore.instance.collection('auditoria_general').doc();
+
+      await auditoriaRef.set({
+        'fecha': FieldValue.serverTimestamp(),
+        'usuario_nombre': usuarioNombre,
+        'usuario_uid': user?.uid ?? 'uid_desconocido',
+        'accion': 'Nueva proforma fundición',
+        'detalle': 'Número de proforma: $numeroProformaFinal',
+      });
       await FirebaseFirestore.instance
           .collection('proformasfundicion')
           .add(proformaData);
-
-      print('✅ Proforma guardada en Firestore: $numeroProformaFinal');
 
       // Limpiar campos
       _clienteController.clear();

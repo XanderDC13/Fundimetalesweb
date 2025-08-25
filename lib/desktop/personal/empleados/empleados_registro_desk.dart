@@ -1,6 +1,6 @@
 import 'package:basefundi/desktop/personal/empleados/empleados_activos_desk.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
-import 'package:basefundi/settings/transition.dart';
+import 'package:basefundi/services/navbar_desk.dart';
+import 'package:basefundi/services/transition.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -15,12 +15,75 @@ class EmpleadosPendientesDeskScreen extends StatefulWidget {
 
 class _EmpleadosPendientesDeskScreenState
     extends State<EmpleadosPendientesDeskScreen> {
+  final Map<String, String> rolesDisponibles = {
+    'Administrador': 'Administrador General',
+    'Gerente': 'Gerente',
+    'Vendedor': 'Vendedor',
+    'SupervisorFundicion': 'Supervisor Fundicion',
+    'OperadorFundicion': 'Operador Fundicion',
+    'SupervisorMecanizado': 'Supervisor Mecanizado',
+    'OperadorMecanizado': 'Operador Mecanizado',
+  };
+
+  List<DropdownMenuItem<String>> _buildDropdownItems(
+    Map<String, String> rolesDisponibles,
+    String rolOriginal,
+  ) {
+    return rolesDisponibles.entries.map((entry) {
+      String value = entry.key;
+      String displayName = entry.value;
+
+      return DropdownMenuItem<String>(
+        value: value,
+        child: Row(
+          children: [
+            Icon(
+              value.contains('Administrador') || value.contains('Gerente')
+                  ? Icons.security
+                  : value.contains('Supervisor')
+                  ? Icons.supervisor_account
+                  : Icons.person,
+              color: const Color(0xFF2C3E50),
+            ),
+            const SizedBox(width: 10),
+            Text(displayName),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
+  Future<void> _registrarAuditoria({
+    required String accion,
+    required String detalle,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    String nombreUsuario = 'Administrador';
+
+    if (user != null) {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('usuarios_activos')
+              .doc(user.uid)
+              .get();
+      if (doc.exists) {
+        nombreUsuario = doc['nombre'] ?? nombreUsuario;
+      }
+    }
+
+    await FirebaseFirestore.instance.collection('auditoria_general').add({
+      'fecha': FieldValue.serverTimestamp(),
+      'usuario_nombre': nombreUsuario,
+      'accion': accion,
+      'detalle': detalle,
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MainDeskLayout(
       child: Column(
         children: [
-          // ✅ CABECERA con Transform y flecha retroceso
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
@@ -44,7 +107,7 @@ class _EmpleadosPendientesDeskScreenState
                   const Align(
                     alignment: Alignment.center,
                     child: Text(
-                      'Personal - Pendientes',
+                      'Usuarios Pendientes',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -57,7 +120,6 @@ class _EmpleadosPendientesDeskScreenState
             ),
           ),
 
-          // ✅ CONTENIDO
           Expanded(
             child: Container(
               color: Colors.white,
@@ -125,8 +187,19 @@ class _EmpleadosPendientesDeskScreenState
                                           user['nombre'] ?? 'Sin nombre';
                                       final email =
                                           user['email'] ?? 'Sin email';
-                                      final rol = user['rol'] ?? 'Sin rol';
+                                      final rol = user['rol'] ?? '';
                                       final sede = user['sede'] ?? 'Sin sede';
+
+                                      String? rolValido;
+                                      String rolOriginal =
+                                          rol?.toString() ?? '';
+
+                                      if (rolOriginal.isNotEmpty &&
+                                          rolesDisponibles.containsKey(
+                                            rolOriginal,
+                                          )) {
+                                        rolValido = rolOriginal;
+                                      }
 
                                       return Card(
                                         shape: RoundedRectangleBorder(
@@ -212,51 +285,34 @@ class _EmpleadosPendientesDeskScreenState
                                                     MainAxisAlignment
                                                         .spaceBetween,
                                                 children: [
-                                                  const Text(
-                                                    'Rol:',
-                                                    style: TextStyle(
+                                                  Text(
+                                                    rolValido != null &&
+                                                            rolesDisponibles
+                                                                .containsKey(
+                                                                  rolValido,
+                                                                )
+                                                        ? 'Rol: '
+                                                        : 'Rol: Sin asignar',
+                                                    style: const TextStyle(
                                                       fontWeight:
                                                           FontWeight.w500,
+                                                      color: Color(0xFF2C3E50),
                                                     ),
                                                   ),
                                                   DropdownButton<String>(
-                                                    value: rol,
+                                                    value: rolValido,
                                                     underline: Container(),
-                                                    items: const [
-                                                      DropdownMenuItem(
-                                                        value: 'Administrador',
-                                                        child: Row(
-                                                          children: [
-                                                            Icon(
-                                                              Icons.security,
-                                                              color: Color(
-                                                                0xFF2C3E50,
-                                                              ),
-                                                            ),
-                                                            SizedBox(width: 10),
-                                                            Text(
-                                                              'Administrador',
-                                                            ),
-                                                          ],
-                                                        ),
+                                                    dropdownColor: Colors.white,
+                                                    hint: const Text(
+                                                      'Seleccionar rol',
+                                                      style: TextStyle(
+                                                        color: Colors.grey,
                                                       ),
-                                                      DropdownMenuItem(
-                                                        value: 'Empleado',
-                                                        child: Row(
-                                                          children: [
-                                                            Icon(
-                                                              Icons
-                                                                  .supervisor_account,
-                                                              color: Color(
-                                                                0xFF2C3E50,
-                                                              ),
-                                                            ),
-                                                            SizedBox(width: 10),
-                                                            Text('Empleado'),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ],
+                                                    ),
+                                                    items: _buildDropdownItems(
+                                                      rolesDisponibles,
+                                                      rolOriginal,
+                                                    ),
                                                     onChanged: (nuevoRol) {
                                                       if (nuevoRol != null) {
                                                         FirebaseFirestore
@@ -281,28 +337,84 @@ class _EmpleadosPendientesDeskScreenState
                                                         tooltip:
                                                             'Aprobar usuario',
                                                         onPressed: () async {
-                                                          final pendienteDoc =
-                                                              await FirebaseFirestore
-                                                                  .instance
-                                                                  .collection(
-                                                                    'usuarios_pendientes',
-                                                                  )
-                                                                  .doc(user.id)
-                                                                  .get();
+                                                          if (rolValido ==
+                                                                  null ||
+                                                              rolValido
+                                                                  .isEmpty) {
+                                                            ScaffoldMessenger.of(
+                                                              context,
+                                                            ).showSnackBar(
+                                                              const SnackBar(
+                                                                content: Text(
+                                                                  'Por favor, asigna un rol antes de aprobar al usuario',
+                                                                ),
+                                                                backgroundColor:
+                                                                    Colors
+                                                                        .orange,
+                                                              ),
+                                                            );
+                                                            return;
+                                                          }
 
-                                                          if (pendienteDoc
-                                                              .exists) {
+                                                          if (!rolesDisponibles
+                                                              .containsKey(
+                                                                rolValido,
+                                                              )) {
+                                                            ScaffoldMessenger.of(
+                                                              context,
+                                                            ).showSnackBar(
+                                                              const SnackBar(
+                                                                content: Text(
+                                                                  'Por favor, selecciona un rol válido de la lista antes de aprobar',
+                                                                ),
+                                                                backgroundColor:
+                                                                    Colors
+                                                                        .orange,
+                                                              ),
+                                                            );
+                                                            return;
+                                                          }
+
+                                                          {
+                                                            final pendienteDoc =
+                                                                await FirebaseFirestore
+                                                                    .instance
+                                                                    .collection(
+                                                                      'usuarios_pendientes',
+                                                                    )
+                                                                    .doc(
+                                                                      user.id,
+                                                                    )
+                                                                    .get();
+
+                                                            if (!pendienteDoc
+                                                                .exists) {
+                                                              ScaffoldMessenger.of(
+                                                                context,
+                                                              ).showSnackBar(
+                                                                const SnackBar(
+                                                                  content: Text(
+                                                                    'Error: Usuario no encontrado',
+                                                                  ),
+                                                                  backgroundColor:
+                                                                      Colors
+                                                                          .red,
+                                                                ),
+                                                              );
+                                                              return;
+                                                            }
+
                                                             final data =
                                                                 pendienteDoc
                                                                     .data()!;
-
-                                                            // Actualiza los campos que quieras al aprobar
                                                             data['estado'] =
                                                                 'aceptado';
                                                             data['fechaVerificacion'] =
                                                                 FieldValue.serverTimestamp();
+                                                            data['rol'] =
+                                                                rolValido;
 
-                                                            // Guardar en usuarios_activos (crea o reemplaza)
+                                                            // Crear usuario activo
                                                             await FirebaseFirestore
                                                                 .instance
                                                                 .collection(
@@ -311,7 +423,7 @@ class _EmpleadosPendientesDeskScreenState
                                                                 .doc(user.id)
                                                                 .set(data);
 
-                                                            // Borrar de usuarios_pendientes
+                                                            // Eliminar de pendientes
                                                             await FirebaseFirestore
                                                                 .instance
                                                                 .collection(
@@ -319,9 +431,17 @@ class _EmpleadosPendientesDeskScreenState
                                                                 )
                                                                 .doc(user.id)
                                                                 .delete();
+
+                                                            await _registrarAuditoria(
+                                                              accion:
+                                                                  'Aprobar Usuario',
+                                                              detalle:
+                                                                  'Usuario: $nombre, Rol: ${rolesDisponibles[rolValido]}, Sede: $sede',
+                                                            );
                                                           }
                                                         },
                                                       ),
+
                                                       IconButton(
                                                         icon: const Icon(
                                                           Icons.close,
@@ -330,24 +450,176 @@ class _EmpleadosPendientesDeskScreenState
                                                         tooltip:
                                                             'Rechazar usuario',
                                                         onPressed: () async {
-                                                          await FirebaseFirestore
-                                                              .instance
-                                                              .collection(
-                                                                'usuarios',
-                                                              )
-                                                              .doc(user.id)
-                                                              .update({
-                                                                'estado':
-                                                                    'rechazado',
-                                                              });
+                                                          final bool?
+                                                          confirm = await showDialog<
+                                                            bool
+                                                          >(
+                                                            context: context,
+                                                            builder:
+                                                                (
+                                                                  context,
+                                                                ) => Center(
+                                                                  child: ConstrainedBox(
+                                                                    constraints:
+                                                                        const BoxConstraints(
+                                                                          maxWidth:
+                                                                              500,
+                                                                        ),
+                                                                    child: Dialog(
+                                                                      shape: RoundedRectangleBorder(
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(
+                                                                              20,
+                                                                            ),
+                                                                      ),
+                                                                      elevation:
+                                                                          12,
+                                                                      backgroundColor:
+                                                                          Colors
+                                                                              .white,
+                                                                      child: Padding(
+                                                                        padding: const EdgeInsets.symmetric(
+                                                                          vertical:
+                                                                              24,
+                                                                          horizontal:
+                                                                              28,
+                                                                        ),
+                                                                        child: Column(
+                                                                          mainAxisSize:
+                                                                              MainAxisSize.min,
+                                                                          children: [
+                                                                            Icon(
+                                                                              Icons.warning_amber_rounded,
+                                                                              color:
+                                                                                  Colors.redAccent,
+                                                                              size:
+                                                                                  48,
+                                                                            ),
+                                                                            const SizedBox(
+                                                                              height:
+                                                                                  12,
+                                                                            ),
+                                                                            Text(
+                                                                              'Rechazar Usuario',
+                                                                              style: Theme.of(
+                                                                                context,
+                                                                              ).textTheme.titleLarge?.copyWith(
+                                                                                fontWeight:
+                                                                                    FontWeight.bold,
+                                                                                color:
+                                                                                    Colors.black87,
+                                                                              ),
+                                                                            ),
+                                                                            const SizedBox(
+                                                                              height:
+                                                                                  8,
+                                                                            ),
+                                                                            Text(
+                                                                              '¿Estás seguro de que quieres rechazar a "$nombre"?',
+                                                                              style: Theme.of(
+                                                                                context,
+                                                                              ).textTheme.bodyMedium?.copyWith(
+                                                                                color:
+                                                                                    Colors.black54,
+                                                                              ),
+                                                                              textAlign:
+                                                                                  TextAlign.center,
+                                                                            ),
+                                                                            const SizedBox(
+                                                                              height:
+                                                                                  28,
+                                                                            ),
+                                                                            Row(
+                                                                              mainAxisAlignment:
+                                                                                  MainAxisAlignment.end,
+                                                                              children: [
+                                                                                TextButton(
+                                                                                  style: TextButton.styleFrom(
+                                                                                    foregroundColor:
+                                                                                        Colors.grey[700],
+                                                                                  ),
+                                                                                  onPressed:
+                                                                                      () => Navigator.pop(
+                                                                                        context,
+                                                                                        false,
+                                                                                      ),
+                                                                                  child: const Text(
+                                                                                    'Cancelar',
+                                                                                  ),
+                                                                                ),
+                                                                                const SizedBox(
+                                                                                  width:
+                                                                                      12,
+                                                                                ),
+                                                                                ElevatedButton(
+                                                                                  style: ElevatedButton.styleFrom(
+                                                                                    backgroundColor:
+                                                                                        Colors.redAccent,
+                                                                                    shape: RoundedRectangleBorder(
+                                                                                      borderRadius: BorderRadius.circular(
+                                                                                        12,
+                                                                                      ),
+                                                                                    ),
+                                                                                  ),
+                                                                                  onPressed:
+                                                                                      () => Navigator.pop(
+                                                                                        context,
+                                                                                        true,
+                                                                                      ),
+                                                                                  child: const Text(
+                                                                                    'Rechazar',
+                                                                                    style: TextStyle(
+                                                                                      color:
+                                                                                          Colors.white,
+                                                                                      fontWeight:
+                                                                                          FontWeight.w600,
+                                                                                    ),
+                                                                                  ),
+                                                                                ),
+                                                                              ],
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                          );
 
-                                                          await FirebaseFirestore
-                                                              .instance
-                                                              .collection(
-                                                                'usuarios_pendientes',
-                                                              )
-                                                              .doc(user.id)
-                                                              .delete();
+                                                          if (confirm == true) {
+                                                            // Eliminar usuario pendiente (SOLO esto)
+                                                            await FirebaseFirestore
+                                                                .instance
+                                                                .collection(
+                                                                  'usuarios_pendientes',
+                                                                )
+                                                                .doc(user.id)
+                                                                .delete();
+
+                                                            // Registrar auditoría
+                                                            await _registrarAuditoria(
+                                                              accion:
+                                                                  'Rechazar Usuario',
+                                                              detalle:
+                                                                  'Usuario: $nombre, Sede: $sede',
+                                                            );
+
+                                                            // Mostrar mensaje
+                                                            if (mounted) {
+                                                              ScaffoldMessenger.of(
+                                                                context,
+                                                              ).showSnackBar(
+                                                                SnackBar(
+                                                                  content: Text(
+                                                                    'Usuario $nombre rechazado',
+                                                                  ),
+                                                                  backgroundColor:
+                                                                      Colors
+                                                                          .redAccent,
+                                                                ),
+                                                              );
+                                                            }
+                                                          }
                                                         },
                                                       ),
                                                     ],
@@ -373,12 +645,11 @@ class _EmpleadosPendientesDeskScreenState
                                     const EmpleadosActivosDeskScreen(),
                                   );
                                 },
-
                                 icon: const Icon(
                                   Icons.group,
                                   color: Colors.white,
                                 ),
-                                label: const Text('Ver empleados activos'),
+                                label: const Text('Ver usuarios activos'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF4682B4),
                                   foregroundColor: const Color.fromARGB(

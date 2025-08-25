@@ -1,6 +1,7 @@
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EmpleadosActivosDeskScreen extends StatefulWidget {
   const EmpleadosActivosDeskScreen({super.key});
@@ -14,6 +15,32 @@ class _EmpleadosActivosDeskScreenState
     extends State<EmpleadosActivosDeskScreen> {
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
+
+  Future<void> _registrarAuditoria({
+    required String accion,
+    required String detalle,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    String nombreUsuario = 'Administrador';
+
+    if (user != null) {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('usuarios_activos')
+              .doc(user.uid)
+              .get();
+      if (doc.exists) {
+        nombreUsuario = doc['nombre'] ?? nombreUsuario;
+      }
+    }
+
+    await FirebaseFirestore.instance.collection('auditoria_general').add({
+      'fecha': FieldValue.serverTimestamp(),
+      'usuario_nombre': nombreUsuario,
+      'accion': accion,
+      'detalle': detalle,
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +70,7 @@ class _EmpleadosActivosDeskScreenState
                   const Align(
                     alignment: Alignment.center,
                     child: Text(
-                      'Empleados Activos',
+                      'Usuarios Activos',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -136,6 +163,7 @@ class _EmpleadosActivosDeskScreenState
                                         final roles = [
                                           'Administrador General',
                                           'Gerente Sede',
+                                          'Vendedor',
                                           'Supervisor Fundición',
                                           'Operador Fundición',
                                           'Supervisor Mecanizado',
@@ -208,9 +236,12 @@ class _EmpleadosActivosDeskScreenState
                                                           ),
                                                         );
                                                       }).toList(),
-                                                  onChanged: (nuevoRol) {
-                                                    if (nuevoRol != null) {
-                                                      FirebaseFirestore.instance
+                                                  onChanged: (nuevoRol) async {
+                                                    if (nuevoRol != null &&
+                                                        nuevoRol != rol) {
+                                                      // Actualizar el rol en Firestore
+                                                      await FirebaseFirestore
+                                                          .instance
                                                           .collection(
                                                             'usuarios_activos',
                                                           )
@@ -218,6 +249,14 @@ class _EmpleadosActivosDeskScreenState
                                                           .update({
                                                             'rol': nuevoRol,
                                                           });
+
+                                                      // Registrar auditoría del cambio de rol
+                                                      await _registrarAuditoria(
+                                                        accion:
+                                                            'Cambiar Rol Usuario',
+                                                        detalle:
+                                                            'Usuario: $nombre, Rol anterior: $rol, Nuevo rol: $nuevoRol'
+                                                      );
                                                     }
                                                   },
                                                 ),
@@ -236,6 +275,8 @@ class _EmpleadosActivosDeskScreenState
                                                       context,
                                                       empleado.id,
                                                       nombre,
+                                                      sede,
+                                                      rol,
                                                     ),
                                               ),
                                             ),
@@ -259,97 +300,112 @@ class _EmpleadosActivosDeskScreenState
     );
   }
 
-  void _confirmarEliminacion(
+  Future<void> _confirmarEliminacion(
     BuildContext context,
     String docId,
     String nombre,
-  ) {
+    String sede,
+    String rol,
+  ) async {
     showDialog(
       context: context,
       builder:
-          (context) => Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                color: const Color(0xFFF5F6FA),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.warning_amber_rounded,
-                    size: 48,
-                    color: Color(0xFF1E40AF),
+          (context) => Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                elevation: 12,
+                backgroundColor: Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 24,
+                    horizontal: 28,
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    '¿Eliminar empleado?',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E3A8A),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '¿Estás seguro de que deseas eliminar a "$nombre"? Esta acción no se puede deshacer.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.black87),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[300],
-                          foregroundColor: Colors.black87,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                        ),
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancelar'),
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.redAccent,
+                        size: 48,
                       ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFEF4444),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Eliminar Empleado',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
                         ),
-                        onPressed: () async {
-                          Navigator.of(context).pop();
-                          await FirebaseFirestore.instance
-                              .collection('usuarios_activos')
-                              .doc(docId)
-                              .delete();
-                          if (!mounted) return;
-                          _scaffoldMessengerKey.currentState?.showSnackBar(
-                            const SnackBar(
-                              content: Text('Empleado eliminado correctamente'),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '¿Estás seguro de que deseas eliminar a "$nombre"?',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 28),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.grey[700],
                             ),
-                          );
-                        },
-                        child: const Text('Eliminar'),
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancelar'),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.redAccent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () async {
+                              Navigator.of(context).pop();
+
+                              // Eliminar usuario de Firestore
+                              await FirebaseFirestore.instance
+                                  .collection('usuarios_activos')
+                                  .doc(docId)
+                                  .delete();
+
+                              // Registrar auditoría de eliminación
+                              await _registrarAuditoria(
+                                accion: 'Eliminar Usuario',
+                                detalle:
+                                    'Usuario: $nombre, Rol: $rol, Sede: $sede',
+                              );
+
+                              if (!mounted) return;
+                              _scaffoldMessengerKey.currentState?.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Empleado $nombre eliminado correctamente',
+                                  ),
+                                  backgroundColor: Colors.redAccent,
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Eliminar',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           ),

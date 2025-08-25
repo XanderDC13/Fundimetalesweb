@@ -1,6 +1,6 @@
 import 'package:basefundi/desktop/personal/funciones/tareas_historial_desk.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
-import 'package:basefundi/settings/transition.dart';
+import 'package:basefundi/services/navbar_desk.dart';
+import 'package:basefundi/services/transition.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +14,8 @@ class FuncionesDeskScreen extends StatefulWidget {
 
 class _FuncionesDeskScreenState extends State<FuncionesDeskScreen> {
   String _searchText = '';
+  final Set<String> _expandedCards =
+      {}; // Para rastrear qué tarjetas están expandidas
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +30,6 @@ class _FuncionesDeskScreenState extends State<FuncionesDeskScreen> {
     return MainDeskLayout(
       child: Column(
         children: [
-          // ✅ CABECERA CON TRANSFORM Y FLECHA
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
@@ -62,8 +63,6 @@ class _FuncionesDeskScreenState extends State<FuncionesDeskScreen> {
               ),
             ),
           ),
-
-          // ✅ CONTENIDO CON CONSTRAINEDBOX Y FONDO BLANCO
           Expanded(
             child: Container(
               color: Colors.white,
@@ -94,9 +93,9 @@ class _FuncionesDeskScreenState extends State<FuncionesDeskScreen> {
 
                           final data =
                               snapshot.data!.data() as Map<String, dynamic>;
-                          final rol = (data['rol'] ?? 'empleado').toString();
+                          final rol = data['rol'] ?? 'empleado';
 
-                          if (rol.toLowerCase() == 'administrador') {
+                          if (rol == 'Administrador General') {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -117,10 +116,7 @@ class _FuncionesDeskScreenState extends State<FuncionesDeskScreen> {
                                     });
                                   },
                                 ),
-
                                 const SizedBox(height: 20),
-
-                                // 🔵 NUEVO BOTÓN DE HISTORIAL
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: ElevatedButton.icon(
@@ -153,9 +149,7 @@ class _FuncionesDeskScreenState extends State<FuncionesDeskScreen> {
                                     ),
                                   ),
                                 ),
-
                                 const SizedBox(height: 20),
-
                                 Expanded(child: _buildListaEmpleados()),
                               ],
                             );
@@ -193,7 +187,8 @@ class _FuncionesDeskScreenState extends State<FuncionesDeskScreen> {
 
         final empleados =
             snapshot.data!.docs.where((doc) {
-              final nombre = (doc['nombre'] ?? '').toString().toLowerCase();
+              final data = doc.data() as Map<String, dynamic>;
+              final nombre = (data['nombre'] ?? '').toString().toLowerCase();
               return nombre.contains(_searchText);
             }).toList();
 
@@ -209,95 +204,76 @@ class _FuncionesDeskScreenState extends State<FuncionesDeskScreen> {
             final data = empleado.data() as Map<String, dynamic>;
             final List tareas =
                 data.containsKey('tareas') ? List.from(data['tareas']) : [];
-
             final tareasController = TextEditingController();
+            final isExpanded = _expandedCards.contains(empleado.id);
 
             return Card(
-              color: const Color(0xFFF7F5F5),
-              margin: const EdgeInsets.only(bottom: 20),
+              color: const Color.fromARGB(255, 239, 247, 253),
+              margin: const EdgeInsets.only(bottom: 8),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(12),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      nombre,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C3E50),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Tareas asignadas:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                        color: Color(0xFF2C3E50),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (tareas.isEmpty)
-                      const Text(
-                        'Sin tareas asignadas',
-                        style: TextStyle(color: Colors.grey),
-                      )
-                    else
-                      ...tareas.map<Widget>((tarea) {
-                        return Row(
-                          children: [
-                            const Icon(
-                              Icons.check_box_outlined,
-                              size: 20,
-                              color: Colors.blueAccent,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(child: Text(tarea.toString())),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.edit,
-                                color: Colors.orange,
-                              ),
-                              onPressed:
-                                  () => _showEditarTareaDialog(
-                                    empleado.id,
-                                    tarea,
-                                  ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed:
-                                  () => _eliminarTarea(empleado.id, tarea),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    const SizedBox(height: 12),
+                    // LÍNEA PRINCIPAL COMPACTA
                     Row(
                       children: [
+                        // Nombre y rol
                         Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                nombre,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2C3E50),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                data['rol'] ?? 'Sin rol',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Campo nueva tarea
+                        Expanded(
+                          flex: 3,
                           child: TextField(
                             controller: tareasController,
                             decoration: InputDecoration(
                               hintText: 'Nueva tarea',
                               filled: true,
-                              fillColor: const Color(0xFFF0F4F8),
+                              fillColor: const Color.fromARGB(255, 255, 255, 255),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
+                                borderRadius: BorderRadius.circular(20),
                                 borderSide: BorderSide.none,
                               ),
                               contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 12,
+                                horizontal: 12,
+                                vertical: 8,
                               ),
+                              isDense: true,
                             ),
+                            style: const TextStyle(fontSize: 13),
                           ),
                         ),
-                        const SizedBox(width: 12),
+
+                        const SizedBox(width: 8),
+
+                        // Botón Agregar
                         ElevatedButton(
                           onPressed: () {
                             final nuevaTarea = tareasController.text.trim();
@@ -316,23 +292,146 @@ class _FuncionesDeskScreenState extends State<FuncionesDeskScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF4682B4),
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 14,
+                              horizontal: 12,
+                              vertical: 8,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                              borderRadius: BorderRadius.circular(20),
                             ),
+                            minimumSize: const Size(0, 32),
                           ),
                           child: const Text(
                             'Agregar',
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 8),
+
+                        // Botón expandir/contraer
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              if (isExpanded) {
+                                _expandedCards.remove(empleado.id);
+                              } else {
+                                _expandedCards.add(empleado.id);
+                              }
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${tareas.length}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  isExpanded
+                                      ? Icons.expand_less
+                                      : Icons.expand_more,
+                                  size: 16,
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ],
                     ),
+
+                    // SECCIÓN EXPANDIBLE DE TAREAS
+                    if (isExpanded) ...[
+                      const SizedBox(height: 12),
+                      const Divider(height: 1),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Tareas asignadas:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (tareas.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            'Sin tareas asignadas',
+                            style: TextStyle(color: Colors.grey, fontSize: 12),
+                          ),
+                        )
+                      else
+                        ...tareas.map<Widget>((tarea) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.check_box_outlined,
+                                  size: 16,
+                                  color: Colors.blueAccent,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    tarea.toString(),
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.orange,
+                                    size: 16,
+                                  ),
+                                  padding: const EdgeInsets.all(2),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 24,
+                                    minHeight: 24,
+                                  ),
+                                  onPressed:
+                                      () => _showEditarTareaDialog(
+                                        empleado.id,
+                                        tarea,
+                                      ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                    size: 16,
+                                  ),
+                                  padding: const EdgeInsets.all(2),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 24,
+                                    minHeight: 24,
+                                  ),
+                                  onPressed:
+                                      () => _eliminarTarea(empleado.id, tarea),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                    ],
                   ],
                 ),
               ),
@@ -390,7 +489,7 @@ class _FuncionesDeskScreenState extends State<FuncionesDeskScreen> {
                 decoration: InputDecoration(
                   hintText: 'Nueva tarea',
                   filled: true,
-                  fillColor: const Color(0xFFF0F4F8),
+                  fillColor: const Color.fromARGB(255, 255, 255, 255),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
                     borderSide: BorderSide.none,

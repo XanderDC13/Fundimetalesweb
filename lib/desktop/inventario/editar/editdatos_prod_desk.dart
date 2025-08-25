@@ -1,4 +1,4 @@
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -172,6 +172,7 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
     final nombre = nombreController.text.trim();
     final referencia = referenciaController.text.trim();
     final costoText = costoController.text.trim();
+    final esProductoNuevo = widget.codigoBarras.isEmpty;
 
     if (codigo.isEmpty || nombre.isEmpty || costoText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -207,33 +208,37 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
       return;
     }
 
-    // Verificar cambios
-    List<String> cambios = [];
+    // Solo verificar cambios si NO es producto nuevo
+    if (!esProductoNuevo) {
+      List<String> cambios = [];
 
-    if (codigo != originalCodigo)
-      cambios.add('Código: "$originalCodigo" → "$codigo"');
-    if (nombre != originalNombre)
-      cambios.add('Nombre: "$originalNombre" → "$nombre"');
-    if (referencia != originalReferencia)
-      cambios.add('Referencia: "$originalReferencia" → "$referencia"');
-    if (costoText != originalCosto)
-      cambios.add('Costo: "$originalCosto" → "$costoText"');
-    if (categoriaSeleccionada != originalCategoria)
-      cambios.add('Categoría: "$originalCategoria" → "$categoriaSeleccionada"');
+      if (codigo != originalCodigo)
+        cambios.add('Código: "$originalCodigo" → "$codigo"');
+      if (nombre != originalNombre)
+        cambios.add('Nombre: "$originalNombre" → "$nombre"');
+      if (referencia != originalReferencia)
+        cambios.add('Referencia: "$originalReferencia" → "$referencia"');
+      if (costoText != originalCosto)
+        cambios.add('Costo: "$originalCosto" → "$costoText"');
+      if (categoriaSeleccionada != originalCategoria)
+        cambios.add(
+          'Categoría: "$originalCategoria" → "$categoriaSeleccionada"',
+        );
 
-    for (int i = 0; i < precios.length; i++) {
-      final pActual = precios[i];
-      final pOrig = i < originalPrecios.length ? originalPrecios[i] : '';
-      if (pActual != pOrig) {
-        cambios.add('Precio ${i + 1}: "$pOrig" → "$pActual"');
+      for (int i = 0; i < precios.length; i++) {
+        final pActual = precios[i];
+        final pOrig = i < originalPrecios.length ? originalPrecios[i] : '';
+        if (pActual != pOrig) {
+          cambios.add('Precio ${i + 1}: "$pOrig" → "$pActual"');
+        }
       }
-    }
 
-    if (cambios.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se detectaron cambios.')),
-      );
-      return;
+      if (cambios.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se detectaron cambios.')),
+        );
+        return;
+      }
     }
 
     // Guardar producto
@@ -252,34 +257,69 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
 
     await docRef.set(datos, SetOptions(merge: true));
 
-    // Guardar auditoría
-    if (cambios.isNotEmpty) {
-      final user = FirebaseAuth.instance.currentUser;
+    // Obtener datos del usuario para auditoría
+    final user = FirebaseAuth.instance.currentUser;
+    String auditor = 'Desconocido';
+    String uid = user?.uid ?? 'sin_uid';
 
-      String auditor = 'Desconocido';
-      String uid = user?.uid ?? 'sin_uid';
+    if (user != null) {
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('usuarios_activos')
+              .doc(user.uid)
+              .get();
 
-      if (user != null) {
-        final userDoc =
-            await FirebaseFirestore.instance
-                .collection('usuarios_activos')
-                .doc(user.uid)
-                .get();
-
-        if (userDoc.exists && userDoc.data()!.containsKey('nombre')) {
-          auditor = userDoc['nombre'];
-        }
+      if (userDoc.exists && userDoc.data()!.containsKey('nombre')) {
+        auditor = userDoc['nombre'];
       }
+    }
 
+    // Guardar auditoría según el tipo
+    if (esProductoNuevo) {
+      // Auditoría para producto NUEVO
       await FirebaseFirestore.instance.collection('auditoria_general').add({
-        'accion': 'Edición de producto',
-        'detalle': 'Producto: $nombre\n${cambios.join('\n')}',
+        'accion': 'Crear producto',
+        'detalle':
+            'Producto: $nombre (Referencia: $referencia) - categoría: $categoriaSeleccionada',
         'fecha': FieldValue.serverTimestamp(),
         'usuario_nombre': auditor,
         'usuario_uid': uid,
       });
+    } else {
+      // Auditoría para producto EDITADO (ya verificamos que hay cambios)
+      List<String> cambios = [];
 
+      if (codigo != originalCodigo)
+        cambios.add('Código: "$originalCodigo" → "$codigo"');
+      if (nombre != originalNombre)
+        cambios.add('Nombre: "$originalNombre" → "$nombre"');
+      if (referencia != originalReferencia)
+        cambios.add('Referencia: "$originalReferencia" → "$referencia"');
+      if (costoText != originalCosto)
+        cambios.add('Costo: "$originalCosto" → "$costoText"');
+      if (categoriaSeleccionada != originalCategoria)
+        cambios.add(
+          'Categoría: "$originalCategoria" → "$categoriaSeleccionada"',
+        );
+
+      for (int i = 0; i < precios.length; i++) {
+        final pActual = precios[i];
+        final pOrig = i < originalPrecios.length ? originalPrecios[i] : '';
+        if (pActual != pOrig) {
+          cambios.add('Precio ${i + 1}: "$pOrig" → "$pActual"');
+        }
+      }
+
+      await FirebaseFirestore.instance.collection('auditoria_general').add({
+        'accion': 'Editar producto',
+        'detalle':
+            'Producto: $nombre - Cambios realizados:\n${cambios.join('\n')}',
+        'fecha': FieldValue.serverTimestamp(),
+        'usuario_nombre': auditor,
+        'usuario_uid': uid,
+      });
     }
+
     Navigator.pop(context);
   }
 

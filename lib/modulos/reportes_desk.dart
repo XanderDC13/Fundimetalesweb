@@ -1,11 +1,11 @@
 import 'package:basefundi/desktop/reportes/auditoria_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_compras_desk.dart';
+import 'package:basefundi/desktop/reportes/reporte_documentos_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_inv_desk.dart';
-import 'package:basefundi/desktop/reportes/reporte_transporte_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_ventas_desk.dart';
-import 'package:basefundi/settings/transition.dart';
+import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 class ReportesDeskScreen extends StatefulWidget {
@@ -95,7 +95,7 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
                     children: [
                       _buildBoton(
                         icon: LucideIcons.clipboardList,
-                        titulo: 'Reporte de Inventario',
+                        titulo: 'Reporte Inventario',
                         subtitulo: 'Detalle de productos',
                         onTap: () {
                           navegarConFade(
@@ -108,7 +108,7 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
                       const SizedBox(height: 20),
                       _buildBoton(
                         icon: LucideIcons.clipboardList,
-                        titulo: 'Reporte de Ventas',
+                        titulo: 'Reporte Ventas',
                         subtitulo: 'Historial de ventas',
                         onTap: () {
                           navegarConFade(
@@ -120,24 +120,24 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
                       const SizedBox(height: 20),
                       _buildBoton(
                         icon: LucideIcons.clipboardList,
-                        titulo: 'Reporte de Compras',
-                        subtitulo: 'Compra de materia prima',
+                        titulo: 'Reporte Documentos',
+                        subtitulo: 'Proformas y Ordenes de despacho',
                         onTap: () {
                           navegarConFade(
                             context,
-                            const ReporteComprasDeskScreen(),
+                            const ReporteDocumentosDeskScreen(),
                           );
                         },
                       ),
                       const SizedBox(height: 20),
                       _buildBoton(
                         icon: LucideIcons.clipboardList,
-                        titulo: 'Reporte de Transporte',
-                        subtitulo: 'Tiempos y entregas',
+                        titulo: 'Reporte Compras Materia Prima',
+                        subtitulo: 'Compra de materia prima',
                         onTap: () {
                           navegarConFade(
                             context,
-                            const ReporteTransporteDeskScreen(),
+                            const ReporteComprasDeskScreen(),
                           );
                         },
                       ),

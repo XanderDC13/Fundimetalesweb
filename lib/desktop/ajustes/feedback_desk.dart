@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 
 class FeedbackDeskScreen extends StatefulWidget {
   const FeedbackDeskScreen({super.key});
@@ -134,11 +134,10 @@ class _FeedbackDeskScreenState extends State<FeedbackDeskScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Formulario dentro de Card
                         Container(
                           padding: const EdgeInsets.all(32),
                           decoration: BoxDecoration(
-                            color: const Color.fromARGB(255, 252, 250, 250),
+                            color: const Color(0xFFF0F4F8),
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(

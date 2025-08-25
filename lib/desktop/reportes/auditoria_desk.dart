@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:basefundi/settings/navbar_desk.dart'; // Asegúrate de tener este layout
+import 'package:basefundi/services/navbar_desk.dart'; // Asegúrate de tener este layout
 
 class AuditoriaDeskScreen extends StatefulWidget {
   const AuditoriaDeskScreen({super.key});

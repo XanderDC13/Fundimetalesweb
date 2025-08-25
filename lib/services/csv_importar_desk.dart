@@ -2,7 +2,7 @@ import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:csv/csv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 
 class ImportarProductosDeskScreen extends StatefulWidget {
   const ImportarProductosDeskScreen({super.key});

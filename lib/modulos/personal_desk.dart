@@ -1,9 +1,9 @@
 import 'package:basefundi/desktop/personal/empleados/empleados_registro_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
 import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
-import 'package:basefundi/settings/transition.dart';
+import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 
 class PersonalDeskScreen extends StatefulWidget {
   const PersonalDeskScreen({super.key});
@@ -76,7 +76,6 @@ class _PersonalDeskScreenState extends State<PersonalDeskScreen>
             ),
           ),
 
-          // ✅ CONTENIDO principal con FadeTransition
           Expanded(
             child: Container(
               color: Colors.white,
@@ -88,12 +87,11 @@ class _PersonalDeskScreenState extends State<PersonalDeskScreen>
                     children: [
                       _buildCard(
                         context: context,
-                        title: 'Empleados',
-                        subtitle: 'Lista de empleados',
+                        title: 'Usuarios',
+                        subtitle: 'Lista de usuarios registrados',
                         icon: Icons.group,
                         destination: const EmpleadosPendientesDeskScreen(),
                       ),
-
                       const SizedBox(height: 20),
                       _buildCard(
                         context: context,

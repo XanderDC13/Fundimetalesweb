@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 
 class ReporteComprasDeskScreen extends StatefulWidget {
   const ReporteComprasDeskScreen({super.key});
@@ -320,143 +320,232 @@ class _ReporteComprasDeskScreenState extends State<ReporteComprasDeskScreen> {
   }
 
   pw.Widget _buildReportePDFTable(List<Map<String, dynamic>> data) {
-    return pw.Container(
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey400),
-        borderRadius: pw.BorderRadius.circular(6),
-      ),
-      child: pw.Column(
-        children: [
-          // Header
-          pw.Container(
-            padding: pw.EdgeInsets.all(6),
-            color: PdfColor.fromHex('#f8f9fa'),
-            child: pw.Row(
-              children: [
-                pw.Expanded(
-                  flex: 2,
-                  child: pw.Text(
-                    'NÚMERO',
-                    style: pw.TextStyle(
-                      fontSize: 9,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 3,
-                  child: pw.Text(
-                    'CLIENTE',
-                    style: pw.TextStyle(
-                      fontSize: 9,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 2,
-                  child: pw.Text(
-                    'FECHA',
-                    style: pw.TextStyle(
-                      fontSize: 9,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 4,
-                  child: pw.Text(
-                    'ITEMS',
-                    style: pw.TextStyle(
-                      fontSize: 9,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 2,
-                  child: pw.Text(
-                    'TOTAL',
-                    style: pw.TextStyle(
-                      fontSize: 9,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                    textAlign: pw.TextAlign.right,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Filas de datos
-          ...data.map((item) {
-            final items = item['items'] as List<dynamic>;
-            String itemsTexto = items
-                .map((i) {
-                  final itemMap = i as Map<String, dynamic>;
-                  return '${itemMap['descripcion']} (${itemMap['kilos']}kg)';
-                })
-                .join(', ');
-
-            // Limitar el texto de items si es muy largo
-            if (itemsTexto.length > 80) {
-              itemsTexto = '${itemsTexto.substring(0, 80)}...';
-            }
-
-            return pw.Container(
-              padding: pw.EdgeInsets.all(6),
+  return pw.Column(
+    children: data.map((proforma) {
+      final items = proforma['items'] as List<dynamic>? ?? [];
+      
+      return pw.Container(
+        margin: pw.EdgeInsets.only(bottom: 20),
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColors.grey400, width: 1),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            // Header de la proforma individual
+            pw.Container(
+              width: double.infinity,
+              padding: pw.EdgeInsets.all(10),
               decoration: pw.BoxDecoration(
+                color: PdfColors.grey200,
                 border: pw.Border(
-                  bottom: pw.BorderSide(color: PdfColors.grey300),
+                  bottom: pw.BorderSide(color: PdfColors.grey400),
                 ),
               ),
               child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Expanded(
-                    flex: 2,
-                    child: pw.Text(
-                      item['numero']?.toString() ?? '—',
-                      style: pw.TextStyle(fontSize: 8),
+                  pw.Text(
+                    'PROFORMA: ${proforma['numero']?.toString() ?? '—'}',
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
                     ),
                   ),
-                  pw.Expanded(
-                    flex: 3,
-                    child: pw.Text(
-                      (item['cliente']?.toString() ?? '—').toUpperCase(),
-                      style: pw.TextStyle(fontSize: 8),
-                    ),
-                  ),
-                  pw.Expanded(
-                    flex: 2,
-                    child: pw.Text(
-                      item['fecha'] != null
-                          ? DateFormat('dd/MM/yyyy').format(item['fecha'])
-                          : '—',
-                      style: pw.TextStyle(fontSize: 8),
-                    ),
-                  ),
-                  pw.Expanded(
-                    flex: 4,
-                    child: pw.Text(
-                      itemsTexto,
-                      style: pw.TextStyle(fontSize: 7),
-                    ),
-                  ),
-                  pw.Expanded(
-                    flex: 2,
-                    child: pw.Text(
-                      '\$${(item['totalProforma'] ?? 0.0).toStringAsFixed(2)}',
-                      style: pw.TextStyle(fontSize: 8),
-                      textAlign: pw.TextAlign.right,
+                  pw.Text(
+                    'FECHA: ${proforma['fecha'] != null ? DateFormat('dd/MM/yyyy').format(proforma['fecha']) : '—'}',
+                    style: pw.TextStyle(
+                      fontSize: 9,
                     ),
                   ),
                 ],
               ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
+            ),
+            
+            // Información del cliente
+            pw.Container(
+              width: double.infinity,
+              padding: pw.EdgeInsets.all(8),
+              decoration: pw.BoxDecoration(
+                border: pw.Border(
+                  bottom: pw.BorderSide(color: PdfColors.grey400),
+                ),
+              ),
+              child: pw.Text(
+                'CLIENTE: ${(proforma['cliente']?.toString() ?? '—').toUpperCase()}',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ),
+            
+            // Tabla de items
+            pw.Container(
+              child: pw.Column(
+                children: [
+                  // Header de la tabla
+                  pw.Container(
+                    padding: pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.grey200,
+                      border: pw.Border(
+                        bottom: pw.BorderSide(color: PdfColors.grey400),
+                      ),
+                    ),
+                    child: pw.Row(
+                      children: [
+                        pw.Expanded(
+                          flex: 4,
+                          child: pw.Text(
+                            'DESCRIPCIÓN',
+                            style: pw.TextStyle(
+                              fontSize: 9,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        pw.Expanded(
+                          flex: 2,
+                          child: pw.Text(
+                            'KILOS',
+                            style: pw.TextStyle(
+                              fontSize: 9,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ),
+                        pw.Expanded(
+                          flex: 2,
+                          child: pw.Text(
+                            'PRECIO',
+                            style: pw.TextStyle(
+                              fontSize: 9,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ),
+                        pw.Expanded(
+                          flex: 2,
+                          child: pw.Text(
+                            'SUBTOTAL',
+                            style: pw.TextStyle(
+                              fontSize: 9,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                            textAlign: pw.TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Filas de items
+                  ...items.map((item) {
+                    final itemMap = item as Map<String, dynamic>;
+                    return pw.Container(
+                      padding: pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                      decoration: pw.BoxDecoration(
+                        border: pw.Border(
+                          bottom: pw.BorderSide(color: PdfColors.grey300),
+                        ),
+                      ),
+                      child: pw.Row(
+                        children: [
+                          pw.Expanded(
+                            flex: 4,
+                            child: pw.Text(
+                              (itemMap['descripcion']?.toString() ?? '').toUpperCase(),
+                              style: pw.TextStyle(fontSize: 8),
+                            ),
+                          ),
+                          pw.Expanded(
+                            flex: 2,
+                            child: pw.Text(
+                              itemMap['kilos']?.toString() ?? '0',
+                              style: pw.TextStyle(fontSize: 8),
+                              textAlign: pw.TextAlign.center,
+                            ),
+                          ),
+                          pw.Expanded(
+                            flex: 2,
+                            child: pw.Text(
+                              '\$${itemMap['precio']?.toString() ?? '0'}',
+                              style: pw.TextStyle(fontSize: 8),
+                              textAlign: pw.TextAlign.center,
+                            ),
+                          ),
+                          pw.Expanded(
+                            flex: 2,
+                            child: pw.Text(
+                              '\$${itemMap['total']?.toString() ?? '0'}',
+                              style: pw.TextStyle(fontSize: 8),
+                              textAlign: pw.TextAlign.right,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
+            
+            // Total de la proforma
+            pw.Container(
+              padding: pw.EdgeInsets.all(8),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
+                children: [
+                  pw.Container(
+                    width: 150,
+                    padding: pw.EdgeInsets.all(8),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey400),
+                    ),
+                    child: pw.Column(
+                      children: [
+                        pw.Container(
+                          width: double.infinity,
+                          padding: pw.EdgeInsets.symmetric(vertical: 4),
+                          decoration: pw.BoxDecoration(
+                            color: PdfColors.grey200,
+                            border: pw.Border.all(color: PdfColors.grey400),
+                          ),
+                          child: pw.Row(
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            children: [
+                              pw.Text(
+                                'TOTAL:',
+                                style: pw.TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: pw.FontWeight.bold,
+                                ),
+                              ),
+                              pw.Text(
+                                '\$${(proforma['totalProforma'] ?? 0.0).toStringAsFixed(2)}',
+                                style: pw.TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: pw.FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList(),
+  );
+}
 
   pw.Widget _buildReportePDFTotales(
     List<Map<String, dynamic>> data,
@@ -629,7 +718,7 @@ class _ReporteComprasDeskScreenState extends State<ReporteComprasDeskScreen> {
                   const Align(
                     alignment: Alignment.center,
                     child: Text(
-                      'Reporte de Compras',
+                      'Reporte de Compras Materia Prima',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 24,

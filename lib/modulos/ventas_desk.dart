@@ -1,8 +1,7 @@
-import 'package:basefundi/settings/navbar_desk.dart';
+import 'package:basefundi/services/navbar_desk.dart';
 import 'package:basefundi/desktop/ventas/modificar_ventas_desk.dart';
-import 'package:basefundi/desktop/ventas/ventas_totales_desk.dart';
 import 'package:basefundi/desktop/ventas/realizar_venta_desk.dart';
-import 'package:basefundi/settings/transition.dart';
+import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
 
 class VentasDeskScreen extends StatefulWidget {
@@ -88,10 +87,10 @@ class _VentasDeskScreenState extends State<VentasDeskScreen>
                   child: ListView(
                     children: [
                       _buildBoton(
-                        icono: Icons.receipt_long,
-                        titulo: 'Ventas Totales',
-                        subtitulo: 'Historial de ventas realizadas',
-                        destino: const VentasTotalesDeskScreen(),
+                        icono: Icons.shopping_cart,
+                        titulo: 'Realizar Venta',
+                        subtitulo: 'Registrar nueva venta',
+                        destino: const VentasDetalleDeskScreen(),
                       ),
                       const SizedBox(height: 20),
                       _buildBoton(
@@ -99,13 +98,6 @@ class _VentasDeskScreenState extends State<VentasDeskScreen>
                         titulo: 'Modificar Ventas',
                         subtitulo: 'Editar ventas registradas',
                         destino: const ModificarVentaDeskScreen(),
-                      ),
-                      const SizedBox(height: 20),
-                      _buildBoton(
-                        icono: Icons.shopping_cart,
-                        titulo: 'Realizar Venta',
-                        subtitulo: 'Registrar nueva venta',
-                        destino: const VentasDetalleDeskScreen(),
                       ),
                     ],
                   ),
