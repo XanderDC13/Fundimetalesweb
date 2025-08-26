@@ -268,7 +268,7 @@ class _HistorialInsumosDeskWidgetState
         transaction.set(auditoriaRef, {
           'fecha': FieldValue.serverTimestamp(),
           'usuario_nombre': auditor,
-          'accion': 'Eliminar Solicitud de Insumos',
+          'accion': 'Eliminar Solicitud Insumos',
           'detalle': 'Insumo: $nombreInsumo, Cantidad devuelta: $cantidad',
         });
 

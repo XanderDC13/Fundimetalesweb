@@ -63446,7 +63446,7 @@ m=(e==null?$.r=$.aa():e).S("[DEFAULT]")
 A.Y(m,p,!0)
 f=A.ap(new A.a8(m)).T("auditoria_general").p9()
 e=$.fU().fu()
-a.DN(0,f,A.a9(["fecha",new A.ei(e,e),"usuario_nombre",k,"accion","Eliminar Solicitud de Insumos","detalle","Insumo: "+A.j(g)+", Cantidad devuelta: "+o],n,t.K),d)
+a.DN(0,f,A.a9(["fecha",new A.ei(e,e),"usuario_nombre",k,"accion","Eliminar Solicitud Insumos","detalle","Insumo: "+A.j(g)+", Cantidad devuelta: "+o],n,t.K),d)
 d=$.r
 m=(d==null?$.r=$.aa():d).S("[DEFAULT]")
 A.Y(m,p,!0)
