@@ -322,8 +322,8 @@ class _InventarioProcesoDeskScreenState
             final double anchoFecha = totalWidth * 0.12;
             final double anchoNombre = totalWidth * 0.25;
             final double anchoReferencia = totalWidth * 0.20;
-            final double anchoCantidad = totalWidth * 0.12;
-            final double anchoAcciones = totalWidth * 0.12;
+            final double anchoCantidad = totalWidth * 0.10;
+            final double anchoAcciones = totalWidth * 0.15;
 
             return SingleChildScrollView(
               scrollDirection: Axis.vertical,
@@ -430,14 +430,27 @@ class _InventarioProcesoDeskScreenState
                           DataCell(
                             SizedBox(
                               width: anchoAcciones,
-                              child: IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.redAccent,
-                                ),
-                                tooltip: 'Eliminar',
-                                onPressed:
-                                    () => _eliminarProducto(data, context),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.edit_outlined,
+                                      color: Color(0xFF4682B4),
+                                    ),
+                                    tooltip: 'Editar cantidad',
+                                    onPressed: () => _editarCantidad(data),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.redAccent,
+                                    ),
+                                    tooltip: 'Eliminar',
+                                    onPressed:
+                                        () => _eliminarProducto(data, context),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -496,8 +509,7 @@ class _InventarioProcesoDeskScreenState
             'referencia': referencia,
             'proceso': proceso,
             'cantidad': cantidad,
-            'ultima_actualizacion':
-                data['ultima_actualizacion'], 
+            'ultima_actualizacion': data['ultima_actualizacion'],
           });
         }
       }
@@ -546,8 +558,7 @@ class _InventarioProcesoDeskScreenState
               'Producto no encontrado',
           'proceso': producto['proceso'],
           'cantidad': producto['cantidad'],
-          'ultima_actualizacion':
-              producto['ultima_actualizacion'],
+          'ultima_actualizacion': producto['ultima_actualizacion'],
         });
       }
     } catch (e) {
@@ -752,11 +763,11 @@ class _InventarioProcesoDeskScreenState
               cellStyle: const pw.TextStyle(fontSize: 8),
               cellPadding: const pw.EdgeInsets.all(3),
               columnWidths: {
-                0: const pw.FixedColumnWidth(60), 
+                0: const pw.FixedColumnWidth(60),
                 1: const pw.FixedColumnWidth(70),
-                2: const pw.FlexColumnWidth(2), 
-                3: const pw.FixedColumnWidth(60), 
-                4: const pw.FixedColumnWidth(50), 
+                2: const pw.FlexColumnWidth(2),
+                3: const pw.FixedColumnWidth(60),
+                4: const pw.FixedColumnWidth(50),
               },
               headers: headers,
               data: dataRows,
@@ -836,7 +847,7 @@ class _InventarioProcesoDeskScreenState
 
         await FirebaseFirestore.instance.collection('auditoria_general').add({
           'accion':
-              'Eliminación de Inventario ${data['proceso'].toUpperCase()}',
+              'Eliminar Cant Inventario ${data['proceso'].toUpperCase()}',
           'detalle':
               'Producto: ${data['nombre']}, Referencia: ${data['referencia']}, Cantidad eliminada: ${data['cantidad']}',
           'fecha': DateTime.now(),
@@ -848,6 +859,124 @@ class _InventarioProcesoDeskScreenState
         setState(() {});
       } catch (e) {
         _mostrarSnackBar('Error al eliminar producto: $e');
+      }
+    }
+  }
+
+  Future<void> _editarCantidad(Map<String, dynamic> data) async {
+    final TextEditingController cantidadController = TextEditingController(
+      text: data['cantidad'].toString(),
+    );
+
+    final nuevaCantidad = await showDialog<int>(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: Text('Editar cantidad - ${data['nombre']}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Referencia: ${data['referencia']}'),
+                Text('Proceso: ${data['proceso'].toUpperCase()}'),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: cantidadController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Nueva cantidad',
+                    border: OutlineInputBorder(),
+                  ),
+                  autofocus: true,
+                  onSubmitted: (value) {
+                    final cantidad = int.tryParse(value);
+                    if (cantidad != null && cantidad >= 0) {
+                      if (mounted) Navigator.pop(context, cantidad);
+                    }
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  if (mounted) Navigator.pop(context);
+                },
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4682B4),
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  final cantidad = int.tryParse(cantidadController.text);
+                  if (cantidad != null && cantidad >= 0) {
+                    if (mounted) Navigator.pop(context, cantidad);
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Ingrese una cantidad válida (número entero mayor o igual a 0)',
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Guardar'),
+              ),
+            ],
+          ),
+    );
+
+    if (nuevaCantidad != null && nuevaCantidad != data['cantidad']) {
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          if (mounted) _mostrarSnackBar('Usuario no autenticado');
+          return;
+        }
+
+        // Buscar el nombre en la colección usuarios_activos
+        final usuarioDoc =
+            await FirebaseFirestore.instance
+                .collection('usuarios_activos')
+                .doc(user.uid)
+                .get();
+
+        final usuarioNombre =
+            usuarioDoc.exists
+                ? (usuarioDoc['nombre'] ?? 'Desconocido')
+                : 'Desconocido';
+
+        // Actualizar la cantidad en Firestore
+        await FirebaseFirestore.instance
+            .collection('inventarios')
+            .doc(data['proceso'])
+            .collection('productos')
+            .doc(data['referencia'])
+            .update({
+              'cantidad': nuevaCantidad,
+              'ultima_actualizacion': FieldValue.serverTimestamp(),
+            });
+
+        // Registrar en auditoría
+        await FirebaseFirestore.instance.collection('auditoria_general').add({
+          'fecha': FieldValue.serverTimestamp(),
+          'usuario_nombre': usuarioNombre,
+          'usuario_uid': user.uid,
+          'accion': 'Edición de cantidad de inventario procesos',
+          'detalle':
+              'Proceso: ${data['proceso']}, Producto: ${data['nombre']}, Referencia: ${data['referencia']}, Cantidad anterior: ${data['cantidad']}, Cantidad nueva: $nuevaCantidad',
+        });
+
+        if (mounted) {
+          _mostrarSnackBar('Cantidad actualizada correctamente');
+          setState(() {}); // Refrescar la tabla
+        }
+      } catch (e) {
+        if (mounted) _mostrarSnackBar('Error al actualizar cantidad: $e');
       }
     }
   }

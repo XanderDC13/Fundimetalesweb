@@ -21,10 +21,17 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
   String _filtroCliente = '';
   String? _vendedorSeleccionado;
   List<String> _vendedoresDisponibles = [];
-  DateTimeRange? _rangoFechas;
+  DateTime? _fechaInicio;
+  DateTime? _fechaFin;
 
   TabController? _tabController;
   bool _disposed = false;
+
+  // Métricas para los indicadores
+  double _totalGeneralFacturas = 0.0;
+  double _totalGeneralNotas = 0.0;
+  int _cantidadFacturas = 0;
+  int _cantidadNotas = 0;
 
   @override
   void initState() {
@@ -33,6 +40,7 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _cargarVendedores();
+        _calcularMetricas();
       }
     });
   }
@@ -65,6 +73,76 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
     }
   }
 
+  Future<void> _calcularMetricas() async {
+    setState(() {});
+
+    try {
+      Query query = FirebaseFirestore.instance
+          .collection('ventas')
+          .orderBy('fecha', descending: true);
+
+      if (_fechaInicio != null) {
+        query = query.where(
+          'fecha',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(_fechaInicio!),
+        );
+      }
+      if (_fechaFin != null) {
+        query = query.where(
+          'fecha',
+          isLessThanOrEqualTo: Timestamp.fromDate(_fechaFin!),
+        );
+      }
+
+      final snapshot = await query.get();
+
+      double totalFacturas = 0.0;
+      double totalNotas = 0.0;
+      int cantFacturas = 0;
+      int cantNotas = 0;
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final tipoComprobante =
+            (data['tipoComprobante'] ?? '').toString().toLowerCase();
+        final total = (data['total'] ?? 0).toDouble();
+
+        // Aplicar filtros adicionales
+        bool cumpleFiltros = true;
+
+        if (_filtroCliente.isNotEmpty) {
+          final cliente = (data['cliente'] ?? '').toString().toLowerCase();
+          cumpleFiltros =
+              cumpleFiltros && cliente.contains(_filtroCliente.toLowerCase());
+        }
+
+        if (_vendedorSeleccionado != null) {
+          cumpleFiltros =
+              cumpleFiltros && data['usuario_nombre'] == _vendedorSeleccionado;
+        }
+
+        if (!cumpleFiltros) continue;
+
+        if (tipoComprobante == 'factura') {
+          totalFacturas += total;
+          cantFacturas++;
+        } else {
+          totalNotas += total;
+          cantNotas++;
+        }
+      }
+
+      setState(() {
+        _totalGeneralFacturas = totalFacturas;
+        _totalGeneralNotas = totalNotas;
+        _cantidadFacturas = cantFacturas;
+        _cantidadNotas = cantNotas;
+      });
+    } catch (e) {
+      setState(() {});
+    }
+  }
+
   @override
   void dispose() {
     _disposed = true;
@@ -78,36 +156,48 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
     }
   }
 
-  Future<void> _seleccionarRangoFechas() async {
-    DateTimeRange? picked;
-    DateTime? start = await showDatePicker(
+  Future<void> _seleccionarFechaInicio() async {
+    final fecha = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: _fechaInicio ?? DateTime.now(),
       firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
+      lastDate: DateTime(2100),
     );
-    if (start != null) {
-      DateTime? end = await showDatePicker(
-        context: context,
-        initialDate: start,
-        firstDate: start,
-        lastDate: DateTime.now(),
-      );
-      if (end != null) {
-        picked = DateTimeRange(start: start, end: end);
-        _safeSetState(() {
-          _rangoFechas = picked;
-        });
-      }
+    if (fecha != null) {
+      setState(() {
+        _fechaInicio = fecha;
+      });
+      _calcularMetricas();
     }
   }
 
-  void _limpiarFiltros() {
-    _safeSetState(() {
+  Future<void> _seleccionarFechaFin() async {
+    final fecha = await showDatePicker(
+      context: context,
+      initialDate: _fechaFin ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (fecha != null) {
+      setState(() {
+        _fechaFin = fecha;
+      });
+      _calcularMetricas();
+    }
+  }
+
+  void _limpiarFiltro() {
+    setState(() {
+      _fechaInicio = null;
+      _fechaFin = null;
       _filtroCliente = '';
       _vendedorSeleccionado = null;
-      _rangoFechas = null;
     });
+    _calcularMetricas();
+  }
+
+  String _formatearMoneda(double valor) {
+    return '\$${valor.toStringAsFixed(2)}';
   }
 
   // Función helper para crear filas del desglose de totales
@@ -136,8 +226,6 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
     );
   }
 
-  // Reemplaza la función _generarPdf completa con esta versión corregida:
-
   Future<void> _generarPdf(
     List<Map<String, dynamic>> ventas, {
     String? titulo,
@@ -158,12 +246,8 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
         List productosRegulares = [];
         double valorTransporte = 0.0;
 
-        // Debug: Imprimir cada producto para verificar
-
         for (var item in productos) {
           final producto = item as Map<String, dynamic>;
-
-          // Debug completo de todos los campos del producto
 
           producto.forEach((key, value) {});
 
@@ -764,22 +848,27 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
           (v['tipoComprobante'] ?? '').toString().toLowerCase() == 'factura';
       final esNotaVenta = !esFacturaReal;
 
-      final coincideCliente = v['cliente'].toString().toLowerCase().contains(
-        _filtroCliente.toLowerCase(),
-      );
+      final coincideCliente = (v['cliente'] ?? 'Cliente General')
+          .toString()
+          .toLowerCase()
+          .contains(_filtroCliente.toLowerCase());
 
       final coincideVendedor =
           _vendedorSeleccionado == null ||
           _vendedorSeleccionado == v['usuario_nombre'];
 
       bool coincideFecha = true;
-      if (_rangoFechas != null && v['fecha'] != null) {
+      if (_fechaInicio != null && v['fecha'] != null) {
+        final fechaVenta = v['fecha'] as DateTime;
+        coincideFecha = fechaVenta.isAfter(
+          _fechaInicio!.subtract(const Duration(days: 1)),
+        );
+      }
+      if (_fechaFin != null && v['fecha'] != null) {
         final fechaVenta = v['fecha'] as DateTime;
         coincideFecha =
-            fechaVenta.isAfter(
-              _rangoFechas!.start.subtract(const Duration(days: 1)),
-            ) &&
-            fechaVenta.isBefore(_rangoFechas!.end.add(const Duration(days: 1)));
+            coincideFecha &&
+            fechaVenta.isBefore(_fechaFin!.add(const Duration(days: 1)));
       }
 
       return (esFactura ? esFacturaReal : esNotaVenta) &&
@@ -805,7 +894,7 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
             snapshot.data!.docs.map((doc) {
               final data = doc.data() as Map<String, dynamic>;
               return {
-                'cliente': data['cliente'] ?? 'Desconocido',
+                'cliente': data['cliente'] ?? 'Cliente General',
                 'fecha': data['fecha']?.toDate(),
                 'metodoPago': data['metodoPago'] ?? '---',
                 'tipoComprobante': data['tipoComprobante'] ?? '---',
@@ -886,7 +975,7 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
                           label: SizedBox(
                             width: anchoCP,
                             child: const Text(
-                              'Copmprobante',
+                              'Comprobante',
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -936,15 +1025,6 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
                                       'dd/MM/yy',
                                     ).format(venta['fecha'])
                                     : 'Sin fecha';
-
-                            // ✅ USAR EL TOTAL DIRECTAMENTE DE LA BASE DE DATOS
-                            final totalRaw = venta['total'] ?? 0;
-                            final total =
-                                totalRaw is num
-                                    ? totalRaw.toDouble()
-                                    : double.tryParse(totalRaw.toString()) ??
-                                        0.0;
-
                             return DataRow(
                               cells: [
                                 DataCell(
@@ -1009,7 +1089,7 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
                                     width: anchoTotal,
                                     child: Center(
                                       child: Text(
-                                        '\$${total.toStringAsFixed(2)}',
+                                        '\$${(venta['total'] ?? 0).toStringAsFixed(2)}',
                                         textAlign: TextAlign.center,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
@@ -1060,7 +1140,7 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
     return MainDeskLayout(
       child: Column(
         children: [
-          // ✅ CABECERA
+          // CABECERA
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
@@ -1097,138 +1177,279 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
             ),
           ),
 
-          // ✅ CONTENIDO con fondo blanco
+          // INDICADORES RESUMEN
+          Container(
+            color: Colors.grey.shade100,
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Card(
+                    color: const Color(0xFF4682B4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.receipt,
+                            color: const Color(0xFFFFFFFF),
+                            size: 32,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Total Facturas',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: const Color(0xFFFFFFFF),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatearMoneda(_totalGeneralFacturas),
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: const Color(0xFFFFFFFF),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '($_cantidadFacturas docs)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: const Color(0xFFFFFFFF).withOpacity(0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Card(
+                    color: const Color(0xFF4682B4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.note,
+                            color: const Color(0xFFFFFFFF),
+                            size: 32,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Total Notas',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: const Color(0xFFFFFFFF),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatearMoneda(_totalGeneralNotas),
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: const Color(0xFFFFFFFF),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '($_cantidadNotas docs)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: const Color(0xFFFFFFFF).withOpacity(0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Card(
+                    color: const Color(0xFF4682B4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.monetization_on,
+                            color: const Color(0xFFFFFFFF),
+                            size: 32,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Total General',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: const Color(0xFFFFFFFF),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatearMoneda(
+                              _totalGeneralFacturas + _totalGeneralNotas,
+                            ),
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: const Color(0xFFFFFFFF),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '(${_cantidadFacturas + _cantidadNotas} docs)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: const Color(0xFFFFFFFF).withOpacity(0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // CONTENIDO principal
           Expanded(
             child: Container(
               color: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Column(
                 children: [
-                  // Filtros
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                decoration: InputDecoration(
-                                  hintText: 'Buscar por cliente...',
-                                  prefixIcon: const Icon(Icons.search),
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 0,
-                                    horizontal: 16,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                ),
-                                onChanged: (value) {
-                                  _safeSetState(() {
-                                    _filtroCliente = value;
-                                  });
-                                },
-                              ),
+                  // FILTROS - PRIMERA LÍNEA: Cliente y Vendedor
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Buscar por cliente...',
+                            prefixIcon: const Icon(Icons.search),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 0,
+                              horizontal: 16,
                             ),
-                            const SizedBox(width: 12),
-                            TextButton.icon(
-                              onPressed: _seleccionarRangoFechas,
-                              icon: const Icon(
-                                Icons.date_range,
-                                color: Color(0xFF4682B4),
-                              ),
-                              label: Text(
-                                _rangoFechas == null
-                                    ? 'Filtrar por fecha'
-                                    : 'Desde ${_rangoFechas!.start.toLocal().toString().split(' ')[0]} hasta ${_rangoFechas!.end.toLocal().toString().split(' ')[0]}',
-                                style: const TextStyle(
-                                  color: Color(0xFF4682B4),
-                                ),
-                              ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
                             ),
-                            if (_rangoFechas != null)
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.clear,
-                                  color: Color(0xFF4682B4),
-                                ),
-                                onPressed: () {
-                                  _safeSetState(() {
-                                    _rangoFechas = null;
-                                  });
-                                },
-                              ),
-                          ],
+                          ),
+                          onChanged: (value) {
+                            _safeSetState(() {
+                              _filtroCliente = value;
+                            });
+                            _calcularMetricas();
+                          },
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                ),
-                                value: _vendedorSeleccionado,
-                                hint: const Text('Filtrar por vendedor'),
-                                items:
-                                    _vendedoresDisponibles.map((vendedor) {
-                                      return DropdownMenuItem(
-                                        value: vendedor,
-                                        child: Text(vendedor),
-                                      );
-                                    }).toList(),
-                                onChanged: (value) {
-                                  _safeSetState(() {
-                                    _vendedorSeleccionado = value;
-                                  });
-                                },
-                                isExpanded: true,
-                              ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: DropdownButtonFormField<String>(
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
                             ),
-                            const SizedBox(width: 12),
-                            ElevatedButton.icon(
-                              onPressed: _limpiarFiltros,
-                              icon: const Icon(
-                                Icons.clear,
-                                color: Color(0xFF4682B4),
-                              ),
-                              label: const Text(
-                                'Limpiar',
-                                style: TextStyle(color: Color((0xFF4682B4))),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFFFFFF),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
                             ),
-                          ],
+                          ),
+                          value: _vendedorSeleccionado,
+                          hint: const Text('Filtrar por vendedor'),
+                          items:
+                              _vendedoresDisponibles.map((vendedor) {
+                                return DropdownMenuItem(
+                                  value: vendedor,
+                                  child: Text(vendedor),
+                                );
+                              }).toList(),
+                          onChanged: (value) {
+                            _safeSetState(() {
+                              _vendedorSeleccionado = value;
+                            });
+                            _calcularMetricas();
+                          },
+                          isExpanded: true,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
 
-                  // Tabs
+                  const SizedBox(height: 12),
+
+                  // FILTROS - SEGUNDA LÍNEA: Fechas y acciones (igual que en compras)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _seleccionarFechaInicio,
+                          icon: const Icon(
+                            Icons.date_range,
+                            color: Colors.white,
+                          ),
+                          label: Text(
+                            _fechaInicio == null
+                                ? 'Desde'
+                                : DateFormat(
+                                  'dd/MM/yyyy',
+                                ).format(_fechaInicio!),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4682B4),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _seleccionarFechaFin,
+                          icon: const Icon(
+                            Icons.date_range,
+                            color: Colors.white,
+                          ),
+                          label: Text(
+                            _fechaFin == null
+                                ? 'Hasta'
+                                : DateFormat('dd/MM/yyyy').format(_fechaFin!),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4682B4),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      IconButton(
+                        onPressed: _limpiarFiltro,
+                        icon: const Icon(Icons.clear, color: Color(0xFF4682B4)),
+                        tooltip: 'Limpiar filtros',
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Tabs - División Facturas y Notas de Venta
                   Container(
                     margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
+                      horizontal: 0,
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(

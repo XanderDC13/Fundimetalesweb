@@ -16,6 +16,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class DashboardDeskScreen extends StatefulWidget {
   const DashboardDeskScreen({super.key});
@@ -30,10 +31,28 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
   String rolUsuario = 'Empleado';
   String sedeUsuario = '';
 
+  int totalProductos = 0;
   int ventasRealizadas = 0;
-  int productosVendidos = 0;
-  double ingresosDia = 0.0;
   int productosBajoStock = 0;
+  int numeroUsuarios = 0;
+  int usuariosPendientes = 0;
+
+  List<FlSpot> ingresosData = [];
+  List<FlSpot> egresosData = [];
+  List<String> meses = [
+    'Ene',
+    'Feb',
+    'Mar',
+    'Abr',
+    'May',
+    'Jun',
+    'Jul',
+    'Ago',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dic',
+  ];
 
   bool get isDesktop =>
       defaultTargetPlatform == TargetPlatform.windows ||
@@ -45,7 +64,77 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _cargarNombreYRolUsuario();
-    _cargarResumenHoy();
+    _cargarDashboardData();
+  }
+
+  // Función unificada para cargar datos del gráfico
+  Future<void> _cargarDatosGrafico() async {
+    final now = DateTime.now();
+    final currentYear = now.year;
+
+    // Inicializamos en 0 los 12 meses
+    final ingresosMensuales = List<double>.filled(12, 0);
+    final egresosMensuales = List<double>.filled(12, 0);
+
+    // 🔹 Cargar INGRESOS desde "ventas"
+    final ventasSnapshot =
+        await FirebaseFirestore.instance.collection('ventas').get();
+    for (var doc in ventasSnapshot.docs) {
+      final data = doc.data();
+      if (data['fecha'] != null) {
+        final fecha = (data['fecha'] as Timestamp).toDate();
+
+        // Solo procesar datos del año actual
+        if (fecha.year == currentYear) {
+          // Usar 'total' o 'monto' según lo que tengas en tu colección
+          final monto = (data['total'] ?? data['monto'] ?? 0).toDouble();
+          ingresosMensuales[fecha.month - 1] += monto;
+        }
+      }
+    }
+
+    // 🔹 Cargar EGRESOS desde "proformasfundicion"
+    final egresosSnapshot =
+        await FirebaseFirestore.instance.collection('proformasfundicion').get();
+    for (var doc in egresosSnapshot.docs) {
+      final data = doc.data();
+      if (data['fecha'] != null) {
+        final fecha = (data['fecha'] as Timestamp).toDate();
+
+        // Solo procesar datos del año actual
+        if (fecha.year == currentYear) {
+          double totalEgresos = 0.0;
+
+          // Si tiene campo 'monto' directo
+          if (data['monto'] != null) {
+            totalEgresos = (data['monto'] as num).toDouble();
+          }
+          // Si tiene items con totales
+          else if (data['items'] != null) {
+            final items = data['items'] as List<dynamic>;
+            for (var item in items) {
+              final totalItem =
+                  double.tryParse(item['total']?.toString() ?? '0') ?? 0.0;
+              totalEgresos += totalItem;
+            }
+          }
+
+          egresosMensuales[fecha.month - 1] += totalEgresos;
+        }
+      }
+    }
+
+    // 🔹 Convertir a FlSpot (dividimos entre 1000 para mostrar en K)
+    setState(() {
+      ingresosData = List.generate(
+        12,
+        (i) => FlSpot(i.toDouble() + 1, ingresosMensuales[i] / 1000),
+      );
+      egresosData = List.generate(
+        12,
+        (i) => FlSpot(i.toDouble() + 1, egresosMensuales[i] / 1000),
+      );
+    });
   }
 
   Future<void> _cargarNombreYRolUsuario() async {
@@ -70,7 +159,26 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
     }
   }
 
-  Future<void> _cargarResumenHoy() async {
+  Future<void> _cargarDashboardData() async {
+    await Future.wait([
+      _cargarTotalProductos(),
+      _cargarVentasHoy(),
+      _cargarProductosBajoStock(),
+      _cargarUsuarios(),
+      _cargarUsuariosPendientes(),
+      _cargarDatosGrafico(), // Solo esta función para el gráfico
+    ]);
+  }
+
+  Future<void> _cargarTotalProductos() async {
+    final productosSnapshot =
+        await FirebaseFirestore.instance.collection('productos').get();
+    setState(() {
+      totalProductos = productosSnapshot.docs.length;
+    });
+  }
+
+  Future<void> _cargarVentasHoy() async {
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day);
     final endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
@@ -85,61 +193,48 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             .where('fecha', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
             .get();
 
-    int totalVentas = ventasQuery.docs.length;
-    int totalProductos = 0;
-    double totalIngresos = 0.0;
+    setState(() {
+      ventasRealizadas = ventasQuery.docs.length;
+    });
+  }
 
-    for (var doc in ventasQuery.docs) {
-      final data = doc.data();
-      totalIngresos += (data['total'] ?? 0.0).toDouble();
-      final productos = data['productos'] as List<dynamic>? ?? [];
-      for (var producto in productos) {
-        totalProductos += (producto['cantidad'] ?? 0) as int;
-      }
-    }
-
-    final inventarioSnapshot =
+  Future<void> _cargarProductosBajoStock() async {
+    final bodegaSnapshot =
         await FirebaseFirestore.instance
             .collection('inventarios')
-            .orderBy('fecha_actualizacion', descending: true)
+            .doc('bodega')
+            .collection('productos')
             .get();
 
-    final ventasSnapshot =
-        await FirebaseFirestore.instance.collection('ventas').get();
-    final Map<String, int> ventasPorReferencia = {};
-    for (var venta in ventasSnapshot.docs) {
-      final productos = List<Map<String, dynamic>>.from(venta['productos']);
-      for (var producto in productos) {
-        final referencia = producto['referencia']?.toString() ?? '';
-        final cantidad = (producto['cantidad'] ?? 0) as num;
-        ventasPorReferencia[referencia] =
-            (ventasPorReferencia[referencia] ?? 0) + cantidad.toInt();
+    int bajoStock = 0;
+
+    for (var doc in bodegaSnapshot.docs) {
+      final cantidad = doc.data()['cantidad'] ?? 0;
+      if (cantidad is int && cantidad < 5) {
+        bajoStock++;
       }
     }
-
-    final Map<String, int> stockFinal = {};
-    for (var doc in inventarioSnapshot.docs) {
-      final data = doc.data();
-      final referencia = (data['referencia'] ?? '').toString();
-      final cantidad = (data['cantidad'] ?? 0) as int;
-      final tipo = (data['tipo'] ?? 'entrada').toString();
-      final ajuste = tipo == 'salida' ? -cantidad : cantidad;
-      stockFinal[referencia] = (stockFinal[referencia] ?? 0) + ajuste;
-    }
-
-    ventasPorReferencia.forEach((referencia, cantidadVendida) {
-      if (stockFinal.containsKey(referencia)) {
-        stockFinal[referencia] = stockFinal[referencia]! - cantidadVendida;
-      }
-    });
-
-    int bajoStock = stockFinal.values.where((cantidad) => cantidad < 5).length;
 
     setState(() {
-      ventasRealizadas = totalVentas;
-      productosVendidos = totalProductos;
-      ingresosDia = totalIngresos;
       productosBajoStock = bajoStock;
+    });
+  }
+
+  Future<void> _cargarUsuarios() async {
+    final usuariosSnapshot =
+        await FirebaseFirestore.instance.collection('usuarios_activos').get();
+    setState(() {
+      numeroUsuarios = usuariosSnapshot.docs.length;
+    });
+  }
+
+  Future<void> _cargarUsuariosPendientes() async {
+    final pendientesSnapshot =
+        await FirebaseFirestore.instance
+            .collection('usuarios_pendientes')
+            .get();
+    setState(() {
+      usuariosPendientes = pendientesSnapshot.docs.length;
     });
   }
 
@@ -188,10 +283,9 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             ),
           ),
 
-          // ✅ CONTENIDO PRINCIPAL CON FONDO BLANCO EXPLÍCITO
           Expanded(
             child: Container(
-              color: Colors.white, // 🎯 FONDO BLANCO EXPLÍCITO
+              color: Colors.white,
               child: SafeArea(
                 top: false,
                 child: Align(
@@ -199,11 +293,64 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1400),
                     child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(32),
                       child: Column(
                         children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildMetricCard(
+                                  '$totalProductos',
+                                  'Total Productos',
+                                ),
+                              ),
+                              const SizedBox(width: 20),
+                              Expanded(
+                                child: _buildMetricCard(
+                                  '$ventasRealizadas',
+                                  'Ventas',
+                                ),
+                              ),
+                              const SizedBox(width: 20),
+                              Expanded(
+                                child: _buildMetricCard(
+                                  '$productosBajoStock',
+                                  'Bajo Stock',
+                                  isClickable: true,
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 20),
-                          _buildResumenHoy(),
-                          const SizedBox(height: 20),
+
+                          Row(
+                            children: [
+                              Column(
+                                children: [
+                                  SizedBox(
+                                    width: 200,
+                                    child: _buildMetricCard(
+                                      '$numeroUsuarios',
+                                      'Usuarios Activos',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  SizedBox(
+                                    width: 200,
+                                    child: _buildMetricCard(
+                                      '$usuariosPendientes',
+                                      'Usuarios Pendientes',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: 20),
+
+                              Expanded(child: _buildFlujoDineroChart()),
+                            ],
+                          ),
+                          const SizedBox(height: 40),
+
                           _buildGridFunctions(),
                           const SizedBox(height: 40),
                         ],
@@ -219,115 +366,370 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
     );
   }
 
-  Widget _buildResumenHoy() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 32),
-      padding: const EdgeInsets.all(28),
+  Widget _buildMetricCard(
+    String value,
+    String label, {
+    bool isClickable = false,
+  }) {
+    Widget card = Container(
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF4682B4), Color(0xFF5a8cc7)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300, width: 1),
         boxShadow: [
           BoxShadow(
-            // ignore: deprecated_member_use
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C3E50),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+
+    if (isClickable && label == 'Bajo Stock') {
+      return GestureDetector(
+        onTap: () => navegarConFade(context, const BajoStockDeskScreen()),
+        child: card,
+      );
+    }
+
+    return card;
+  }
+
+  Widget _buildFlujoDineroChart() {
+    final allYValues = [
+      ...ingresosData.map((e) => e.y),
+      ...egresosData.map((e) => e.y),
+    ];
+    final double maxYValue =
+        allYValues.isNotEmpty
+            ? allYValues.reduce((a, b) => a > b ? a : b)
+            : 100;
+
+    final double maxY =
+        maxYValue > 0 ? ((maxYValue + 99) / 100).ceil() * 100 : 100;
+
+    return Container(
+      height: 350,
+      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.white, Colors.grey.shade50],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Resumen de Hoy',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 20),
+          // Título y leyenda mejorados
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: _buildResumenItem(
-                  value: ventasRealizadas.toString(),
-                  label: 'Ventas Realizadas',
+              const Text(
+                'Flujo de Dinero 2025',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A202C),
+                  letterSpacing: -0.5,
                 ),
               ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: _buildResumenItem(
-                  value: productosVendidos.toString(),
-                  label: 'Productos Vendidos',
-                ),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: _buildResumenItem(
-                  value: '\$${ingresosDia.toStringAsFixed(0)}',
-                  label: 'Ingresos del Día',
-                ),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: _buildResumenItemClickeable(
-                  value: productosBajoStock.toString(),
-                  label: 'Productos Bajo Stock',
-                  onTap: () {
-                    navegarConFade(context, const BajoStockDeskScreen());
-                  },
-                ),
+              Row(
+                children: [
+                  // Leyenda Ingresos
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF10B981).withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Ingresos',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF064E3B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Leyenda Egresos
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFFEF4444).withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFEF4444),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Egresos',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF7F1D1D),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
+          ),
+          const SizedBox(height: 24),
+          // Gráfico
+          Expanded(
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: maxY,
+                minY: 0,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: maxY / 5,
+                  getDrawingHorizontalLine:
+                      (value) => FlLine(
+                        color: Colors.grey.shade200,
+                        strokeWidth: 1,
+                        dashArray: [5, 5],
+                      ),
+                ),
+                titlesData: FlTitlesData(
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: maxY / 5,
+                      reservedSize: 50,
+                      getTitlesWidget: (value, meta) {
+                        if (value == 0) return const Text('0');
+
+                        if (value >= 1000) {
+                          return Text(
+                            '${(value / 1000).toInt()}M',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF6B7280),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          );
+                        } else {
+                          return Text(
+                            '${value.toInt()}K',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF6B7280),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 1,
+                      reservedSize: 35,
+                      getTitlesWidget: (value, meta) {
+                        int index = value.toInt() - 1;
+                        if (index >= 0 && index < meses.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              meses[index],
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF6B7280),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          );
+                        }
+                        return Container();
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(
+                  show: true,
+                  border: Border(
+                    left: BorderSide(color: Colors.grey.shade300, width: 1),
+                    bottom: BorderSide(color: Colors.grey.shade300, width: 1),
+                  ),
+                ),
+                barGroups: List.generate(12, (index) {
+                  // Aseguramos que tengamos datos para todos los meses
+                  double ingresosValue =
+                      index < ingresosData.length ? ingresosData[index].y : 0;
+                  double egresosValue =
+                      index < egresosData.length ? egresosData[index].y : 0;
+
+                  return BarChartGroupData(
+                    x: index + 1,
+                    barRods: [
+                      // Barra de Ingresos
+                      BarChartRodData(
+                        toY: ingresosValue,
+                        gradient: const LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [Color(0xFF10B981), Color(0xFF34D399)],
+                        ),
+                        width: 14,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(6),
+                          topRight: Radius.circular(6),
+                        ),
+                        backDrawRodData: BackgroundBarChartRodData(
+                          show: true,
+                          toY: maxY,
+                          color: Colors.grey.shade100,
+                        ),
+                      ),
+                      // Barra de Egresos
+                      BarChartRodData(
+                        toY: egresosValue,
+                        gradient: const LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [Color(0xFFEF4444), Color(0xFFF87171)],
+                        ),
+                        width: 14,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(6),
+                          topRight: Radius.circular(6),
+                        ),
+                      ),
+                    ],
+                    barsSpace: 4,
+                  );
+                }),
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    tooltipBorder: const BorderSide(color: Colors.blueAccent),
+                    tooltipBorderRadius: BorderRadius.circular(8),
+                    tooltipPadding: const EdgeInsets.all(8),
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      String tipo = rodIndex == 0 ? 'Ingresos' : 'Egresos';
+                      String valor;
+
+                      // Mostrar el valor real (multiplicado por 1000 porque dividimos por 1000)
+                      double valorReal = rod.toY * 1000;
+                      if (valorReal >= 1000000) {
+                        valor =
+                            '\$${(valorReal / 1000000).toStringAsFixed(1)}M';
+                      } else if (valorReal >= 1000) {
+                        valor = '\$${(valorReal / 1000).toInt()}K';
+                      } else {
+                        valor = '\$${valorReal.toInt()}';
+                      }
+
+                      return BarTooltipItem(
+                        '$tipo\n$valor',
+                        const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildResumenItem({required String value, required String label}) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildResumenItemClickeable({
-    required String value,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: _buildResumenItem(value: value, label: label),
-    );
-  }
-
   Widget _buildGridFunctions() {
-    int crossAxisCount = isDesktop ? 5 : 3;
+    int crossAxisCount = isDesktop ? 7 : 3;
 
     List<Widget> botones = [];
 
@@ -364,7 +766,6 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             'Reportes',
             () => navegarConFade(context, const ReportesDeskScreen()),
           ),
-
           _gridButton(
             Icons.settings,
             'Ajustes',
@@ -402,7 +803,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
           ),
         ];
         break;
-      
+
       case 'Vendedor':
         botones = [
           _gridButton(
@@ -506,16 +907,13 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
         ];
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: GridView.count(
-        crossAxisCount: crossAxisCount,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 24,
-        crossAxisSpacing: 24,
-        children: botones,
-      ),
+    return GridView.count(
+      crossAxisCount: crossAxisCount,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 24,
+      crossAxisSpacing: 24,
+      children: botones,
     );
   }
 
@@ -525,25 +923,30 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(30),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
+              border: Border.all(color: Colors.grey.shade300, width: 1),
               boxShadow: [
                 BoxShadow(
-                  // ignore: deprecated_member_use
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withOpacity(0.05),
                   blurRadius: 8,
-                  offset: const Offset(0, 4),
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-            child: Icon(icon, color: const Color(0xFF4682B4), size: 32),
+            child: Icon(icon, color: const Color(0xFF4682B4), size: 28),
           ),
           const SizedBox(height: 10),
           Text(
             label,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF2C3E50),
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

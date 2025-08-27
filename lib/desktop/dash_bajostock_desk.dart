@@ -89,7 +89,6 @@ class _BajoStockDeskScreenState extends State<BajoStockDeskScreen> {
         final cantidad = (inventarioData['cantidad'] ?? 0) as num;
         final referenciaInventario = inventarioData['referencia']?.toString() ?? doc.id;
         
-        // Solo incluir productos con stock menor a 10
         if (cantidad < 10 && cantidad >= 0) {
           // Buscar información del producto en la colección productos
           final infoProducto = productosInfo[referenciaInventario] ?? {
