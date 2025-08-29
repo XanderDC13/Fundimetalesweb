@@ -197,86 +197,86 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
   }
 
   Future<void> eliminarProductoPorCodigo(String codigo, String nombre) async {
-    bool confirmar =
-        await showDialog(
-          context: context,
-          builder:
-              (context) => AlertDialog(
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Dialog(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
+                elevation: 12,
                 backgroundColor: Colors.white,
-                contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-                title: Row(
-                  children: const [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.red,
-                      size: 30,
-                    ),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 24,
+                    horizontal: 28,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.redAccent,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
                         'Eliminar producto',
-                        style: TextStyle(
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
-                          fontSize: 20,
                           color: Colors.black87,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                content: const Text(
-                  '¿Estás seguro de eliminar este producto? Se eliminarán todos los registros de inventario en todos los procesos.',
-                  style: TextStyle(fontSize: 16),
-                ),
-                actionsPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                actions: [
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
+                      const SizedBox(height: 8),
+                      Text(
+                        '¿Seguro que deseas eliminar "$nombre"?',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                    child: const Text(
-                      'Cancelar',
-                      style: TextStyle(color: Colors.grey, fontSize: 16),
-                    ),
-                    onPressed: () => Navigator.of(context).pop(false),
+                      const SizedBox(height: 28),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.grey[700],
+                            ),
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancelar'),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.redAccent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text(
+                              'Eliminar',
+                              style: TextStyle(
+                                color: Color(0xFFFFFFFF),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                    ),
-                    icon: const Icon(
-                      Icons.delete_forever,
-                      size: 20,
-                      color: Colors.white,
-                    ),
-                    label: const Text(
-                      'Eliminar',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                    onPressed: () => Navigator.of(context).pop(true),
-                  ),
-                ],
+                ),
               ),
-        ) ??
-        false;
+            ),
+          ),
+    );
 
-    if (!confirmar) return;
+    if (!confirmar!) return;
 
     final FirebaseAuth _auth = FirebaseAuth.instance;
     final user = _auth.currentUser;
@@ -428,7 +428,6 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                               ),
                               const SizedBox(width: 16),
 
-                    
                               // Dropdown de categorías
                               FutureBuilder<QuerySnapshot>(
                                 future:
@@ -527,7 +526,7 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                 onPressed: () {
                                   _navegarConFade(
                                     context,
-                                    const ImportarProductosDeskScreen(),
+                                    const ImportarDualScreen(),
                                   );
                                 },
                                 icon: const Icon(Icons.file_upload),
@@ -691,12 +690,10 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                   {};
 
                                               // Calcular stock total
-                                              stockPorProceso
-                                                  .values
-                                                  .fold(
-                                                    0,
-                                                    (sum, stock) => sum + stock,
-                                                  );
+                                              stockPorProceso.values.fold(
+                                                0,
+                                                (sum, stock) => sum + stock,
+                                              );
 
                                               return GestureDetector(
                                                 onTap: () {

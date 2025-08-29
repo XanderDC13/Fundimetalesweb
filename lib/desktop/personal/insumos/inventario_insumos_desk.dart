@@ -446,7 +446,7 @@ class _InventarioInsumosDeskScreenState
                           const SizedBox(width: 12),
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue[800],
+                              backgroundColor: const Color(0xFF4682B4),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),

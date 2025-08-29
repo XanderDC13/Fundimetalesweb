@@ -799,24 +799,80 @@ class _InventarioProcesoDeskScreenState
         await showDialog<bool>(
           context: context,
           builder:
-              (_) => AlertDialog(
-                title: const Text('Confirmar eliminación'),
-                content: Text(
-                  '¿Eliminar "${data['nombre']}" del proceso ${data['proceso'].toUpperCase()}?',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Cancelar'),
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
+              (context) => Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  child: Dialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Eliminar'),
+                    elevation: 12,
+                    backgroundColor: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 24,
+                        horizontal: 28,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.redAccent,
+                            size: 48,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Eliminar producto',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '¿Eliminar "${data['nombre']}" del proceso ${data['proceso'].toUpperCase()}?',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: Colors.black54),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 28),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.grey[700],
+                                ),
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancelar'),
+                              ),
+                              const SizedBox(width: 12),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.redAccent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text(
+                                  'Eliminar',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ],
+                ),
               ),
         ) ??
         false;
@@ -846,8 +902,7 @@ class _InventarioProcesoDeskScreenState
             .delete();
 
         await FirebaseFirestore.instance.collection('auditoria_general').add({
-          'accion':
-              'Eliminar Cant Inventario ${data['proceso'].toUpperCase()}',
+          'accion': 'Eliminar Cant Inventario ${data['proceso'].toUpperCase()}',
           'detalle':
               'Producto: ${data['nombre']}, Referencia: ${data['referencia']}, Cantidad eliminada: ${data['cantidad']}',
           'fecha': DateTime.now(),
@@ -871,62 +926,108 @@ class _InventarioProcesoDeskScreenState
     final nuevaCantidad = await showDialog<int>(
       context: context,
       builder:
-          (_) => AlertDialog(
-            title: Text('Editar cantidad - ${data['nombre']}'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Referencia: ${data['referencia']}'),
-                Text('Proceso: ${data['proceso'].toUpperCase()}'),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: cantidadController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Nueva cantidad',
-                    border: OutlineInputBorder(),
-                  ),
-                  autofocus: true,
-                  onSubmitted: (value) {
-                    final cantidad = int.tryParse(value);
-                    if (cantidad != null && cantidad >= 0) {
-                      if (mounted) Navigator.pop(context, cantidad);
-                    }
-                  },
+          (context) => Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
                 ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  if (mounted) Navigator.pop(context);
-                },
-                child: const Text('Cancelar'),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4682B4),
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: () {
-                  final cantidad = int.tryParse(cantidadController.text);
-                  if (cantidad != null && cantidad >= 0) {
-                    if (mounted) Navigator.pop(context, cantidad);
-                  } else {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Ingrese una cantidad válida (número entero mayor o igual a 0)',
-                          ),
+                elevation: 12,
+                backgroundColor: Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Título
+                      Text(
+                        'Editar cantidad',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
                         ),
-                      );
-                    }
-                  }
-                },
-                child: const Text('Guardar'),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Subtítulo con nombre del producto
+                      Text(
+                        data['nombre'] ?? 'Producto',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+                      // Campo cantidad
+                      TextField(
+                        controller: cantidadController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Nueva cantidad',
+                          border: OutlineInputBorder(),
+                        ),
+                        autofocus: true,
+                        onSubmitted: (value) {
+                          final cantidad = int.tryParse(value);
+                          if (cantidad != null && cantidad >= 0) {
+                            Navigator.pop(context, cantidad);
+                          }
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Botones
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.grey[700],
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancelar'),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4682B4),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                            ),
+                            onPressed: () {
+                              final cantidad = int.tryParse(
+                                cantidadController.text,
+                              );
+                              if (cantidad != null && cantidad >= 0) {
+                                Navigator.pop(context, cantidad);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Ingrese una cantidad válida (número entero mayor o igual a 0)',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                            child: const Text('Guardar'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ],
+            ),
           ),
     );
 

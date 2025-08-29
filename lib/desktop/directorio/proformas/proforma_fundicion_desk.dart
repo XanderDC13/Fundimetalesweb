@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'package:basefundi/services/navbar_desk.dart';
+import 'package:basefundi/services/pdfs/materiaprimapdf.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProformaFundicionDeskScreen extends StatefulWidget {
@@ -779,335 +777,32 @@ class _ProformaFundicionDeskScreenState
     return total.toStringAsFixed(2);
   }
 
+  // MÉTODO MODIFICADO: Solo llama al generador de PDF externo
   void _vistaPrevia() async {
-    final pdf = await _generarPDF();
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdf.save(),
-    );
-  }
+    try {
+      // Convertir items a formato Map<String, String>
+      List<Map<String, String>> itemsData = items.map((item) => {
+        'descripcion': item.descripcionController.text,
+        'kilos': item.kilosController.text,
+        'precio': item.precioController.text,
+        'total': item.totalController.text,
+      }).toList();
 
-  Future<pw.Document> _generarPDF() async {
-    final pdf = pw.Document();
-
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(40),
-        build: (pw.Context context) {
-          return pw.Container(
-            width: double.infinity,
-            height: PdfPageFormat.a4.height / 2, // Solo la mitad de la página
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColors.grey400, width: 1),
-            ),
-            child: pw.Padding(
-              padding: pw.EdgeInsets.all(15),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  _buildSimplePDFHeader(),
-                  pw.SizedBox(height: 15),
-                  _buildSimpleClienteInfo(),
-                  pw.SizedBox(height: 15),
-                  pw.Expanded(child: _buildSimpleItemsTable()),
-                  pw.SizedBox(height: 10),
-                  _buildSimpleTotales(),
-                  pw.SizedBox(height: 15),
-                  _buildSimpleFooter(),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-
-    return pdf;
-  }
-
-  pw.Widget _buildSimplePDFHeader() {
-    return pw.Container(
-      width: double.infinity,
-      child: pw.Column(
-        children: [
-          // Header principal
-          pw.Container(
-            width: double.infinity,
-            padding: pw.EdgeInsets.all(12),
-            decoration: pw.BoxDecoration(
-              color: PdfColors.grey200,
-              border: pw.Border.all(color: PdfColors.grey400),
-            ),
-            child: pw.Text(
-              'COMPRA DE MATERIA PRIMA',
-              style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
-              textAlign: pw.TextAlign.center,
-            ),
-          ),
-          // Información de la empresa
-          pw.Container(
-            width: double.infinity,
-            padding: pw.EdgeInsets.all(10),
-            decoration: pw.BoxDecoration(
-              border: pw.Border(
-                left: pw.BorderSide(color: PdfColors.grey400),
-                right: pw.BorderSide(color: PdfColors.grey400),
-                bottom: pw.BorderSide(color: PdfColors.grey400),
-              ),
-            ),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                // Información de la empresa
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(
-                      'FUNDIMETALES DEL NORTE',
-                      style: pw.TextStyle(
-                        fontSize: 11,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                    pw.SizedBox(height: 3),
-                    pw.Text(
-                      'Av Brasil y Panamá - Tulcán, Ecuador',
-                      style: pw.TextStyle(fontSize: 9),
-                    ),
-                    pw.Text(
-                      'Tel: (06) 296-2017',
-                      style: pw.TextStyle(fontSize: 9),
-                    ),
-                  ],
-                ),
-                // Información del documento
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: [
-                    pw.Text(
-                      'Documento: $_numeroProforma',
-                      style: pw.TextStyle(
-                        fontSize: 9,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                    pw.SizedBox(height: 3),
-                    pw.Text(
-                      'Fecha: ${DateTime.now().day.toString().padLeft(2, '0')}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year}',
-                      style: pw.TextStyle(fontSize: 9),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  pw.Widget _buildSimpleClienteInfo() {
-    return pw.Container(
-      width: double.infinity,
-      padding: pw.EdgeInsets.all(8),
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey400),
-      ),
-      child: pw.Text(
-        'CLIENTE: ${_clienteController.text.toUpperCase()}',
-        style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
-      ),
-    );
-  }
-
-  pw.Widget _buildSimpleItemsTable() {
-    return pw.Container(
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey400),
-      ),
-      child: pw.Column(
-        children: [
-          // Header
-          pw.Container(
-            padding: pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-            decoration: pw.BoxDecoration(
-              color: PdfColors.grey200,
-              border: pw.Border(
-                bottom: pw.BorderSide(color: PdfColors.grey400),
-              ),
-            ),
-            child: pw.Row(
-              children: [
-                pw.Expanded(
-                  flex: 4,
-                  child: pw.Text(
-                    'DESCRIPCIÓN',
-                    style: pw.TextStyle(
-                      fontSize: 9,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 2,
-                  child: pw.Text(
-                    'KILOS',
-                    style: pw.TextStyle(
-                      fontSize: 9,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 2,
-                  child: pw.Text(
-                    'PRECIO',
-                    style: pw.TextStyle(
-                      fontSize: 9,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 2,
-                  child: pw.Text(
-                    'SUBTOTAL',
-                    style: pw.TextStyle(
-                      fontSize: 9,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                    textAlign: pw.TextAlign.right,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Filas de items
-          ...items.map(
-            (item) => pw.Container(
-              padding: pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-              decoration: pw.BoxDecoration(
-                border: pw.Border(
-                  bottom: pw.BorderSide(color: PdfColors.grey300),
-                ),
-              ),
-              child: pw.Row(
-                children: [
-                  pw.Expanded(
-                    flex: 4,
-                    child: pw.Text(
-                      item.descripcionController.text.toUpperCase(),
-                      style: pw.TextStyle(fontSize: 8),
-                    ),
-                  ),
-                  pw.Expanded(
-                    flex: 2,
-                    child: pw.Text(
-                      item.kilosController.text,
-                      style: pw.TextStyle(fontSize: 8),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  pw.Expanded(
-                    flex: 2,
-                    child: pw.Text(
-                      '\$${item.precioController.text}',
-                      style: pw.TextStyle(fontSize: 8),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  pw.Expanded(
-                    flex: 2,
-                    child: pw.Text(
-                      '\$${item.totalController.text}',
-                      style: pw.TextStyle(fontSize: 8),
-                      textAlign: pw.TextAlign.right,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  pw.Widget _buildSimpleTotales() {
-    return pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.end,
-      children: [
-        pw.Container(
-          width: 150,
-          padding: pw.EdgeInsets.all(8),
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: PdfColors.grey400),
-          ),
-          child: pw.Column(
-            children: [
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Subtotal:', style: pw.TextStyle(fontSize: 9)),
-                  pw.Text(
-                    '\$${_calcularSubtotal()}',
-                    style: pw.TextStyle(fontSize: 9),
-                  ),
-                ],
-              ),
-              pw.SizedBox(height: 5),
-              pw.Container(
-                width: double.infinity,
-                padding: pw.EdgeInsets.symmetric(vertical: 4),
-                decoration: pw.BoxDecoration(
-                  color: PdfColors.grey200,
-                  border: pw.Border.all(color: PdfColors.grey400),
-                ),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text(
-                      'TOTAL:',
-                      style: pw.TextStyle(
-                        fontSize: 10,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                    pw.Text(
-                      '\$${_calcularTotalFinal()}',
-                      style: pw.TextStyle(
-                        fontSize: 10,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+      // Llamar al generador de PDF externo
+      await MateriaPrimaPDFGenerator.showPreview(
+        numero: _numeroProforma,
+        cliente: _clienteController.text,
+        fecha: DateTime.now(),
+        items: itemsData,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al generar vista previa: ${e.toString()}'),
+          backgroundColor: Colors.red,
         ),
-      ],
-    );
-  }
-
-  pw.Widget _buildSimpleFooter() {
-    return pw.Center(
-      child: pw.Column(
-        children: [
-          pw.Container(
-            width: 120,
-            child: pw.Divider(thickness: 1, color: PdfColors.black),
-          ),
-          pw.SizedBox(height: 5),
-          pw.Text(
-            'Firma Autorizada',
-            style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
-          ),
-        ],
-      ),
-    );
+      );
+    }
   }
 
   Future<void> _guardarProformaDirecto() async {

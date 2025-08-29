@@ -53,7 +53,7 @@ class _SolicitudInsumosDeskWidgetState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: _buildCard('Empleado', _buildSelectorEmpleado()),
+                      child: _buildCard('Usuario', _buildSelectorEmpleado()),
                     ),
                     const SizedBox(width: 24),
                     Expanded(
@@ -155,7 +155,7 @@ class _SolicitudInsumosDeskWidgetState
                     Icon(Icons.person_add, color: Color(0xFF4682B4), size: 20),
                     SizedBox(width: 8),
                     Text(
-                      'Agregar nuevo empleado',
+                      'Agregar nuevo usuario',
                       style: TextStyle(
                         color: Color(0xFF4682B4),
                         fontWeight: FontWeight.w500,
@@ -170,7 +170,7 @@ class _SolicitudInsumosDeskWidgetState
               data: Theme.of(context).copyWith(canvasColor: Colors.white),
               child: DropdownButtonFormField<String>(
                 value: empleadoSeleccionado,
-                decoration: _dropdownDecoration('Selecciona un empleado'),
+                decoration: _dropdownDecoration('Selecciona un usuario'),
                 items: items,
                 onChanged: (value) {
                   setState(() {
@@ -195,16 +195,20 @@ class _SolicitudInsumosDeskWidgetState
             decoration: InputDecoration(
               filled: true,
               fillColor: Colors.white,
-              hintText: 'Ingresa el nombre del empleado',
+              hintText: 'Ingresa el nombre del usuario',
               prefixIcon: const Icon(Icons.person, color: Color(0xFF4682B4)),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 14,
               ),
-              border: OutlineInputBorder(
+              // 🔹 borde cuando NO está enfocado
+              enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF4682B4)),
+                borderSide: const BorderSide(
+                  color: Colors.transparent, // sin borde visible
+                ),
               ),
+              // 🔹 borde cuando está enfocado
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(
@@ -488,7 +492,7 @@ class _SolicitudInsumosDeskWidgetState
           'usuario_nombre': nombreUsuario,
           'accion': 'Solicitud de Insumos',
           'detalle':
-              'Empleado: $nombreEmpleado${esEmpleadoManual ? ' (Manual)' : ''}, Insumo: $nombreInsumo, Cantidad: $cantidad',
+              'Usuario: $nombreEmpleado${esEmpleadoManual ? ' (Manual)' : ''}, Insumo: $nombreInsumo, Cantidad: $cantidad',
         });
       });
 

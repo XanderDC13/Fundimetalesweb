@@ -486,24 +486,81 @@ class _InventarioGeneralDeskScreenState
         await showDialog<bool>(
           context: context,
           builder:
-              (_) => AlertDialog(
-                title: const Text('Confirmar eliminación'),
-                content: Text(
-                  '¿Eliminar "${data['nombre']}" del inventario de Bodega?',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Cancelar'),
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
+              (context) => Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  child: Dialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Eliminar'),
+                    elevation: 12,
+                    backgroundColor: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 24,
+                        horizontal: 28,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.redAccent,
+                            size: 48,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Eliminar producto',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '¿Eliminar "${data['nombre']}" del inventario de Bodega?',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: Colors.black54),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 28),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  foregroundColor:
+                                      Colors.grey[700], // color gris
+                                ),
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancelar'),
+                              ),
+                              const SizedBox(width: 12),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.redAccent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text(
+                                  'Eliminar',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ],
+                ),
               ),
         ) ??
         false;
@@ -589,16 +646,7 @@ class _InventarioGeneralDeskScreenState
                         ),
                       ),
 
-                      const SizedBox(height: 8),
-                      Text(
-                        'Referencia: ${data['referencia']}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
+                      const SizedBox(height: 15),
                       // Campo cantidad
                       TextField(
                         controller: cantidadController,
@@ -623,6 +671,9 @@ class _InventarioGeneralDeskScreenState
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.grey[700],
+                            ),
                             onPressed: () => Navigator.pop(context),
                             child: const Text('Cancelar'),
                           ),

@@ -845,7 +845,7 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
 
     // Determinar tipo de comprobante basado en si hay IVA
     final conIva = carrito.ivaActivado && carrito.totalIva > 0;
-    final tipoComprobante = conIva ? 'Factura' : 'Nota de Venta';
+    final tipoComprobante = conIva ? 'Factura' : 'Nota de Pedido';
     final prefijo = conIva ? 'FAC' : 'NV';
     final tipoClave = conIva ? 'factura' : 'nota_venta';
 

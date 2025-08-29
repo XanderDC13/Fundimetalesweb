@@ -74,14 +74,10 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
             child: DropdownButton<String?>(
               value: _filtroCiudad,
               hint: const Text('Ciudad'),
-              underline: const SizedBox(), // quita la línea de abajo
-              dropdownColor:
-                  Colors.white, // Color de fondo del menú desplegable
-              style: const TextStyle(color: Colors.black), // Color del texto
-              icon: const Icon(
-                Icons.arrow_drop_down,
-                color: Colors.black,
-              ), // Color del ícono
+              underline: const SizedBox(),
+              dropdownColor: Colors.white,
+              style: const TextStyle(color: Colors.black),
+              icon: const Icon(Icons.arrow_drop_down, color: Colors.black),
               onChanged: (value) {
                 setState(() {
                   _filtroCiudad = value;
@@ -176,235 +172,240 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: filtrados.length,
-                itemBuilder: (context, index) {
-                  final item = filtrados[index];
-                  final contacto = item['data'] as Map<String, dynamic>;
-                  final docId = item['docId'] as String;
+              child: Container(
+                color: Colors.white, // 🔹 fondo blanco forzado
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: filtrados.length,
+                  itemBuilder: (context, index) {
+                    final item = filtrados[index];
+                    final contacto = item['data'] as Map<String, dynamic>;
+                    final docId = item['docId'] as String;
 
-                  return Card(
-                    color: Colors.white,
-                    margin: const EdgeInsets.symmetric(vertical: 6),
-                    elevation: 1,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ListTile(
-                      title: Text(
-                        contacto['nombre'] ?? '-',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                    return Card(
+                      color: Colors.white,
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      elevation: 1,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      subtitle: Text(
-                        contacto['empresa'] ?? '',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.edit_outlined,
-                              color: Color(0xFF4682B4),
+                      child: ListTile(
+                        title: Text(
+                          contacto['nombre'] ?? '-',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          contacto['empresa'] ?? '',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.edit_outlined,
+                                color: Color(0xFF4682B4),
+                              ),
+                              onPressed: () {
+                                _mostrarFormulario(
+                                  context,
+                                  contacto,
+                                  esCliente: esCliente,
+                                  docId:
+                                      docId, // Ahora pasamos el docId correcto
+                                );
+                              },
                             ),
-                            onPressed: () {
-                              _mostrarFormulario(
-                                context,
-                                contacto,
-                                esCliente: esCliente,
-                                docId: docId, // Ahora pasamos el docId correcto
-                              );
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              color: Colors.redAccent,
-                            ),
-                            onPressed: () async {
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder:
-                                    (context) => Center(
-                                      child: ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                          maxWidth: 500,
-                                        ),
-                                        child: Dialog(
-                                          backgroundColor: Colors.transparent,
-                                          insetPadding:
-                                              const EdgeInsets.symmetric(
-                                                horizontal: 24,
-                                                vertical: 24,
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.redAccent,
+                              ),
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder:
+                                      (context) => Center(
+                                        child: ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                            maxWidth: 500,
+                                          ),
+                                          child: Dialog(
+                                            backgroundColor: Colors.transparent,
+                                            insetPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 24,
+                                                  vertical: 24,
+                                                ),
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withOpacity(0.2),
+                                                    blurRadius: 20,
+                                                    offset: const Offset(0, 8),
+                                                  ),
+                                                ],
                                               ),
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black
-                                                      .withOpacity(0.2),
-                                                  blurRadius: 20,
-                                                  offset: const Offset(0, 8),
-                                                ),
-                                              ],
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 24,
-                                              horizontal: 28,
-                                            ),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(
-                                                  Icons.warning_amber_rounded,
-                                                  color: Colors.redAccent,
-                                                  size: 48,
-                                                ),
-                                                const SizedBox(height: 12),
-                                                Text(
-                                                  'Eliminar $tipoTexto',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .titleLarge
-                                                      ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: Colors.black87,
-                                                      ),
-                                                ),
-                                                const SizedBox(height: 8),
-                                                Text(
-                                                  '¿Seguro que deseas eliminar este $tipoTexto?',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .bodyMedium
-                                                      ?.copyWith(
-                                                        color: Colors.black54,
-                                                      ),
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                                const SizedBox(height: 28),
-                                                Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.end,
-                                                  children: [
-                                                    TextButton(
-                                                      style:
-                                                          TextButton.styleFrom(
-                                                            foregroundColor:
-                                                                Colors
-                                                                    .grey[700],
-                                                          ),
-                                                      onPressed:
-                                                          () => Navigator.pop(
-                                                            context,
-                                                            false,
-                                                          ),
-                                                      child: const Text(
-                                                        'Cancelar',
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 12),
-                                                    ElevatedButton(
-                                                      style: ElevatedButton.styleFrom(
-                                                        backgroundColor:
-                                                            Colors.redAccent,
-                                                        shape: RoundedRectangleBorder(
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                12,
-                                                              ),
-                                                        ),
-                                                      ),
-                                                      onPressed:
-                                                          () => Navigator.pop(
-                                                            context,
-                                                            true,
-                                                          ),
-                                                      child: const Text(
-                                                        'Eliminar',
-                                                        style: TextStyle(
-                                                          color: Colors.white,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 24,
+                                                    horizontal: 28,
+                                                  ),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.warning_amber_rounded,
+                                                    color: Colors.redAccent,
+                                                    size: 48,
+                                                  ),
+                                                  const SizedBox(height: 12),
+                                                  Text(
+                                                    'Eliminar $tipoTexto',
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .titleLarge
+                                                        ?.copyWith(
                                                           fontWeight:
-                                                              FontWeight.w600,
+                                                              FontWeight.bold,
+                                                          color: Colors.black87,
+                                                        ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    '¿Seguro que deseas eliminar este $tipoTexto?',
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodyMedium
+                                                        ?.copyWith(
+                                                          color: Colors.black54,
+                                                        ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  const SizedBox(height: 28),
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment.end,
+                                                    children: [
+                                                      TextButton(
+                                                        style:
+                                                            TextButton.styleFrom(
+                                                              foregroundColor:
+                                                                  Colors
+                                                                      .grey[700],
+                                                            ),
+                                                        onPressed:
+                                                            () => Navigator.pop(
+                                                              context,
+                                                              false,
+                                                            ),
+                                                        child: const Text(
+                                                          'Cancelar',
                                                         ),
                                                       ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
+                                                      const SizedBox(width: 12),
+                                                      ElevatedButton(
+                                                        style: ElevatedButton.styleFrom(
+                                                          backgroundColor:
+                                                              Colors.redAccent,
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  12,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                        onPressed:
+                                                            () => Navigator.pop(
+                                                              context,
+                                                              true,
+                                                            ),
+                                                        child: const Text(
+                                                          'Eliminar',
+                                                          style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                              );
+                                );
 
-                              if (confirm == true) {
-                                try {
-                                  final user =
-                                      FirebaseAuth.instance.currentUser;
-                                  final usuarioDoc =
-                                      await FirebaseFirestore.instance
-                                          .collection('usuarios_activos')
-                                          .doc(user?.uid)
-                                          .get();
+                                if (confirm == true) {
+                                  try {
+                                    final user =
+                                        FirebaseAuth.instance.currentUser;
+                                    final usuarioDoc =
+                                        await FirebaseFirestore.instance
+                                            .collection('usuarios_activos')
+                                            .doc(user?.uid)
+                                            .get();
 
-                                  final usuarioNombre =
-                                      usuarioDoc.exists
-                                          ? (usuarioDoc['nombre'] ??
-                                              'Desconocido')
-                                          : 'Desconocido';
+                                    final usuarioNombre =
+                                        usuarioDoc.exists
+                                            ? (usuarioDoc['nombre'] ??
+                                                'Desconocido')
+                                            : 'Desconocido';
 
-                                  // Eliminar el contacto
-                                  await FirebaseFirestore.instance
-                                      .collection(coleccion)
-                                      .doc(docId)
-                                      .delete();
+                                    // Eliminar el contacto
+                                    await FirebaseFirestore.instance
+                                        .collection(coleccion)
+                                        .doc(docId)
+                                        .delete();
 
-                                  // Guardar auditoría
-                                  final auditoriaRef =
-                                      FirebaseFirestore.instance
-                                          .collection('auditoria_general')
-                                          .doc();
+                                    // Guardar auditoría
+                                    final auditoriaRef =
+                                        FirebaseFirestore.instance
+                                            .collection('auditoria_general')
+                                            .doc();
 
-                                  await auditoriaRef.set({
-                                    'fecha': FieldValue.serverTimestamp(),
-                                    'usuario_nombre': usuarioNombre,
-                                    'usuario_uid':
-                                        user?.uid ?? 'uid_desconocido',
-                                    'accion': 'Eliminar $tipoTexto',
-                                    'detalle':
-                                        'Se eliminó el $tipoTexto: ${contacto['nombre'] ?? 'Sin nombre'} - ${contacto['empresa'] ?? 'Sin empresa'}',
-                                  });
+                                    await auditoriaRef.set({
+                                      'fecha': FieldValue.serverTimestamp(),
+                                      'usuario_nombre': usuarioNombre,
+                                      'usuario_uid':
+                                          user?.uid ?? 'uid_desconocido',
+                                      'accion': 'Eliminar $tipoTexto',
+                                      'detalle':
+                                          'Se eliminó el $tipoTexto: ${contacto['nombre'] ?? 'Sin nombre'} - ${contacto['empresa'] ?? 'Sin empresa'}',
+                                    });
 
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('$tipoTexto eliminado'),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Error al eliminar: $e'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('$tipoTexto eliminado'),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Error al eliminar: $e'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
                                 }
-                              }
-                            },
-                          ),
-                        ],
+                              },
+                            ),
+                          ],
+                        ),
+                        onTap: () => _mostrarDetalle(contacto),
                       ),
-                      onTap: () => _mostrarDetalle(contacto),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
           ],
@@ -425,107 +426,123 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
         backgroundColor: const Color(0xFF4682B4),
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: MainDeskLayout(
-        child: Column(
-          children: [
-            // Cabecera con flecha y contenido
-            Transform.translate(
-              offset: const Offset(-0.5, 0),
-              child: Container(
-                width: double.infinity,
-                color: const Color(0xFF2C3E50),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 64,
-                  vertical: 38,
-                ),
-                child: Stack(
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back_ios,
-                          color: Colors.white,
-                        ),
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                      ),
+      body: Container(
+        color: Colors.white,
+        child: MainDeskLayout(
+          child: Container(
+            color: Colors.white,
+            child: Column(
+              children: [
+                // Cabecera con flecha y contenido
+                Transform.translate(
+                  offset: const Offset(-0.5, 0),
+                  child: Container(
+                    width: double.infinity,
+                    color: const Color(0xFF2C3E50),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 64,
+                      vertical: 38,
                     ),
-                    const Align(
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Contactos',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                    child: Stack(
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.arrow_back_ios,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                          ),
                         ),
-                      ),
+                        const Align(
+                          alignment: Alignment.center,
+                          child: Text(
+                            'Contactos',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
-                    spreadRadius: 2,
-                    blurRadius: 5,
-                    offset: const Offset(0, 3),
                   ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(25),
-                child: TabBar(
-                  controller: _tabController,
-                  labelColor: const Color(0xFF4682B4),
-                  unselectedLabelColor: Colors.grey,
-                  indicatorColor: const Color(0xFF4682B4),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  indicator: BoxDecoration(
-                    color: const Color(0xFF4682B4).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  dividerColor: Colors.transparent,
-                  onTap: (index) {
-                    setState(() {
-                      _busqueda = '';
-                      _filtroCiudad = null;
-                    });
-                  },
-                  tabs: const [Tab(text: 'Clientes'), Tab(text: 'Proveedores')],
                 ),
-              ),
-            ),
-            // Contenido de las pestañas
-            Expanded(
-              child: Container(
-                color: Colors.white,
-                child: SafeArea(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1200),
-                      child: TabBarView(
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.2),
+                          spreadRadius: 2,
+                          blurRadius: 5,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(25),
+                      child: TabBar(
                         controller: _tabController,
-                        children: [
-                          _buildTablaContactos(true), // Clientes
-                          _buildTablaContactos(false), // Proveedores
+                        labelColor: const Color(0xFF4682B4),
+                        unselectedLabelColor: Colors.grey,
+                        indicatorColor: const Color(0xFF4682B4),
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        indicator: BoxDecoration(
+                          color: const Color(0xFF4682B4).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        dividerColor: Colors.transparent,
+                        onTap: (index) {
+                          setState(() {
+                            _busqueda = '';
+                            _filtroCiudad = null;
+                          });
+                        },
+                        tabs: const [
+                          Tab(text: 'Clientes'),
+                          Tab(text: 'Proveedores'),
                         ],
                       ),
                     ),
                   ),
                 ),
-              ),
+                // Contenido de las pestañas
+                Expanded(
+                  child: Container(
+                    color: Colors.white,
+                    width: double.infinity,
+                    child: SafeArea(
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 1200),
+                          child: TabBarView(
+                            controller: _tabController,
+                            children: [
+                              _buildTablaContactos(true), // Clientes
+                              _buildTablaContactos(false), // Proveedores
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -552,8 +569,6 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _info('RUC', contacto['ruc']),
-                _info('País', contacto['pais']),
-                _info('Provincia', contacto['provincia']),
                 _info('Ciudad', contacto['ciudad']),
                 _info('Empresa', contacto['empresa']),
                 _info('Dirección', contacto['direccion']),
@@ -598,12 +613,6 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
 
     final nombreController = TextEditingController(text: contacto?['nombre']);
     final rucController = TextEditingController(text: contacto?['ruc']);
-    final paisController = TextEditingController(
-      text: contacto == null ? 'ECUADOR' : contacto['pais'],
-    );
-    final provinciaController = TextEditingController(
-      text: contacto?['provincia'],
-    );
     final ciudadController = TextEditingController(text: contacto?['ciudad']);
     final empresaController = TextEditingController(text: contacto?['empresa']);
     final direccionController = TextEditingController(
@@ -653,22 +662,6 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _campo(paisController, 'País', Icons.flag),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _campo(
-                            provinciaController,
-                            'Provincia',
-                            Icons.map,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
                     _campo(ciudadController, 'Ciudad', Icons.location_city),
                     const SizedBox(height: 12),
                     _campo(empresaController, 'Empresa', Icons.business),
@@ -712,8 +705,6 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
                   final data = {
                     'nombre': nombreController.text.trim(),
                     'ruc': rucController.text.trim(),
-                    'pais': paisController.text.trim(),
-                    'provincia': provinciaController.text.trim(),
                     'ciudad': ciudadController.text.trim(),
                     'empresa': empresaController.text.trim(),
                     'direccion': direccionController.text.trim(),

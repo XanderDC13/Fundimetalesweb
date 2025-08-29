@@ -322,7 +322,7 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
             (tipoComprobanteRaw == null ||
                     tipoComprobanteRaw == '' ||
                     tipoComprobanteRaw == '---')
-                ? 'Nota de Venta'
+                ? 'Nota de Pedido'
                 : tipoComprobanteRaw;
 
         final esFactura = tipoComprobante.toLowerCase() == 'factura';
@@ -798,7 +798,7 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
                           color: PdfColor.fromInt(0xFFFFF8DC),
                         ),
                         child: pw.Text(
-                          'NOTA DE VENTA - Este documento no tiene valor tributario. No incluye IVA.',
+                          'NOTA DE PEDIDO - Este documento no tiene valor tributario. No incluye IVA.',
                           style: pw.TextStyle(
                             fontSize: 10,
                             fontWeight: pw.FontWeight.bold,
@@ -911,7 +911,7 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
           return const Center(child: Text('No hay ventas que coincidan.'));
         }
 
-        final tipoTexto = esFactura ? 'Facturas' : 'Notas de Venta';
+        final tipoTexto = esFactura ? 'Facturas' : 'Notas de Pedido';
 
         return Column(
           children: [
@@ -1479,7 +1479,7 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
                         dividerColor: Colors.transparent,
                         tabs: const [
                           Tab(text: 'Facturas'),
-                          Tab(text: 'Notas de Venta'),
+                          Tab(text: 'Notas de Pedido'),
                         ],
                       ),
                     ),

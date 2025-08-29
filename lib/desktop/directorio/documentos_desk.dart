@@ -48,6 +48,13 @@ class _ProformaOrdenDespachoDeskScreenState
       _entradaManualHabilitada = true;
       _mensajeBusqueda =
           'Modo entrada manual activado. Complete los campos requeridos.';
+
+      if (_telefonoController.text.isEmpty) {
+        _telefonoController.text = '09XXXXXXXX';
+      }
+      if (_emailController.text.isEmpty) {
+        _emailController.text = 'sincorreo@fmn.com';
+      }
     });
   }
 
@@ -64,6 +71,101 @@ class _ProformaOrdenDespachoDeskScreenState
       _clienteEncontrado = false;
       _mensajeBusqueda = '';
     });
+  }
+
+  Future<void> _guardarClienteManual() async {
+    if (!_validarDatosCliente()) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: const Color(0xFF4682B4)),
+              SizedBox(height: 16),
+              Text('Guardando cliente...'),
+            ],
+          ),
+        );
+      },
+    );
+
+    try {
+      final clienteData = {
+        'ruc': _ciRucController.text.trim(),
+        'nombre': _clienteController.text.toUpperCase(),
+        'telefono': _telefonoController.text,
+        'direccion': _direccionController.text.toUpperCase(),
+        'correo': _emailController.text.toLowerCase(),
+        'ciudad': _ciudadController.text.toUpperCase(),
+        'fecha_creacion': Timestamp.now(),
+      };
+
+      await FirebaseFirestore.instance.collection('clientes').add(clienteData);
+
+      Navigator.pop(context); // Cerrar diálogo de carga
+
+      setState(() {
+        _clienteEncontrado = true;
+        _mensajeBusqueda = 'Cliente guardado y encontrado correctamente.';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Cliente guardado correctamente'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      Navigator.pop(context); // Cerrar diálogo de carga
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al guardar cliente: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  bool _validarDatosCliente() {
+    if (_clienteController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('El nombre del cliente es obligatorio'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return false;
+    }
+
+    if (_ciRucController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('La cédula/RUC es obligatoria'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return false;
+    }
+
+    if (!_telefonoController.text.startsWith('09') ||
+        _telefonoController.text.length != 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('El teléfono debe tener formato 09XXXXXXXX'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return false;
+    }
+
+    return true;
   }
 
   void _buscarClienteConDebounce(String query) {
@@ -496,6 +598,26 @@ class _ProformaOrdenDespachoDeskScreenState
               ),
             ],
           ),
+
+          // BOTÓN GUARDAR CLIENTE (solo visible en modo manual)
+          if (_entradaManualHabilitada && !_clienteEncontrado)
+            Container(
+              margin: EdgeInsets.only(top: 16),
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _guardarClienteManual,
+                icon: Icon(Icons.save, color: Colors.white),
+                label: Text('Guardar Cliente'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green[600],
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -711,7 +833,17 @@ class _ProformaOrdenDespachoDeskScreenState
     String referencia,
     int index,
   ) async {
-    if (referencia.isEmpty) return;
+    // Si la referencia está vacía, limpiar campos relacionados
+    if (referencia.isEmpty) {
+      setState(() {
+        items[index].descripcionController.clear();
+        items[index].vUnitController.clear();
+        if (items[index].cantidadController.text.isNotEmpty) {
+          _calcularTotal(index); // Recalcular para mostrar 0.00
+        }
+      });
+      return;
+    }
 
     try {
       final QuerySnapshot querySnapshot =
@@ -741,9 +873,28 @@ class _ProformaOrdenDespachoDeskScreenState
             _calcularTotal(index);
           }
         });
+      } else {
+        // Si no encuentra el producto, limpiar descripción y precio
+        setState(() {
+          items[index].descripcionController.clear();
+          items[index].vUnitController.clear();
+          if (items[index].cantidadController.text.isNotEmpty) {
+            _calcularTotal(index); // Recalcular para mostrar 0.00
+          }
+        });
       }
     } catch (e) {
       print('Error al buscar producto: $e');
+
+      // En caso de error, también limpiar los campos
+      setState(() {
+        items[index].descripcionController.clear();
+        items[index].vUnitController.clear();
+        if (items[index].cantidadController.text.isNotEmpty) {
+          _calcularTotal(index);
+        }
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al buscar producto. Verifique la conexión.'),
@@ -1003,6 +1154,30 @@ class _ProformaOrdenDespachoDeskScreenState
         enabled: enabled,
         keyboardType: keyboardType,
         maxLines: maxLines,
+        onChanged: (value) {
+          // Formatear texto según el tipo de campo
+          if (label == 'Email') {
+            // Para email, mantener en minúsculas
+            if (value != value.toLowerCase()) {
+              controller.value = controller.value.copyWith(
+                text: value.toLowerCase(),
+                selection: TextSelection.collapsed(
+                  offset: value.toLowerCase().length,
+                ),
+              );
+            }
+          } else if (label != 'Teléfono') {
+            // Para todos los campos excepto teléfono y email, convertir a mayúsculas
+            if (value != value.toUpperCase()) {
+              controller.value = controller.value.copyWith(
+                text: value.toUpperCase(),
+                selection: TextSelection.collapsed(
+                  offset: value.toUpperCase().length,
+                ),
+              );
+            }
+          }
+        },
         decoration: InputDecoration(
           labelText: label,
           hintText: hintText,
