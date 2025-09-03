@@ -14,7 +14,7 @@ class _SolicitudInsumosDeskWidgetState
     extends State<SolicitudInsumosDeskWidget> {
   String? empleadoSeleccionado;
   String? insumoSeleccionado;
-  int cantidad = 0;
+  int cantidad = 0; 
   bool guardando = false;
   int maxCantidad = 0;
   bool esEmpleadoManual = false;
@@ -201,14 +201,12 @@ class _SolicitudInsumosDeskWidgetState
                 horizontal: 16,
                 vertical: 14,
               ),
-              // 🔹 borde cuando NO está enfocado
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(
-                  color: Colors.transparent, // sin borde visible
+                  color: Colors.transparent,
                 ),
               ),
-              // 🔹 borde cuando está enfocado
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(
@@ -230,7 +228,7 @@ class _SolicitudInsumosDeskWidgetState
 
   Widget _buildCantidadSelector() {
     return Container(
-      height: 50, // Altura fija más pequeña
+      height: 50, 
       decoration: BoxDecoration(
         border: Border.all(color: const Color(0xFFD6EAF8)),
         borderRadius: BorderRadius.circular(12),

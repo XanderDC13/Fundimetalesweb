@@ -142,10 +142,6 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
 
           precio1Controller.text = precios.isNotEmpty ? precios[0] : '';
           precio2Controller.text = precios.length > 1 ? precios[1] : '';
-          precio3Controller.text = precios.length > 2 ? precios[2] : '';
-          precio4Controller.text = precios.length > 3 ? precios[3] : '';
-          precio5Controller.text = precios.length > 4 ? precios[4] : '';
-          precio6Controller.text = precios.length > 5 ? precios[5] : '';
 
           originalCodigo = widget.codigoBarras;
           originalNombre = nombreController.text;
@@ -155,10 +151,6 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
           originalPrecios = [
             precio1Controller.text,
             precio2Controller.text,
-            precio3Controller.text,
-            precio4Controller.text,
-            precio5Controller.text,
-            precio6Controller.text,
           ];
         });
       }
@@ -212,18 +204,23 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
     if (!esProductoNuevo) {
       List<String> cambios = [];
 
-      if (codigo != originalCodigo)
+      if (codigo != originalCodigo) {
         cambios.add('Código: "$originalCodigo" → "$codigo"');
-      if (nombre != originalNombre)
+      }
+      if (nombre != originalNombre) {
         cambios.add('Nombre: "$originalNombre" → "$nombre"');
-      if (referencia != originalReferencia)
+      }
+      if (referencia != originalReferencia) {
         cambios.add('Referencia: "$originalReferencia" → "$referencia"');
-      if (costoText != originalCosto)
+      }
+      if (costoText != originalCosto) {
         cambios.add('Costo: "$originalCosto" → "$costoText"');
-      if (categoriaSeleccionada != originalCategoria)
+      }
+      if (categoriaSeleccionada != originalCategoria) {
         cambios.add(
           'Categoría: "$originalCategoria" → "$categoriaSeleccionada"',
         );
+      }
 
       for (int i = 0; i < precios.length; i++) {
         final pActual = precios[i];
@@ -289,18 +286,23 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
       // Auditoría para producto EDITADO (ya verificamos que hay cambios)
       List<String> cambios = [];
 
-      if (codigo != originalCodigo)
+      if (codigo != originalCodigo) {
         cambios.add('Código: "$originalCodigo" → "$codigo"');
-      if (nombre != originalNombre)
+      }
+      if (nombre != originalNombre) {
         cambios.add('Nombre: "$originalNombre" → "$nombre"');
-      if (referencia != originalReferencia)
+      }
+      if (referencia != originalReferencia) {
         cambios.add('Referencia: "$originalReferencia" → "$referencia"');
-      if (costoText != originalCosto)
+      }
+      if (costoText != originalCosto) {
         cambios.add('Costo: "$originalCosto" → "$costoText"');
-      if (categoriaSeleccionada != originalCategoria)
+      }
+      if (categoriaSeleccionada != originalCategoria) {
         cambios.add(
           'Categoría: "$originalCategoria" → "$categoriaSeleccionada"',
         );
+      }
 
       for (int i = 0; i < precios.length; i++) {
         final pActual = precios[i];
@@ -411,49 +413,18 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
             children: [
               Expanded(
                 child: buildPrecioField(
-                  label: 'PVP1',
+                  label: 'PVP',
                   controller: precio1Controller,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: buildPrecioField(
-                  label: 'PVP2',
+                  label: '20%',
                   controller: precio2Controller,
                 ),
               ),
               const SizedBox(width: 10),
-              Expanded(
-                child: buildPrecioField(
-                  label: 'PVP3',
-                  controller: precio3Controller,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: buildPrecioField(
-                  label: 'PVP4',
-                  controller: precio4Controller,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: buildPrecioField(
-                  label: 'PVP5',
-                  controller: precio5Controller,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: buildPrecioField(
-                  label: 'PVP6',
-                  controller: precio6Controller,
-                ),
-              ),
             ],
           ),
         ],
