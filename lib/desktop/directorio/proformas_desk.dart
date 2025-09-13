@@ -1,4 +1,5 @@
 import 'package:basefundi/desktop/directorio/documentos_desk.dart';
+import 'package:basefundi/desktop/directorio/proforma_anticipo_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas/proforma_fundicion_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas/proforma_ventas_desk.dart';
 import 'package:basefundi/services/transition.dart';
@@ -46,6 +47,10 @@ class _OpcionesProformasDeskScreenState
 
   Widget _getProformaOrdenesScreen() {
     return ProformaOrdenDespachoDeskScreen();
+  }
+
+  Widget _getProformaAnticiposScreen() {
+    return AnticiposDeskScreen();
   }
 
 
@@ -120,6 +125,13 @@ class _OpcionesProformasDeskScreenState
                         titulo: 'Proforma Materia Prima',
                         subtitulo: 'Genera proforma compra de meteria prima',
                         destino: _getProformaFundicionScreen(),
+                      ),
+                      const SizedBox(height: 20),
+                      _buildBoton(
+                        icono: Icons.add_circle_outline,
+                        titulo: 'Proforma Anticipos',
+                        subtitulo: 'Genera proforma de anticipos a usuarios',
+                        destino: _getProformaAnticiposScreen(),
                       ),
                       const SizedBox(height: 20),
                     ],
