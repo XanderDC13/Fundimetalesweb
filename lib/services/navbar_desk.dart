@@ -2,11 +2,11 @@ import 'package:basefundi/desktop/ajustes/editperfil_desk.dart';
 import 'package:basefundi/desktop/ajustes/feedback_desk.dart';
 import 'package:basefundi/desktop/dashboard_desk.dart';
 import 'package:basefundi/desktop/directorio/contactos_desk.dart';
-import 'package:basefundi/desktop/directorio/documentos_desk.dart';
 import 'package:basefundi/desktop/directorio/pedidos_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareas_cumplir_desk.dart';
-import 'package:basefundi/desktop/reportes/reportes%20inventarios/inventario_general_desk.dart';
+import 'package:basefundi/desktop/inventario/medidas_desk.dart';
+import 'package:basefundi/desktop/reportes/reporte_proformas_desk.dart';
 import 'package:basefundi/desktop/inventario/productos_desk.dart';
 import 'package:basefundi/desktop/personal/empleados/empleados_registro_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
@@ -275,6 +275,14 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             label: 'Productos',
             onTap: () => _navigateToScreen(const TotalInvDeskScreen()),
           ),
+          _buildSubItem(
+            label: 'Insumos',
+            onTap: () => _navigateToScreen(const InsumosDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Catálogo',
+            onTap: () => _navigateToScreen(const VisualizarCatalogoScreen()),
+          ),
         ],
       ),
       _buildExpandableItem(
@@ -307,10 +315,6 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             label: 'Funciones',
             onTap: () => _navigateToScreen(const FuncionesDeskScreen()),
           ),
-          _buildSubItem(
-            label: 'Insumos',
-            onTap: () => _navigateToScreen(const InsumosDeskScreen()),
-          ),
         ],
       ),
       _buildExpandableItem(
@@ -321,12 +325,6 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
           _buildSubItem(
             label: 'Proformas',
             onTap: () => _navigateToScreen(const OpcionesProformasDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Documentos',
-            onTap:
-                () =>
-                    _navigateToScreen(const ProformaOrdenDespachoDeskScreen()),
           ),
           _buildSubItem(
             label: 'Pedidos',
@@ -352,7 +350,13 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             onTap: () => _navigateToScreen(const ReporteInventarioDeskScreen()),
           ),
           _buildSubItem(
-            label: 'Documentos',
+            label: 'Cotizaciones',
+            onTap:
+                () =>
+                    _navigateToScreen(const ReporteProformasVentasDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Proformas / Ordenes',
             onTap: () => _navigateToScreen(const ReporteDocumentosDeskScreen()),
           ),
           _buildSubItem(
@@ -379,6 +383,10 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             label: 'Realizar Venta',
             onTap: () => _navigateToScreen(const VentasDetalleDeskScreen()),
           ),
+          _buildSubItem(
+            label: 'Modificar Ventas',
+            onTap: () => _navigateToScreen(const ModificarVentaDeskScreen()),
+          ),
         ],
       ),
       _buildExpandableItem(
@@ -387,15 +395,86 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
         menuKey: 'inventario',
         subItems: [
           _buildSubItem(
-            label: 'General',
-            onTap: () => _navigateToScreen(const InventarioGeneralDeskScreen()),
+            label: 'Productos',
+            onTap: () => _navigateToScreen(const TotalInvDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Insumos',
+            onTap: () => _navigateToScreen(const InsumosDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Catálogo',
+            onTap: () => _navigateToScreen(const VisualizarCatalogoScreen()),
           ),
         ],
       ),
-      _buildMainItem(
+      _buildExpandableItem(
+        icon: Icons.people,
+        title: 'Personal',
+        menuKey: 'personal',
+        subItems: [
+          _buildSubItem(
+            label: 'Usuarios',
+            onTap:
+                () => _navigateToScreen(const EmpleadosPendientesDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Funciones',
+            onTap: () => _navigateToScreen(const FuncionesDeskScreen()),
+          ),
+        ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.contacts,
+        title: 'Directorio',
+        menuKey: 'directorio',
+        subItems: [
+          _buildSubItem(
+            label: 'Proformas',
+            onTap: () => _navigateToScreen(const OpcionesProformasDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Pedidos',
+            onTap: () => _navigateToScreen(const PedidosDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Contactos',
+            onTap: () => _navigateToScreen(const ContactosDeskScreen()),
+          ),
+        ],
+      ),
+      _buildExpandableItem(
         icon: Icons.bar_chart,
         title: 'Reportes',
-        onTap: () => _navigateToScreen(const ReportesDeskScreen()),
+        menuKey: 'reportes',
+        subItems: [
+          _buildSubItem(
+            label: 'Ventas',
+            onTap: () => _navigateToScreen(const ReporteVentasDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Inventario',
+            onTap: () => _navigateToScreen(const ReporteInventarioDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Cotizaciones',
+            onTap:
+                () =>
+                    _navigateToScreen(const ReporteProformasVentasDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Proformas / Ordenes',
+            onTap: () => _navigateToScreen(const ReporteDocumentosDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Materia Prima',
+            onTap: () => _navigateToScreen(const ReporteComprasDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Auditoría',
+            onTap: () => _navigateToScreen(const AuditoriaDeskScreen()),
+          ),
+        ],
       ),
     ];
   }
@@ -411,6 +490,10 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             label: 'Realizar Venta',
             onTap: () => _navigateToScreen(const VentasDetalleDeskScreen()),
           ),
+          _buildSubItem(
+            label: 'Modificar Ventas',
+            onTap: () => _navigateToScreen(const ModificarVentaDeskScreen()),
+          ),
         ],
       ),
       _buildExpandableItem(
@@ -418,9 +501,13 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
         title: 'Inventario',
         menuKey: 'inventario',
         subItems: [
+           _buildSubItem(
+            label: 'Productos',
+            onTap: () => _navigateToScreen(const TotalInvDeskScreen()),
+          ),
           _buildSubItem(
-            label: 'General',
-            onTap: () => _navigateToScreen(const InventarioGeneralDeskScreen()),
+            label: 'Catálogo',
+            onTap: () => _navigateToScreen(const VisualizarCatalogoScreen()),
           ),
         ],
       ),
@@ -480,11 +567,6 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
         icon: Icons.inventory,
         title: 'Inventario',
         onTap: () => _navigateToScreen(const InventarioDeskScreen()),
-      ),
-      _buildMainItem(
-        icon: Icons.task_alt,
-        title: 'Tareas',
-        onTap: () => _navigateToScreen(const TareasPendientesDeskScreen()),
       ),
       _buildMainItem(
         icon: Icons.bar_chart,

@@ -48,10 +48,10 @@ class _ProformaFundicionDeskScreenState
                       },
                     ),
                   ),
-                  const Align(
+                  Align(
                     alignment: Alignment.center,
                     child: Text(
-                      'Proforma de Compras',
+                      _numeroProforma,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -81,8 +81,6 @@ class _ProformaFundicionDeskScreenState
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildCompactHeader(),
-                                const SizedBox(height: 16),
                                 _buildMobileClienteSection(),
                                 const SizedBox(height: 16),
                                 _buildMobileItemsSection(),
@@ -106,29 +104,6 @@ class _ProformaFundicionDeskScreenState
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCompactHeader() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Center(
-        child: Text(
-          _numeroProforma,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[800],
-            letterSpacing: 1,
-          ),
-        ),
       ),
     );
   }
@@ -179,6 +154,20 @@ class _ProformaFundicionDeskScreenState
             ),
             child: TextField(
               controller: _clienteController,
+              textCapitalization:
+                  TextCapitalization.characters, // Convierte a mayúsculas
+              onChanged: (value) {
+                // Forzar mayúsculas en tiempo real
+                final upperCaseValue = value.toUpperCase();
+                if (value != upperCaseValue) {
+                  _clienteController.value = _clienteController.value.copyWith(
+                    text: upperCaseValue,
+                    selection: TextSelection.collapsed(
+                      offset: upperCaseValue.length,
+                    ),
+                  );
+                }
+              },
               decoration: InputDecoration(
                 hintText: 'Ingrese el nombre del cliente',
                 prefixIcon: Icon(Icons.person, color: Colors.grey[600]),
@@ -327,7 +316,7 @@ class _ProformaFundicionDeskScreenState
                   child: _buildItemInputField(
                     controller: item.descripcionController,
                     label: 'Descripción',
-                    options: ["CHATARRA", "ALUMINIO", "HIERRO"],
+                    options: ["FUNDICION", "CHATARRA", "ALUMINIO", "HIERRO"],
                   ),
                 ),
                 SizedBox(width: 8),
@@ -376,7 +365,7 @@ class _ProformaFundicionDeskScreenState
   Widget _buildItemInputField({
     required TextEditingController controller,
     required String label,
-    List<String>? options, // 👈 lista de opciones
+    List<String>? options,
     TextInputType keyboardType = TextInputType.text,
     bool readOnly = false,
     TextStyle? style,
@@ -403,8 +392,9 @@ class _ProformaFundicionDeskScreenState
             );
           },
           onSelected: (String selection) {
-            controller.text = selection;
-            if (onChanged != null) onChanged(selection);
+            controller.text =
+                selection.toUpperCase(); // Mayúsculas al seleccionar
+            if (onChanged != null) onChanged(controller.text);
           },
           fieldViewBuilder: (
             context,
@@ -419,7 +409,21 @@ class _ProformaFundicionDeskScreenState
             );
 
             textEditingController.addListener(() {
-              controller.text = textEditingController.text;
+              // Convertir a mayúsculas automáticamente
+              final upperCaseValue = textEditingController.text.toUpperCase();
+
+              // Solo actualizar si es diferente para evitar bucles infinitos
+              if (textEditingController.text != upperCaseValue) {
+                textEditingController.value = textEditingController.value
+                    .copyWith(
+                      text: upperCaseValue,
+                      selection: TextSelection.collapsed(
+                        offset: upperCaseValue.length,
+                      ),
+                    );
+              }
+
+              controller.text = upperCaseValue;
               if (onChanged != null) onChanged(controller.text);
             });
 
@@ -428,6 +432,8 @@ class _ProformaFundicionDeskScreenState
               focusNode: focusNode,
               keyboardType: keyboardType,
               readOnly: readOnly,
+              textCapitalization:
+                  TextCapitalization.characters, // Mayúsculas automáticas
               style: style ?? const TextStyle(fontSize: 14),
               decoration: InputDecoration(
                 labelText: label,
@@ -436,18 +442,15 @@ class _ProformaFundicionDeskScreenState
               ),
             );
           },
-          // 👇 Aquí se personaliza la lista de opciones
           optionsViewBuilder: (context, onSelected, options) {
             return Align(
               alignment: Alignment.topLeft,
               child: Material(
                 elevation: 4,
                 borderRadius: BorderRadius.circular(8),
-                color: Colors.white, // 👈 Fondo blanco fijo
+                color: Colors.white,
                 child: SizedBox(
-                  width:
-                      MediaQuery.of(context).size.width *
-                      0.6, // ajusta si quieres
+                  width: MediaQuery.of(context).size.width * 0.6,
                   child: ListView.builder(
                     padding: EdgeInsets.zero,
                     shrinkWrap: true,
@@ -477,7 +480,7 @@ class _ProformaFundicionDeskScreenState
       );
     }
 
-    // 🔹 Caso normal sin lista
+    // Caso normal sin lista - TAMBIÉN CON MAYÚSCULAS AUTOMÁTICAS
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -489,7 +492,23 @@ class _ProformaFundicionDeskScreenState
         controller: controller,
         keyboardType: keyboardType,
         readOnly: readOnly,
-        onChanged: onChanged,
+        textCapitalization:
+            TextCapitalization.characters, // Mayúsculas automáticas
+        onChanged: (value) {
+          // Solo para campos de texto (no numéricos)
+          if (keyboardType == TextInputType.text || label == 'Descripción') {
+            final upperCaseValue = value.toUpperCase();
+            if (value != upperCaseValue) {
+              controller.value = controller.value.copyWith(
+                text: upperCaseValue,
+                selection: TextSelection.collapsed(
+                  offset: upperCaseValue.length,
+                ),
+              );
+            }
+          }
+          if (onChanged != null) onChanged(controller.text);
+        },
         style: style ?? const TextStyle(fontSize: 14),
         decoration: InputDecoration(
           labelText: label,
@@ -591,35 +610,6 @@ class _ProformaFundicionDeskScreenState
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: OutlinedButton(
-                  onPressed: _vistaPrevia,
-                  child: const Text('Vista previa'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.black87,
-                    side: BorderSide.none,
-                    backgroundColor: Colors.transparent,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
                   color: const Color(0xFF4682B4),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
@@ -631,8 +621,8 @@ class _ProformaFundicionDeskScreenState
                   ],
                 ),
                 child: ElevatedButton(
-                  onPressed: _guardarProformaDirecto,
-                  child: const Text('Guardar'),
+                  onPressed: _guardarYGenerarPDF,
+                  child: const Text('Guardar e Imprimir'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     foregroundColor: Colors.white,
@@ -777,36 +767,44 @@ class _ProformaFundicionDeskScreenState
     return total.toStringAsFixed(2);
   }
 
-  // MÉTODO MODIFICADO: Solo llama al generador de PDF externo
-  void _vistaPrevia() async {
+  Future<void> _guardarYGenerarPDF() async {
     try {
-      // Convertir items a formato Map<String, String>
-      List<Map<String, String>> itemsData = items.map((item) => {
-        'descripcion': item.descripcionController.text,
-        'kilos': item.kilosController.text,
-        'precio': item.precioController.text,
-        'total': item.totalController.text,
-      }).toList();
+      // Validaciones básicas
+      if (_clienteController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ Por favor ingrese el nombre del cliente'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
 
-      // Llamar al generador de PDF externo
-      await MateriaPrimaPDFGenerator.showPreview(
-        numero: _numeroProforma,
-        cliente: _clienteController.text,
-        fecha: DateTime.now(),
-        items: itemsData,
+      // Validar que al menos un item tenga datos
+      bool tieneItemsValidos = items.any(
+        (item) =>
+            item.descripcionController.text.trim().isNotEmpty &&
+            item.kilosController.text.trim().isNotEmpty &&
+            item.precioController.text.trim().isNotEmpty,
       );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al generar vista previa: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
 
-  Future<void> _guardarProformaDirecto() async {
-    try {
+      if (!tieneItemsValidos) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ Por favor complete al menos un item'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Mostrar loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
       final fechaHoy = DateTime.now();
       final fechaFormateada =
           "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
@@ -825,16 +823,24 @@ class _ProformaFundicionDeskScreenState
         await counterRef.set({'contador': numero});
       }
 
-      final numeroProformaFinal = "Orden N-$fechaFormateada-$numero";
+      final numeroProformaFinal = "ORDEN N-$fechaFormateada-$numero";
 
       final proformaData = {
         'numero': numeroProformaFinal,
-        'cliente': _clienteController.text,
+        'cliente':
+            _clienteController.text.toUpperCase(), // Guardar en mayúsculas
         'items':
             items
+                .where(
+                  (item) =>
+                      item.descripcionController.text.trim().isNotEmpty &&
+                      item.kilosController.text.trim().isNotEmpty &&
+                      item.precioController.text.trim().isNotEmpty,
+                )
                 .map(
                   (item) => {
-                    'descripcion': item.descripcionController.text,
+                    'descripcion':
+                        item.descripcionController.text.toUpperCase(),
                     'kilos': item.kilosController.text,
                     'precio': item.precioController.text,
                     'total': item.totalController.text,
@@ -858,6 +864,12 @@ class _ProformaFundicionDeskScreenState
               ? (usuarioDoc['nombre'] ?? 'Desconocido')
               : 'Desconocido';
 
+      // Guardar en Firestore
+      await FirebaseFirestore.instance
+          .collection('proformasfundicion')
+          .add(proformaData);
+
+      // Registrar en auditoría
       final auditoriaRef =
           FirebaseFirestore.instance.collection('auditoria_general').doc();
 
@@ -868,23 +880,65 @@ class _ProformaFundicionDeskScreenState
         'accion': 'Nueva proforma fundición',
         'detalle': 'Número de proforma: $numeroProformaFinal',
       });
-      await FirebaseFirestore.instance
-          .collection('proformasfundicion')
-          .add(proformaData);
 
-      // Limpiar campos
-      _clienteController.clear();
-      items.clear();
+      // Cerrar loading
+      Navigator.of(context, rootNavigator: true).pop();
 
-      setState(() {});
+      // Convertir items a formato Map<String, String> para el PDF
+      List<Map<String, String>> itemsData =
+          items
+              .where(
+                (item) =>
+                    item.descripcionController.text.trim().isNotEmpty &&
+                    item.kilosController.text.trim().isNotEmpty &&
+                    item.precioController.text.trim().isNotEmpty,
+              )
+              .map(
+                (item) => {
+                  'descripcion': item.descripcionController.text.toUpperCase(),
+                  'kilos': item.kilosController.text,
+                  'precio': item.precioController.text,
+                  'total': item.totalController.text,
+                },
+              )
+              .toList();
 
+      // Generar PDF automáticamente
+      await MateriaPrimaPDFGenerator.showPreview(
+        numero: numeroProformaFinal,
+        cliente: _clienteController.text.toUpperCase(),
+        fecha: fechaHoy,
+        items: itemsData,
+      );
+
+      // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ Proforma guardada correctamente'),
+          content: Text(
+            '✅ Proforma guardada correctamente y lista para imprimir',
+          ),
           backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
         ),
       );
+
+      // Limpiar campos después del éxito
+      _clienteController.clear();
+      items.clear();
+      items.add(ItemProforma()); // Agregar un item vacío
+
+      setState(() {
+        _numeroProforma = ''; // Limpiar número para regenerarlo
+      });
+
+      // Regenerar número de proforma para la próxima
+      _previsualizarNumeroProforma();
     } catch (e) {
+      // Cerrar loading si está abierto
+      if (Navigator.canPop(context)) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
       print('❌ Error al guardar proforma: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

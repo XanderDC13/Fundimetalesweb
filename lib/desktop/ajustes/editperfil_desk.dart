@@ -57,14 +57,9 @@ class _EditarPerfilDeskScreenState extends State<EditarPerfilDeskScreen> {
     if (!_formKey.currentState!.validate() || _usuario == null) return;
 
     final nuevoNombre = _nombreController.text.trim();
-    final nuevoEmail = _emailController.text.trim();
     final nuevaContrasena = _contrasenaController.text.trim();
 
     try {
-      if (nuevoEmail != _usuario!.email) {
-        await _usuario!.updateEmail(nuevoEmail);
-      }
-
       if (nuevaContrasena.isNotEmpty) {
         await _usuario!.updatePassword(nuevaContrasena);
       }
@@ -74,7 +69,6 @@ class _EditarPerfilDeskScreenState extends State<EditarPerfilDeskScreen> {
           .doc(_usuario!.uid)
           .update({
             'nombre': nuevoNombre,
-            'email': nuevoEmail,
             'sede': sedeSeleccionada ?? '',
             if (nuevaContrasena.isNotEmpty) 'contrasena': nuevaContrasena,
           });
@@ -108,6 +102,7 @@ class _EditarPerfilDeskScreenState extends State<EditarPerfilDeskScreen> {
     required TextEditingController controller,
     TextInputType? keyboardType,
     bool obscure = false,
+    bool readOnly = false,
     String? Function(String?)? validator,
   }) {
     return Card(
@@ -122,6 +117,7 @@ class _EditarPerfilDeskScreenState extends State<EditarPerfilDeskScreen> {
           controller: controller,
           keyboardType: keyboardType,
           obscureText: obscure,
+          readOnly: readOnly,
           decoration: InputDecoration(
             hintText: label,
             border: InputBorder.none, // 👈 sin borde
@@ -200,13 +196,7 @@ class _EditarPerfilDeskScreenState extends State<EditarPerfilDeskScreen> {
                                 label: 'Email',
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty)
-                                    return 'Campo requerido';
-                                  if (!value.contains('@'))
-                                    return 'Email inválido';
-                                  return null;
-                                },
+                                readOnly: true,
                               ),
                               _inputCard(
                                 icon: Icons.lock,

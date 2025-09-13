@@ -29,21 +29,18 @@ final GoRouter _router = GoRouter(
     final isLoggedIn = user != null;
     final isOnLoginPage = state.fullPath == '/login';
     final isOnRegisterPage = state.fullPath == '/register';
-    
+
     // Si no hay usuario y está intentando acceder a páginas protegidas
     if (!isLoggedIn && !isOnLoginPage && !isOnRegisterPage) {
       return '/login';
     }
-    
+
     // No hacer redirección automática al dashboard
     // Dejar que el usuario navegue manualmente después del login
     return null;
   },
   routes: [
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginScreen(),
-    ),
+    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(
       path: '/register',
       builder: (context, state) => const RegisterScreen(),
@@ -80,7 +77,64 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF4682B4), // Tu color azul principal
+          primary: const Color(0xFF4682B4),
+          secondary: const Color(
+            0xFFD6EAF8,
+          ), // Tu color azul claro para selecciones
+        ),
+        // Personalizar específicamente los elementos de selección
+        textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: Color(0xFF4682B4), // Color del cursor
+          selectionColor: Color(0xFFD6EAF8), // Color de selección de texto
+          selectionHandleColor: Color(
+            0xFF4682B4,
+          ), // Color de los controladores de selección
+        ),
+        // Personalizar inputs y campos de texto
+        inputDecorationTheme: InputDecorationTheme(
+          focusedBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFF4682B4), width: 2),
+          ),
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFF4682B4).withOpacity(0.3)),
+          ),
+        ),
+        // Personalizar checkboxes, radio buttons, switches
+        checkboxTheme: CheckboxThemeData(
+          fillColor: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return const Color(0xFF4682B4);
+            }
+            return null;
+          }),
+        ),
+        radioTheme: RadioThemeData(
+          fillColor: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return const Color(0xFF4682B4);
+            }
+            return null;
+          }),
+        ),
+        switchTheme: SwitchThemeData(
+          thumbColor: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return const Color(0xFF4682B4);
+            }
+            return null;
+          }),
+          trackColor: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return const Color(0xFFD6EAF8);
+            }
+            return null;
+          }),
+        ),
+      ),
       routerConfig: _router,
     );
   }

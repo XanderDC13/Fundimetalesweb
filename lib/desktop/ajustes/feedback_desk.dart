@@ -83,10 +83,10 @@ class _FeedbackDeskScreenState extends State<FeedbackDeskScreen> {
   Widget build(BuildContext context) {
     return MainDeskLayout(
       child: Container(
-        color: Colors.white, // ✅ Color de fondo blanco agregado
+        color: Colors.white,
         child: Column(
           children: [
-            // ✅ CABECERA
+            // CABECERA
             Transform.translate(
               offset: const Offset(-0.5, 0),
               child: Container(
@@ -131,244 +131,208 @@ class _FeedbackDeskScreenState extends State<FeedbackDeskScreen> {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 600),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(32),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF0F4F8),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Tipo de Feedback',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1E293B),
+                            ),
                           ),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Tipo de Feedback',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF1E293B),
+                          const SizedBox(height: 8),
+                          Card(
+                            color: Colors.white,
+                            elevation: 4,
+                            shadowColor: Colors.black.withOpacity(0.1),
+                            margin: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              child: DropdownButtonFormField<String>(
+                                value: _type,
+                                isExpanded: true,
+                                decoration: const InputDecoration(
+                                  prefixIcon: Icon(
+                                    Icons.category_outlined,
+                                    color: Color(0xFF2C3E50),
                                   ),
+                                  border: InputBorder.none,
                                 ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: const Color(
-                                        0xFF1E40AF,
-                                      ).withOpacity(0.2),
-                                    ),
-                                  ),
-                                  child: DropdownButtonFormField<String>(
-                                    dropdownColor: Colors.white,
-                                    value: _type,
-                                    decoration: const InputDecoration(
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 12,
-                                      ),
-                                      prefixIcon: Icon(
-                                        Icons.category_outlined,
-                                        color: Color(0xFF2C3E50),
-                                      ),
-                                    ),
-                                    items:
-                                        [
-                                              'Sugerencia',
-                                              'Reporte de error',
-                                              'Pregunta',
-                                              'Felicitación',
-                                              'Otro',
-                                            ]
-                                            .map(
-                                              (type) => DropdownMenuItem(
-                                                value: type,
-                                                child: Text(type),
+                                dropdownColor: Colors.white,
+                                items:
+                                    [
+                                          'Sugerencia',
+                                          'Reporte de error',
+                                          'Pregunta',
+                                          'Felicitación',
+                                          'Otro',
+                                        ]
+                                        .map(
+                                          (type) => DropdownMenuItem(
+                                            value: type,
+                                            child: Text(
+                                              type,
+                                              style: const TextStyle(
+                                                color: Color(0xFF2C3E50),
                                               ),
-                                            )
-                                            .toList(),
-                                    onChanged:
-                                        (val) => setState(() => _type = val!),
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                const Text(
-                                  'Descripción',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF1E293B),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                TextFormField(
-                                  decoration: InputDecoration(
-                                    hintText: 'Cuéntanos más detalles...',
-                                    prefixIcon: const Icon(
-                                      Icons.description_outlined,
-                                      color: Color(0xFF2C3E50),
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    contentPadding: const EdgeInsets.all(16),
-                                  ),
-                                  maxLines: 4,
-                                  validator: (val) {
-                                    if (val == null || val.isEmpty) {
-                                      return 'Por favor escribe una descripción.';
-                                    }
-                                    if (val.length < 10) {
-                                      return 'La descripción debe tener al menos 10 caracteres.';
-                                    }
-                                    return null;
-                                  },
-                                  onSaved: (val) => _description = val!,
-                                ),
-                                const SizedBox(height: 20),
-                                const Text(
-                                  'Tu email (opcional)',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF1E293B),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                TextFormField(
-                                  decoration: InputDecoration(
-                                    hintText: 'ejemplo@correo.com',
-                                    prefixIcon: const Icon(
-                                      Icons.email_outlined,
-                                      color: Color(0xFF2C3E50),
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    contentPadding: const EdgeInsets.all(16),
-                                  ),
-                                  keyboardType: TextInputType.emailAddress,
-                                  validator: (val) {
-                                    if (val != null && val.isNotEmpty) {
-                                      if (!RegExp(
-                                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                                      ).hasMatch(val)) {
-                                        return 'Ingresa un email válido';
-                                      }
-                                    }
-                                    return null;
-                                  },
-                                  onSaved: (val) => _userEmail = val ?? '',
-                                ),
-                                const SizedBox(height: 32),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 56,
-                                  child: ElevatedButton(
-                                    onPressed:
-                                        _isSubmitting ? null : _submitFeedback,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF4682B4),
-                                      foregroundColor: Colors.white,
-                                      disabledBackgroundColor: const Color(
-                                        0xFF94A3B8,
-                                      ),
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                    child:
-                                        _isSubmitting
-                                            ? const Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                SizedBox(
-                                                  width: 20,
-                                                  height: 20,
-                                                  child: CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                    valueColor:
-                                                        AlwaysStoppedAnimation<
-                                                          Color
-                                                        >(Colors.white),
-                                                  ),
-                                                ),
-                                                SizedBox(width: 12),
-                                                Text(
-                                                  'Enviando...',
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ],
-                                            )
-                                            : const Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(Icons.send),
-                                                SizedBox(width: 8),
-                                                Text(
-                                                  'Enviar Feedback',
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ],
                                             ),
+                                          ),
+                                        )
+                                        .toList(),
+                                onChanged:
+                                    (val) => setState(() => _type = val!),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Descripción',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1E293B),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Card(
+                            color: Colors.white,
+                            elevation: 4,
+                            shadowColor: Colors.black.withOpacity(0.1),
+                            margin: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: TextFormField(
+                                decoration: const InputDecoration(
+                                  hintText: 'Cuéntanos más detalles...',
+                                  prefixIcon: Icon(
+                                    Icons.description_outlined,
+                                    color: Color(0xFF2C3E50),
+                                  ),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                maxLines: 4,
+                                validator: (val) {
+                                  if (val == null || val.isEmpty) {
+                                    return 'Por favor escribe una descripción.';
+                                  }
+                                  if (val.length < 10) {
+                                    return 'La descripción debe tener al menos 10 caracteres.';
+                                  }
+                                  return null;
+                                },
+                                onSaved: (val) => _description = val!,
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 30),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: _isSubmitting ? null : _submitFeedback,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF4682B4),
+                                foregroundColor: Colors.white,
+                                disabledBackgroundColor: const Color(
+                                  0xFF94A3B8,
+                                ),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              child:
+                                  _isSubmitting
+                                      ? const Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    Colors.white,
+                                                  ),
+                                            ),
+                                          ),
+                                          SizedBox(width: 12),
+                                          Text(
+                                            'Enviando...',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                      : const Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.send),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'Enviar Feedback',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2C3E50).withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFF1E40AF).withOpacity(0.1),
+                              ),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: Color(0xFF2C3E50),
+                                  size: 20,
+                                ),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Tu feedback nos ayuda a crear una mejor experiencia para todos los usuarios.',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF2C3E50),
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2C3E50).withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(0xFF1E40AF).withOpacity(0.1),
-                            ),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                color: Color(0xFF2C3E50),
-                                size: 20,
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  'Tu feedback nos ayuda a crear una mejor experiencia para todos los usuarios.',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFF2C3E50),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

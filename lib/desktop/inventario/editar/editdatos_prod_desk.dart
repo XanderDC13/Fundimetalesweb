@@ -22,7 +22,6 @@ class EditarProductoDeskScreen extends StatefulWidget {
 
 class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
   late TextEditingController nombreController;
-  late TextEditingController costoController;
   late TextEditingController codigoController;
   late TextEditingController referenciaController;
 
@@ -44,7 +43,6 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
   late String originalCodigo;
   late String originalReferencia;
   late String originalNombre;
-  late String originalCosto;
   late String? originalCategoria;
   late List<String> originalPrecios;
 
@@ -52,13 +50,11 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
   void initState() {
     super.initState();
     nombreController = TextEditingController();
-    costoController = TextEditingController();
     codigoController = TextEditingController(text: widget.codigoBarras);
     referenciaController = TextEditingController();
     originalCodigo = widget.codigoBarras;
     originalNombre = widget.nombreInicial;
     originalReferencia = '';
-    originalCosto = '';
     originalCategoria = null;
     originalPrecios = [];
 
@@ -76,7 +72,6 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
             widget.precioInicial == 0
                 ? ''
                 : widget.precioInicial.toStringAsFixed(2);
-        costoController.text = '';
         referenciaController.text = '';
         if (categorias.isNotEmpty) {
           categoriaSeleccionada = categorias.first;
@@ -87,7 +82,6 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
       originalCodigo = widget.codigoBarras;
       originalNombre = widget.nombreInicial;
       originalReferencia = '';
-      originalCosto = '';
       originalCategoria = categorias.isNotEmpty ? categorias.first : null;
       originalPrecios = [widget.precioInicial.toStringAsFixed(2)];
     }
@@ -133,8 +127,6 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
 
         setState(() {
           nombreController.text = data['nombre'] ?? widget.nombreInicial;
-          costoController.text =
-              data['costo'] != null ? data['costo'].toString() : '';
           referenciaController.text = data['referencia'] ?? '';
           categoriaSeleccionada =
               categoriaEnDB ??
@@ -146,7 +138,6 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
           originalCodigo = widget.codigoBarras;
           originalNombre = nombreController.text;
           originalReferencia = referenciaController.text;
-          originalCosto = costoController.text;
           originalCategoria = categoriaSeleccionada;
           originalPrecios = [
             precio1Controller.text,
@@ -163,23 +154,14 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
     final codigo = codigoController.text.trim();
     final nombre = nombreController.text.trim();
     final referencia = referenciaController.text.trim();
-    final costoText = costoController.text.trim();
     final esProductoNuevo = widget.codigoBarras.isEmpty;
 
-    if (codigo.isEmpty || nombre.isEmpty || costoText.isEmpty) {
+    if (codigo.isEmpty || nombre.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Código, nombre y costo son obligatorios'),
+          content: Text('Código y nombre son obligatorios'),
         ),
       );
-      return;
-    }
-
-    final costo = double.tryParse(costoText);
-    if (costo == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Costo inválido')));
       return;
     }
 
@@ -187,10 +169,6 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
         [
           precio1Controller.text.trim(),
           precio2Controller.text.trim(),
-          precio3Controller.text.trim(),
-          precio4Controller.text.trim(),
-          precio5Controller.text.trim(),
-          precio6Controller.text.trim(),
         ].where((e) => e.isNotEmpty).toList();
 
     if (precios.isEmpty) {
@@ -212,9 +190,6 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
       }
       if (referencia != originalReferencia) {
         cambios.add('Referencia: "$originalReferencia" → "$referencia"');
-      }
-      if (costoText != originalCosto) {
-        cambios.add('Costo: "$originalCosto" → "$costoText"');
       }
       if (categoriaSeleccionada != originalCategoria) {
         cambios.add(
@@ -246,7 +221,6 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
       'codigo': codigo,
       'nombre': nombre,
       'referencia': referencia,
-      'costo': costo,
       'precios': precios.map((e) => double.tryParse(e) ?? 0).toList(),
       'categoria': categoriaSeleccionada,
       'fecha': FieldValue.serverTimestamp(),
@@ -294,9 +268,6 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
       }
       if (referencia != originalReferencia) {
         cambios.add('Referencia: "$originalReferencia" → "$referencia"');
-      }
-      if (costoText != originalCosto) {
-        cambios.add('Costo: "$originalCosto" → "$costoText"');
       }
       if (categoriaSeleccionada != originalCategoria) {
         cambios.add(
@@ -632,15 +603,6 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
                                     icon: Icons.inventory_2,
                                     controller: nombreController,
                                   ),
-                                  buildTextField(
-                                    label: 'Costo',
-                                    icon: Icons.attach_money,
-                                    controller: costoController,
-                                    inputType:
-                                        const TextInputType.numberWithOptions(
-                                          decimal: true,
-                                        ),
-                                  ),
                                   buildPreciosGrid(),
                                   buildCategoriaDropdown(),
                                   TextButton.icon(
@@ -696,7 +658,6 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
   @override
   void dispose() {
     nombreController.dispose();
-    costoController.dispose();
     codigoController.dispose();
     referenciaController.dispose();
     precio1Controller.dispose();

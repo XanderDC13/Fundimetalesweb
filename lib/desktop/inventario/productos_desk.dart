@@ -335,7 +335,6 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
             'codigo': resultado['codigo'],
             'referencia': resultado['referencia'],
             'nombre': resultado['nombre'],
-            'costo': resultado['costo'],
             'precios': resultado['precios'],
             'categoria': resultado['categoria'],
             'fecha_creacion': Timestamp.now(),
@@ -879,8 +878,6 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                                             resultado['referencia'],
                                                                         'nombre':
                                                                             resultado['nombre'],
-                                                                        'costo':
-                                                                            resultado['costo'],
                                                                         'precios':
                                                                             resultado['precios'],
                                                                         'categoria':

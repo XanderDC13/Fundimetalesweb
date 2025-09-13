@@ -1,4 +1,6 @@
+import 'package:basefundi/desktop/inventario/medidas_desk.dart';
 import 'package:basefundi/desktop/inventario/productos_desk.dart';
+import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
 import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -92,6 +94,26 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
                         },
                       ),
                       const SizedBox(height: 20),
+                      _buildBoton(
+                        icon: Icons.inventory_2,
+                        titulo: 'Insumos',
+                        subtitulo: 'Solicitud de insumos',
+                        onTap: () {
+                          navegarConFade(context, const InsumosDeskScreen());
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      _buildBoton(
+                        icon: LucideIcons.clipboardList,
+                        titulo: 'Catálogo de Productos',
+                        subtitulo: 'Listado completo',
+                        onTap: () {
+                          navegarConFade(
+                            context,
+                            const VisualizarCatalogoScreen(),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),

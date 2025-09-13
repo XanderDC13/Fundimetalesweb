@@ -787,6 +787,11 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             () => navegarConFade(context, const InventarioDeskScreen()),
           ),
           _gridButton(
+            Icons.people,
+            'Personal',
+            () => navegarConFade(context, const PersonalDeskScreen()),
+          ),
+          _gridButton(
             Icons.calculate,
             'Directorio',
             () => navegarConFade(context, const DirectorioDeskScreen()),
@@ -883,6 +888,11 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             Icons.bar_chart,
             'Reportes',
             () => navegarConFade(context, const ReportesDeskScreen()),
+          ),
+          _gridButton(
+            Icons.settings,
+            'Ajustes',
+            () => navegarConFade(context, const SettingsDeskScreen()),
           ),
         ];
         break;

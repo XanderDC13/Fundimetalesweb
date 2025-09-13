@@ -101,15 +101,6 @@ class _SettingsDeskScreenState extends State<SettingsDeskScreen>
                       const SizedBox(height: 20),
                       const SectionTitle(title: 'Soporte'),
                       _buildBoton(
-                        icon: Icons.help_outline,
-                        titulo: 'Centro de ayuda',
-                        subtitulo: 'Consulta preguntas frecuentes',
-                        onTap: () {
-                          // Implementar acción si quieres
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      _buildBoton(
                         icon: Icons.person,
                         titulo: 'Enviar feedback',
                         subtitulo: 'Opinión o sugerencias',

@@ -18,10 +18,8 @@ class _ImportarDualScreenState extends State<ImportarDualScreen> {
   String tipoImportacion = '';
 
   final List<String> subcoleccionesInventario = [
-    'fundicion',
     'bruto',
     'mecanizado',
-    'pulido',
     'pintura',
     'bodega'
   ];

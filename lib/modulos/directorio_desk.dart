@@ -1,5 +1,4 @@
 import 'package:basefundi/desktop/directorio/contactos_desk.dart';
-import 'package:basefundi/desktop/directorio/documentos_desk.dart';
 import 'package:basefundi/desktop/directorio/pedidos_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas_desk.dart';
 import 'package:basefundi/services/navbar_desk.dart';
@@ -95,15 +94,6 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
                         destination: OpcionesProformasDeskScreen(),
                       ),
                       const SizedBox(height: 20),
-                      _buildCard(
-                        context: context,
-                        title: 'Documentos',
-                        subtitle: 'Genera proformas y ordenes de despacho',
-                        icon: Icons.local_shipping,
-                        destination: ProformaOrdenDespachoDeskScreen(),
-                      ),
-                      const SizedBox(height: 20),
-
                       _buildCard(
                         context: context,
                         title: 'Pedidos',

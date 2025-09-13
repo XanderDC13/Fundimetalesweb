@@ -24,6 +24,12 @@ class _ProformaOrdenDespachoDeskScreenState
   final TextEditingController _telefonoController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _ciudadController = TextEditingController();
+  final TextEditingController _formRefController = TextEditingController();
+  final TextEditingController _formDescripcionController =
+      TextEditingController();
+  final TextEditingController _formCantidadController = TextEditingController();
+  final TextEditingController _formPrecioController = TextEditingController();
+  final TextEditingController _formTotalController = TextEditingController();
 
   String _numeroOrden = '';
   Timer? _debounce;
@@ -33,9 +39,9 @@ class _ProformaOrdenDespachoDeskScreenState
   bool _clienteEncontrado = false;
   String _mensajeBusqueda = '';
   bool _entradaManualHabilitada = false;
-
+  bool _aplicarIVA = true;
   // Lista de items
-  List<ItemOrdenDespacho> items = [ItemOrdenDespacho()];
+  List<ItemOrdenDespacho> items = [];
 
   // Formas de pago
   bool _efectivo = false;
@@ -43,12 +49,53 @@ class _ProformaOrdenDespachoDeskScreenState
   bool _tarjetaCredito = false;
   bool _otros = false;
 
+  void _calcularTotalFormulario() {
+    setState(() {
+      double cantidad = double.tryParse(_formCantidadController.text) ?? 0;
+      double precio = double.tryParse(_formPrecioController.text) ?? 0;
+      double subtotal = cantidad * precio;
+      _formTotalController.text = subtotal.toStringAsFixed(2);
+    });
+  }
+
+  void _agregarItemFromForm() {
+    if (_formDescripcionController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Debe ingresar una descripción'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Crear nuevo item con los datos del formulario
+    ItemOrdenDespacho nuevoItem = ItemOrdenDespacho();
+    nuevoItem.refController.text = _formRefController.text;
+    nuevoItem.descripcionController.text = _formDescripcionController.text;
+    nuevoItem.cantidadController.text = _formCantidadController.text;
+    nuevoItem.vUnitController.text = _formPrecioController.text;
+    nuevoItem.vTotalController.text = _formTotalController.text;
+
+    setState(() {
+      items.add(nuevoItem);
+
+      // Limpiar SOLO el formulario
+      _formRefController.clear();
+      _formDescripcionController.clear();
+      _formCantidadController.clear();
+      _formPrecioController.clear();
+      _formTotalController.clear();
+    });
+  }
+
   void _habilitarEntradaManual() {
     setState(() {
       _entradaManualHabilitada = true;
       _mensajeBusqueda =
           'Modo entrada manual activado. Complete los campos requeridos.';
 
+      // Solo llenar si están vacíos
       if (_telefonoController.text.isEmpty) {
         _telefonoController.text = '09XXXXXXXX';
       }
@@ -67,7 +114,7 @@ class _ProformaOrdenDespachoDeskScreenState
       _direccionController.clear();
       _emailController.clear();
       _ciudadController.clear();
-      _entradaManualHabilitada = false;
+      _entradaManualHabilitada = true; // CAMBIAR: de false a true
       _clienteEncontrado = false;
       _mensajeBusqueda = '';
     });
@@ -173,7 +220,6 @@ class _ProformaOrdenDespachoDeskScreenState
 
     if (query.isEmpty) {
       setState(() {
-        _entradaManualHabilitada = false;
         _clienteEncontrado = false;
         _mensajeBusqueda = '';
         _isSearching = false;
@@ -182,16 +228,10 @@ class _ProformaOrdenDespachoDeskScreenState
         _direccionController.clear();
         _emailController.clear();
         _ciudadController.clear();
+        _entradaManualHabilitada = true;
       });
       return;
     }
-
-    if (_entradaManualHabilitada) {
-      setState(() {
-        _entradaManualHabilitada = false;
-      });
-    }
-
     _debounce = Timer(const Duration(milliseconds: 500), () {
       _buscarCliente(query);
     });
@@ -222,6 +262,7 @@ class _ProformaOrdenDespachoDeskScreenState
           _clienteEncontrado = true;
           _isSearching = false;
           _mensajeBusqueda = 'Cliente encontrado correctamente.';
+          _entradaManualHabilitada = true; // MANTENER habilitada
 
           _clienteController.text = cliente['nombre'] ?? '';
           _telefonoController.text = cliente['telefono'] ?? '';
@@ -235,6 +276,7 @@ class _ProformaOrdenDespachoDeskScreenState
           _isSearching = false;
           _mensajeBusqueda =
               'Cliente no encontrado. Puede ingresar datos manualmente.';
+          _entradaManualHabilitada = true; // MANTENER habilitada
 
           _clienteController.clear();
           _telefonoController.clear();
@@ -249,6 +291,7 @@ class _ProformaOrdenDespachoDeskScreenState
         _clienteEncontrado = false;
         _isSearching = false;
         _mensajeBusqueda = 'Error al buscar cliente. Verifique la conexión.';
+        _entradaManualHabilitada = true; // MANTENER habilitada
 
         _clienteController.clear();
         _telefonoController.clear();
@@ -266,13 +309,10 @@ class _ProformaOrdenDespachoDeskScreenState
   }
 
   Future<void> _previsualizarNumeroOrden() async {
-    final fechaHoy = DateTime.now();
-    final fechaFormateada =
-        "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
-
+    // Usar un documento único para el contador global
     final counterRef = FirebaseFirestore.instance
-        .collection('orden_despacho_counter')
-        .doc(fechaFormateada);
+        .collection('proforma_counter')
+        .doc('global'); // Cambio aquí: usar 'global' en lugar de fecha
 
     final counterDoc = await counterRef.get();
 
@@ -315,11 +355,11 @@ class _ProformaOrdenDespachoDeskScreenState
                       },
                     ),
                   ),
-                  const Align(
+                  Align(
                     alignment: Alignment.center,
                     child: Text(
-                      'Proforma & Orden de Despacho',
-                      style: TextStyle(
+                      'DOCUMENTO Nº $_numeroOrden',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -348,20 +388,54 @@ class _ProformaOrdenDespachoDeskScreenState
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildCompactHeader(),
+                                // FILA SUPERIOR: Cliente + Productos
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // CLIENTE (lado izquierdo)
+                                    Expanded(
+                                      flex: 1,
+                                      child: _buildClienteSection(),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    // PRODUCTOS (lado derecho, más pequeño)
+                                    Expanded(
+                                      flex: 1,
+                                      child: _buildProductosSection(),
+                                    ),
+                                  ],
+                                ),
                                 const SizedBox(height: 16),
-                                _buildClienteSection(),
-                                const SizedBox(height: 16),
-                                _buildItemsSection(),
-                                const SizedBox(height: 16),
-                                _buildTotalesSection(),
-                                const SizedBox(height: 16),
-                                _buildFormaPagoSection(),
-                                const SizedBox(height: 16),
+
+                                // FILA MEDIA: Lista de Productos + Resumen/Forma de Pago
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // LISTA DE PRODUCTOS AGREGADOS (lado izquierdo)
+                                    Expanded(
+                                      flex: 2,
+                                      child: _buildListaProductosSection(),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    // COLUMNA DERECHA: TOTALES + FORMA DE PAGO
+                                    Expanded(
+                                      flex: 1,
+                                      child: Column(
+                                        children: [
+                                          _buildTotalesSection(),
+                                          const SizedBox(height: 16),
+                                          _buildFormaPagoSection(),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
                               ],
                             ),
                           ),
                         ),
+                        // Action bar dentro del contenido
                         Padding(
                           padding: const EdgeInsets.all(32),
                           child: _buildActionBar(),
@@ -374,29 +448,6 @@ class _ProformaOrdenDespachoDeskScreenState
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCompactHeader() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Center(
-        child: Text(
-          'DOCUMENTO Nº $_numeroOrden',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[800],
-            letterSpacing: 1,
-          ),
-        ),
       ),
     );
   }
@@ -537,6 +588,7 @@ class _ProformaOrdenDespachoDeskScreenState
             enabled: _clienteEncontrado || _entradaManualHabilitada,
             hintText:
                 _entradaManualHabilitada ? 'Ingrese nombre del cliente' : null,
+            onChanged: (value) {},
           ),
 
           SizedBox(height: 12),
@@ -553,6 +605,7 @@ class _ProformaOrdenDespachoDeskScreenState
                   hintText:
                       _entradaManualHabilitada ? 'Ingrese teléfono' : null,
                   keyboardType: TextInputType.phone,
+                  onChanged: (value) {},
                 ),
               ),
               SizedBox(width: 12),
@@ -565,6 +618,7 @@ class _ProformaOrdenDespachoDeskScreenState
                   enabled: _clienteEncontrado || _entradaManualHabilitada,
                   hintText:
                       _entradaManualHabilitada ? 'Ingrese dirección' : null,
+                  onChanged: (value) {},
                 ),
               ),
             ],
@@ -583,6 +637,7 @@ class _ProformaOrdenDespachoDeskScreenState
                   enabled: _clienteEncontrado || _entradaManualHabilitada,
                   hintText: _entradaManualHabilitada ? 'Ingrese email' : null,
                   keyboardType: TextInputType.emailAddress,
+                  onChanged: (value) {},
                 ),
               ),
               SizedBox(width: 12),
@@ -594,6 +649,7 @@ class _ProformaOrdenDespachoDeskScreenState
                   readOnly: _clienteEncontrado,
                   enabled: _clienteEncontrado || _entradaManualHabilitada,
                   hintText: _entradaManualHabilitada ? 'Ingrese ciudad' : null,
+                  onChanged: (value) {},
                 ),
               ),
             ],
@@ -623,205 +679,249 @@ class _ProformaOrdenDespachoDeskScreenState
     );
   }
 
-  Widget _buildItemsSection() {
+  Widget _buildProductosSection() {
     return _buildSection(
-      title: 'Productos y Servicios (${items.length})',
-      icon: Icons.list_alt,
+      title: 'Agregar Productos',
+      icon: Icons.inventory_2_outlined,
       color: Colors.grey[800]!,
       child: Column(
         children: [
+          // Campo REF con búsqueda
+          _buildTextField(
+            controller: _formRefController,
+            label: 'REF',
+            icon: Icons.qr_code,
+            onChanged:
+                (value) => _buscarProductoPorReferenciaFormulario(value.trim()),
+          ),
+          SizedBox(height: 12),
+
+          // Campo Descripción
+          _buildTextField(
+            controller: _formDescripcionController,
+            label: 'Descripción',
+            icon: Icons.description,
+            onChanged: (value) {},
+          ),
+          SizedBox(height: 12),
+
+          // Fila con Cant, Precio Unit, Subtotal
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Lista de productos',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                  fontWeight: FontWeight.w500,
+              Expanded(
+                child: _buildTextField(
+                  controller: _formCantidadController,
+                  label: 'Cant',
+                  icon: Icons.numbers,
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) => _calcularTotalFormulario(),
                 ),
               ),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[800],
-                  borderRadius: BorderRadius.circular(20),
+              SizedBox(width: 8),
+              Expanded(
+                child: _buildTextField(
+                  controller: _formPrecioController,
+                  label: 'Precio Unit',
+                  icon: Icons.attach_money,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (value) => _calcularTotalFormulario(),
                 ),
-                child: IconButton(
-                  onPressed: _agregarItem,
-                  icon: Icon(Icons.add, color: Colors.white),
-                  iconSize: 20,
-                  constraints: BoxConstraints(minWidth: 36, minHeight: 36),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: _buildTextField(
+                  controller: _formTotalController,
+                  label: 'Subtotal',
+                  icon: Icons.calculate,
+                  readOnly: true,
+                  onChanged: (value) {},
                 ),
               ),
             ],
           ),
           SizedBox(height: 16),
-          ...items.asMap().entries.map((entry) {
-            int index = entry.key;
-            ItemOrdenDespacho item = entry.value;
-            return _buildItemCard(index, item);
-          }),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildItemCard(int index, ItemOrdenDespacho item) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
+          // Botón Agregar
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _agregarItemFromForm,
+              icon: Icon(Icons.add),
+              label: Text('Agregar'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.grey[700],
+                side: BorderSide(color: Colors.grey[400]!),
+                padding: EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Add this new method for the lista productos section:
+  Widget _buildListaProductosSection() {
+    return _buildSection(
+      title: 'Lista Productos Agregados',
+      icon: Icons.list_alt,
+      color: Colors.grey[800]!,
+      child: Column(
+        children: [
+          // Header de la tabla
+          Container(
+            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[800],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${index + 1}',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Producto ${index + 1}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                  ],
-                ),
-                if (items.length > 1)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.red[50],
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: IconButton(
-                      onPressed: () => _eliminarItem(index),
-                      icon: Icon(Icons.close, color: Colors.red[600]),
-                      iconSize: 18,
-                      constraints: BoxConstraints(minWidth: 32, minHeight: 32),
-                    ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'REF',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                   ),
+                ),
+                Expanded(
+                  flex: 4,
+                  child: Text(
+                    'DESCRIPCIÓN',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'CANT',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'PRECIO',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'SUBTOTAL',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+                SizedBox(
+                  width: 40,
+                  child: Text(
+                    '',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
               ],
             ),
           ),
-          Padding(
-            padding: EdgeInsets.all(12),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: _buildItemInputField(
-                        controller: item.refController,
-                        label: 'REF.',
-                        onChanged:
-                            (value) =>
-                                _buscarProductoPorReferencia(value, index),
-                        onEditingComplete:
-                            () => _buscarProductoPorReferencia(
-                              item.refController.text,
-                              index,
-                            ),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      flex: 3,
-                      child: _buildItemInputField(
-                        controller: item.descripcionController,
-                        label: 'Descripción',
-                        onEditingComplete: () {
-                          return Future.value();
-                        },
-                      ),
-                    ),
-                  ],
+          SizedBox(height: 8),
+
+          if (items.isEmpty)
+            Container(
+              padding: EdgeInsets.all(32),
+              child: Text(
+                'No hay productos agregados',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
                 ),
-                SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildItemInputField(
-                        controller: item.cantidadController,
-                        label: 'Cantidad',
-                        keyboardType: TextInputType.number,
-                        onChanged: (value) => _calcularTotal(index),
-                        onEditingComplete: () {
-                          return Future.value();
-                        },
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: _buildItemInputField(
-                        controller: item.vUnitController,
-                        label: 'V. UNIT.',
-                        keyboardType: TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        onChanged: (value) => _calcularTotal(index),
-                        onEditingComplete: () {
-                          return Future.value();
-                        },
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: _buildItemInputField(
-                        controller: item.vTotalController,
-                        label: 'V. TOTAL',
-                        readOnly: true,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green[700],
-                        ),
-                        onEditingComplete: () {
-                          return Future.value();
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                textAlign: TextAlign.center,
+              ),
+            )
+          else
+            // Lista de productos (solo si hay items)
+            ...items.asMap().entries.map((entry) {
+              int index = entry.key;
+              ItemOrdenDespacho item = entry.value;
+              return _buildProductRowCompact(index, item);
+            }),
+
+          SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductRowCompact(int index, ItemOrdenDespacho item) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        children: [
+          // REF
+          Expanded(
+            flex: 1,
+            child: Text(
+              item.refController.text,
+              style: TextStyle(fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          // DESCRIPCIÓN
+          Expanded(
+            flex: 4,
+            child: Text(
+              item.descripcionController.text,
+              style: TextStyle(fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          // CANTIDAD
+          Expanded(
+            flex: 1,
+            child: Text(
+              item.cantidadController.text,
+              style: TextStyle(fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          // PRECIO
+          Expanded(
+            flex: 1,
+            child: Text(
+              '\$${item.vUnitController.text}',
+              style: TextStyle(fontSize: 12),
+              textAlign: TextAlign.right,
+            ),
+          ),
+          // SUBTOTAL
+          Expanded(
+            flex: 1,
+            child: Text(
+              item.vTotalController.text,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.green[700],
+              ),
+              textAlign: TextAlign.right,
+            ),
+          ),
+          // Botón eliminar
+          SizedBox(
+            width: 40,
+            child: IconButton(
+              onPressed: () => _eliminarItem(index),
+              icon: Icon(Icons.remove_circle_outline, color: Colors.red[600]),
+              iconSize: 18,
+              constraints: BoxConstraints(minWidth: 32, minHeight: 32),
             ),
           ),
         ],
@@ -829,18 +929,12 @@ class _ProformaOrdenDespachoDeskScreenState
     );
   }
 
-  Future<void> _buscarProductoPorReferencia(
-    String referencia,
-    int index,
-  ) async {
-    // Si la referencia está vacía, limpiar campos relacionados
+  Future<void> _buscarProductoPorReferenciaFormulario(String referencia) async {
     if (referencia.isEmpty) {
       setState(() {
-        items[index].descripcionController.clear();
-        items[index].vUnitController.clear();
-        if (items[index].cantidadController.text.isNotEmpty) {
-          _calcularTotal(index); // Recalcular para mostrar 0.00
-        }
+        _formDescripcionController.clear();
+        _formPrecioController.clear();
+        _formTotalController.clear();
       });
       return;
     }
@@ -858,41 +952,73 @@ class _ProformaOrdenDespachoDeskScreenState
         final Map<String, dynamic> producto =
             doc.data() as Map<String, dynamic>;
 
-        setState(() {
-          items[index].descripcionController.text = producto['nombre'] ?? '';
+        // Verificar si tiene precios en array
+        List<double> preciosDisponibles = [];
+        List<String> nombrePrecios = [];
 
-          if (producto['precios'] != null && producto['precios'].isNotEmpty) {
-            double precio = producto['precios'][0].toDouble();
-            items[index].vUnitController.text = precio.toStringAsFixed(2);
-          } else if (producto['costo'] != null && producto['costo'] > 0) {
-            double precio = producto['costo'].toDouble();
-            items[index].vUnitController.text = precio.toStringAsFixed(2);
+        if (producto['precios'] != null && producto['precios'] is List) {
+          List precios = producto['precios'];
+          if (precios.length >= 2) {
+            preciosDisponibles.add((precios[0] ?? 0.0).toDouble()); // PVP
+            preciosDisponibles.add((precios[1] ?? 0.0).toDouble()); // 20%
+            nombrePrecios.add('PVP');
+            nombrePrecios.add('20%');
+          } else if (precios.length == 1) {
+            preciosDisponibles.add((precios[0] ?? 0.0).toDouble());
+            nombrePrecios.add('Precio único');
           }
+        }
 
-          if (items[index].cantidadController.text.isNotEmpty) {
-            _calcularTotal(index);
+        // Si no tiene precios en array, usar costo
+        if (preciosDisponibles.isEmpty &&
+            producto['costo'] != null &&
+            producto['costo'] > 0) {
+          preciosDisponibles.add(producto['costo'].toDouble());
+          nombrePrecios.add('Costo');
+        }
+
+        // Si tiene múltiples precios, mostrar diálogo de selección
+        if (preciosDisponibles.length >= 2) {
+          double? precioSeleccionado = await _mostrarDialogoSeleccionPrecio(
+            producto['nombre'] ?? '',
+            preciosDisponibles,
+            nombrePrecios,
+          );
+
+          if (precioSeleccionado != null) {
+            _aplicarDatosProductoFormulario(producto, precioSeleccionado);
+          } else {
+            // Si canceló el diálogo, mantener campos limpios
+            setState(() {
+              _formDescripcionController.clear();
+              _formPrecioController.clear();
+              _formTotalController.clear();
+            });
           }
-        });
+        } else if (preciosDisponibles.isNotEmpty) {
+          // Si solo tiene un precio, usarlo directamente
+          _aplicarDatosProductoFormulario(producto, preciosDisponibles[0]);
+        } else {
+          // Si no tiene ningún precio
+          setState(() {
+            _formDescripcionController.text = producto['nombre'] ?? '';
+            _formPrecioController.text = '0.00';
+            _formTotalController.clear();
+          });
+        }
       } else {
-        // Si no encuentra el producto, limpiar descripción y precio
         setState(() {
-          items[index].descripcionController.clear();
-          items[index].vUnitController.clear();
-          if (items[index].cantidadController.text.isNotEmpty) {
-            _calcularTotal(index); // Recalcular para mostrar 0.00
-          }
+          _formDescripcionController.clear();
+          _formPrecioController.clear();
+          _formTotalController.clear();
         });
       }
     } catch (e) {
       print('Error al buscar producto: $e');
-
-      // En caso de error, también limpiar los campos
       setState(() {
-        items[index].descripcionController.clear();
-        items[index].vUnitController.clear();
-        if (items[index].cantidadController.text.isNotEmpty) {
-          _calcularTotal(index);
-        }
+        _formDescripcionController.clear();
+        _formPrecioController.clear();
+        _formTotalController.clear();
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -905,88 +1031,214 @@ class _ProformaOrdenDespachoDeskScreenState
     }
   }
 
-  Widget _buildItemInputField({
-    required TextEditingController controller,
-    required String label,
-    TextInputType keyboardType = TextInputType.text,
-    bool readOnly = false,
-    TextStyle? style,
-    Function(String)? onChanged,
-    required Future<void> Function() onEditingComplete,
-  }) {
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      alignment: Alignment.centerLeft,
-      padding: EdgeInsets.symmetric(horizontal: 12),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        readOnly: readOnly,
-        onChanged: onChanged,
-        style: style ?? TextStyle(fontSize: 14),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.normal,
-            color: Colors.grey[700],
+  Future<double?> _mostrarDialogoSeleccionPrecio(
+    String nombreProducto,
+    List<double> precios,
+    List<String> nombrePrecios,
+  ) async {
+    return await showDialog<double>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white, // Fondo blanco forzado
+          title: Text(
+            'Seleccionar Precio',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.black, // Negro
+            ),
           ),
-          border: InputBorder.none,
-          isDense: true,
-        ),
-      ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                nombreProducto,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black, // Negro
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Seleccione el precio a usar:',
+                style: TextStyle(color: Colors.black), // Negro
+              ),
+              SizedBox(height: 12),
+              ...List.generate(precios.length, (index) {
+                return Container(
+                  margin: EdgeInsets.only(bottom: 8),
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(precios[index]),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white, // Fondo blanco
+                      foregroundColor: Colors.black, // Texto negro
+                      padding: EdgeInsets.all(12),
+                      side: BorderSide(color: Colors.blue),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${nombrePrecios[index]}:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black, // Negro
+                          ),
+                        ),
+                        Text(
+                          '\$${precios[index].toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black, // Negro
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(color: Colors.grey[700]), // Gris
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
+  void _aplicarDatosProductoFormulario(
+    Map<String, dynamic> producto,
+    double precio,
+  ) {
+    setState(() {
+      _formDescripcionController.text = producto['nombre'] ?? '';
+      _formPrecioController.text = precio.toStringAsFixed(2);
+      if (_formCantidadController.text.isNotEmpty) {
+        _calcularTotalFormulario();
+      }
+    });
+  }
+
   Widget _buildTotalesSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      padding: EdgeInsets.all(16),
+    return _buildSection(
+      title: 'Resumen Totales',
+      icon: Icons.calculate,
+      color: Colors.grey[800]!,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.calculate, color: Colors.grey[800], size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Resumen de Totales',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
-                ),
+          _buildTotalRow('Subtotal:', '\$${_calcularSubtotal()}'),
+          SizedBox(height: 12),
+          _buildTotalRow('I.V.A. 0%:', '\$0.00'),
+          SizedBox(height: 12),
+
+          // Switch para IVA
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: _aplicarIVA ? Colors.green[50] : Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: _aplicarIVA ? Colors.green[300]! : Colors.grey[300]!,
               ),
-            ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'IVA (15%)',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: _aplicarIVA ? Colors.green[700] : Colors.grey[600],
+                  ),
+                ),
+                Row(
+                  children: [
+                    Text(
+                      '\$${_calcularIVA()}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color:
+                            _aplicarIVA ? Colors.green[700] : Colors.grey[600],
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _aplicarIVA = !_aplicarIVA;
+                        });
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color:
+                              _aplicarIVA
+                                  ? Colors.green[400]
+                                  : Colors.grey[400],
+                        ),
+                        child: AnimatedAlign(
+                          duration: Duration(milliseconds: 200),
+                          alignment:
+                              _aplicarIVA
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
+                          child: Container(
+                            width: 18,
+                            height: 18,
+                            margin: EdgeInsets.all(1),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
           SizedBox(height: 16),
-          _buildTotalRow('Sub-Total:', '\$${_calcularSubtotal()}'),
-          SizedBox(height: 8),
-          _buildTotalRow('I.V.A. 0%:', '\$0.00'),
-          SizedBox(height: 8),
-          _buildTotalRow('I.V.A. 15%:', '\$${_calcularIVA()}'),
-          SizedBox(height: 8),
-          Divider(color: Colors.grey[300]),
+
+          // Total final
           Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.green[50],
               borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green[300]!),
             ),
-            child: _buildTotalRow(
-              'TOTAL \$',
-              _calcularTotalFinal(),
-              bold: true,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'TOTAL:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green[800],
+                  ),
+                ),
+                Text(
+                  '\$${_calcularTotalFinal()}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green[800],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -1139,8 +1391,10 @@ class _ProformaOrdenDespachoDeskScreenState
     String? hintText,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
+    required void Function(dynamic value) onChanged,
   }) {
     return Container(
+      height: 48, // AGREGAR ALTURA FIJA (igual que ProformaVentasDeskScreen)
       decoration: BoxDecoration(
         color: enabled ? Colors.white : Colors.grey[100],
         borderRadius: BorderRadius.circular(8),
@@ -1177,6 +1431,9 @@ class _ProformaOrdenDespachoDeskScreenState
               );
             }
           }
+
+          // Llamar al callback proporcionado
+          onChanged(value);
         },
         decoration: InputDecoration(
           labelText: label,
@@ -1197,7 +1454,7 @@ class _ProformaOrdenDespachoDeskScreenState
     );
   }
 
-  Widget _buildTotalRow(String label, String value, {bool bold = false}) {
+  Widget _buildTotalRow(String label, String value) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -1205,17 +1462,11 @@ class _ProformaOrdenDespachoDeskScreenState
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-              fontSize: bold ? 16 : 14,
-            ),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
           Text(
             value,
-            style: TextStyle(
-              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-              fontSize: bold ? 16 : 14,
-            ),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -1408,13 +1659,10 @@ class _ProformaOrdenDespachoDeskScreenState
 
   // FUNCIÓN INTERNA PARA GUARDAR PROFORMA
   Future<void> _guardarProformaInterno() async {
-    final fechaHoy = DateTime.now();
-    final fechaFormateada =
-        "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
-
+    // Usar el mismo documento global para el contador
     final counterRef = FirebaseFirestore.instance
         .collection('proforma_counter')
-        .doc(fechaFormateada);
+        .doc('global'); // Cambio aquí: usar 'global' en lugar de fecha
 
     final counterDoc = await counterRef.get();
 
@@ -1619,27 +1867,9 @@ class _ProformaOrdenDespachoDeskScreenState
     );
   }
 
-  void _agregarItem() {
-    setState(() {
-      items.add(ItemOrdenDespacho());
-    });
-  }
-
   void _eliminarItem(int index) {
-    if (items.length > 1) {
-      setState(() {
-        items.removeAt(index);
-      });
-    }
-  }
-
-  void _calcularTotal(int index) {
     setState(() {
-      double cantidad =
-          double.tryParse(items[index].cantidadController.text) ?? 0;
-      double precio = double.tryParse(items[index].vUnitController.text) ?? 0;
-      double total = cantidad * precio;
-      items[index].vTotalController.text = total.toStringAsFixed(2);
+      items.removeAt(index);
     });
   }
 
@@ -1652,6 +1882,7 @@ class _ProformaOrdenDespachoDeskScreenState
   }
 
   String _calcularIVA() {
+    if (!_aplicarIVA) return '0.00';
     double subtotal = double.tryParse(_calcularSubtotal()) ?? 0;
     double iva = subtotal * 0.15;
     return iva.toStringAsFixed(2);
@@ -1873,7 +2104,7 @@ class _ProformaOrdenDespachoDeskScreenState
       _otros = false;
       _clienteEncontrado = false;
       _mensajeBusqueda = '';
-      _entradaManualHabilitada = false;
+      _entradaManualHabilitada = true; // CAMBIAR: de false a true
       items.clear();
       items.add(ItemOrdenDespacho());
     });

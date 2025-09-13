@@ -2,6 +2,7 @@ import 'package:basefundi/desktop/reportes/auditoria_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_compras_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_documentos_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_inv_desk.dart';
+import 'package:basefundi/desktop/reportes/reporte_proformas_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_ventas_desk.dart';
 import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
@@ -95,19 +96,6 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
                     children: [
                       _buildBoton(
                         icon: LucideIcons.clipboardList,
-                        titulo: 'Reporte Inventario',
-                        subtitulo: 'Detalle de productos',
-                        onTap: () {
-                          navegarConFade(
-                            context,
-                            const ReporteInventarioDeskScreen(),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 20),
-                      _buildBoton(
-                        icon: LucideIcons.clipboardList,
                         titulo: 'Reporte Ventas',
                         subtitulo: 'Historial de ventas',
                         onTap: () {
@@ -120,7 +108,31 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
                       const SizedBox(height: 20),
                       _buildBoton(
                         icon: LucideIcons.clipboardList,
-                        titulo: 'Reporte Documentos',
+                        titulo: 'Reporte Inventario',
+                        subtitulo: 'Detalle de productos',
+                        onTap: () {
+                          navegarConFade(
+                            context,
+                            const ReporteInventarioDeskScreen(),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      _buildBoton(
+                        icon: LucideIcons.clipboardList,
+                        titulo: 'Reporte Cotizaciones',
+                        subtitulo: 'Historial de proformas de cotización',
+                        onTap: () {
+                          navegarConFade(
+                            context,
+                            const ReporteProformasVentasDeskScreen(),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      _buildBoton(
+                        icon: LucideIcons.clipboardList,
+                        titulo: 'Reporte Proformas / Ordenes',
                         subtitulo: 'Proformas y Ordenes de despacho',
                         onTap: () {
                           navegarConFade(
@@ -132,7 +144,7 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
                       const SizedBox(height: 20),
                       _buildBoton(
                         icon: LucideIcons.clipboardList,
-                        titulo: 'Reporte Compras Materia Prima',
+                        titulo: 'Reporte Materia Prima',
                         subtitulo: 'Compra de materia prima',
                         onTap: () {
                           navegarConFade(

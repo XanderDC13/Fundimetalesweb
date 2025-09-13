@@ -1,6 +1,5 @@
 import 'package:basefundi/desktop/personal/empleados/empleados_registro_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
-import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
 import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
 import 'package:basefundi/services/navbar_desk.dart';
@@ -101,13 +100,6 @@ class _PersonalDeskScreenState extends State<PersonalDeskScreen>
                         destination: const FuncionesDeskScreen(),
                       ),
                       const SizedBox(height: 20),
-                      _buildCard(
-                        context: context,
-                        title: 'Insumos',
-                        subtitle: 'Solicitud de insumos',
-                        icon: Icons.inventory_2,
-                        destination: const InsumosDeskScreen(),
-                      ),
                     ],
                   ),
                 ),

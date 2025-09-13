@@ -1,3 +1,4 @@
+import 'package:basefundi/desktop/directorio/documentos_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas/proforma_fundicion_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas/proforma_ventas_desk.dart';
 import 'package:basefundi/services/transition.dart';
@@ -41,6 +42,10 @@ class _OpcionesProformasDeskScreenState
 
   Widget _getProformaVentasScreen() {
     return ProformaVentasDeskScreen();
+  }
+
+  Widget _getProformaOrdenesScreen() {
+    return ProformaOrdenDespachoDeskScreen();
   }
 
 
@@ -98,15 +103,22 @@ class _OpcionesProformasDeskScreenState
                     children: [
                       _buildBoton(
                         icono: Icons.add_circle_outline,
-                        titulo: 'Proforma Ventas',
-                        subtitulo: 'Genera una proforma y guárdala',
+                        titulo: 'Proforma / Ordenes',
+                        subtitulo: 'Genera proformas y ordenes de despacho',
+                        destino: _getProformaOrdenesScreen(),
+                      ),
+                      const SizedBox(height: 20),
+                      _buildBoton(
+                        icono: Icons.add_circle_outline,
+                        titulo: 'Proforma Cotización',
+                        subtitulo: 'Genera proformas de cotización de ventas',
                         destino: _getProformaVentasScreen(),
                       ),
                       const SizedBox(height: 20),
                       _buildBoton(
                         icono: Icons.add_circle_outline,
-                        titulo: 'Proforma Compra Materia Prima',
-                        subtitulo: 'Genera una proforma compra de hierro',
+                        titulo: 'Proforma Materia Prima',
+                        subtitulo: 'Genera proforma compra de meteria prima',
                         destino: _getProformaFundicionScreen(),
                       ),
                       const SizedBox(height: 20),
