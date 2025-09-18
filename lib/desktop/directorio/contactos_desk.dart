@@ -1,3 +1,5 @@
+import 'package:basefundi/services/importarcontactos.dart';
+import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -44,7 +46,7 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
                 });
               },
               decoration: InputDecoration(
-                hintText: 'Buscar por nombre o empresa',
+                hintText: 'Buscar por nombre o RUC',
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -141,11 +143,10 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
               final contacto = item['data'] as Map<String, dynamic>;
               final nombre =
                   (contacto['nombre'] ?? '').toString().toLowerCase();
-              final empresa =
-                  (contacto['empresa'] ?? '').toString().toLowerCase();
+              final ruc = (contacto['ruc'] ?? '').toString().toLowerCase();
               final ciudad = contacto['ciudad'] ?? '';
               final coincideBusqueda =
-                  nombre.contains(_busqueda) || empresa.contains(_busqueda);
+                  nombre.contains(_busqueda) || ruc.contains(_busqueda);
               final coincideCiudad =
                   _filtroCiudad == null ? true : ciudad == _filtroCiudad;
               return coincideBusqueda && coincideCiudad;
@@ -195,7 +196,7 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(
-                          contacto['empresa'] ?? '',
+                          contacto['ruc'] ?? '',
                           style: const TextStyle(fontSize: 12),
                         ),
                         trailing: Row(
@@ -379,7 +380,7 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
                                           user?.uid ?? 'uid_desconocido',
                                       'accion': 'Eliminar $tipoTexto',
                                       'detalle':
-                                          'Se eliminó el $tipoTexto: ${contacto['nombre'] ?? 'Sin nombre'} - ${contacto['empresa'] ?? 'Sin empresa'}',
+                                          'Se eliminó el $tipoTexto: ${contacto['nombre'] ?? 'Sin nombre'}',
                                     });
 
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -465,6 +466,43 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
                               color: Colors.white,
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              navegarConFade(
+                                context,
+                                const ImportarContactosScreen(),
+                              );
+                            },
+
+                            icon: const Icon(
+                              Icons.upload_file,
+                              size: 18,
+                              color: Color(0xFF2C3E50),
+                            ),
+                            label: const Text(
+                              'IMPORTAR CSV',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Color(0xFF2C3E50),
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF2C3E50),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 2,
                             ),
                           ),
                         ),
@@ -570,7 +608,6 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
               children: [
                 _info('RUC', contacto['ruc']),
                 _info('Ciudad', contacto['ciudad']),
-                _info('Empresa', contacto['empresa']),
                 _info('Dirección', contacto['direccion']),
                 _info('Teléfono', contacto['telefono']),
                 _info('Correo', contacto['correo']),
@@ -614,7 +651,6 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
     final nombreController = TextEditingController(text: contacto?['nombre']);
     final rucController = TextEditingController(text: contacto?['ruc']);
     final ciudadController = TextEditingController(text: contacto?['ciudad']);
-    final empresaController = TextEditingController(text: contacto?['empresa']);
     final direccionController = TextEditingController(
       text: contacto?['direccion'],
     );
@@ -664,8 +700,6 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
                     const SizedBox(height: 12),
                     _campo(ciudadController, 'Ciudad', Icons.location_city),
                     const SizedBox(height: 12),
-                    _campo(empresaController, 'Empresa', Icons.business),
-                    const SizedBox(height: 12),
                     _campo(direccionController, 'Dirección', Icons.home),
                     const SizedBox(height: 12),
                     _campo(
@@ -706,7 +740,6 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
                     'nombre': nombreController.text.trim(),
                     'ruc': rucController.text.trim(),
                     'ciudad': ciudadController.text.trim(),
-                    'empresa': empresaController.text.trim(),
                     'direccion': direccionController.text.trim(),
                     'telefono': telefonoController.text.trim(),
                     'correo': correoController.text.trim(),
@@ -737,7 +770,7 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
 
                       accionAuditoria = 'Crear $tipoTexto';
                       detalleAuditoria =
-                          'Se creó un nuevo $tipoTexto: ${data['nombre']} - ${data['empresa']}';
+                          'Se creó un nuevo $tipoTexto: ${data['nombre']}';
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -754,7 +787,7 @@ class _ContactosDeskScreenState extends State<ContactosDeskScreen>
 
                       accionAuditoria = 'Editar $tipoTexto';
                       detalleAuditoria =
-                          'Se editó el $tipoTexto: ${data['nombre']} - ${data['empresa']}';
+                          'Se editó el $tipoTexto: ${data['nombre']}';
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(

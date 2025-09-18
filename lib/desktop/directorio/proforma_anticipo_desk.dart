@@ -38,8 +38,6 @@ class _AnticiposDeskScreenState extends State<AnticiposDeskScreen> {
       TextEditingController();
 
   String _numeroAnticipo = '';
-  bool _urgente = false;
-  String _tipoAnticipo = 'GASTOS DE VIAJE';
 
   @override
   void initState() {
@@ -546,21 +544,17 @@ class _AnticiposDeskScreenState extends State<AnticiposDeskScreen> {
         ),
       );
 
-      // Reemplaza esta línea:
-      // await PDFGeneratorAnticipo.vistaPrevia(...);
 
       // Con esta llamada:
       await PDFGeneratorAnticipo.vistaPrevia(
         numeroAnticipo: numeroAnticipoTemporal,
         nombreSolicitante: _nombreSolicitanteController.text,
         montoAnticipo: _montoAnticipoController.text,
-        tipoAnticipo: _tipoAnticipo,
         motivo: _motivoController.text,
         justificacion: _justificacionController.text,
         fechaSolicitud: _fechaSolicitudController.text,
         fechaAprobacion: _fechaAprobacionController.text,
         fechaDevolucion: _fechaDevolucionController.text,
-        urgente: _urgente,
         nombreAprobador: _nombreAprobadorController.text,
         cargoAprobador: _cargoAprobadorController.text,
       );
@@ -636,13 +630,11 @@ class _AnticiposDeskScreenState extends State<AnticiposDeskScreen> {
         'numero': _numeroAnticipo,
         'nombre_solicitante': _nombreSolicitanteController.text,
         'monto_anticipo': _montoAnticipoController.text,
-        'tipo_anticipo': _tipoAnticipo,
         'motivo': _motivoController.text,
         'justificacion': _justificacionController.text,
         'fecha_solicitud': _fechaSolicitudController.text,
         'fecha_aprobacion': _fechaAprobacionController.text,
         'fecha_devolucion': _fechaDevolucionController.text,
-        'urgente': _urgente,
         'nombre_aprobador': _nombreAprobadorController.text,
         'cargo_aprobador': _cargoAprobadorController.text,
         'fecha': Timestamp.now(),

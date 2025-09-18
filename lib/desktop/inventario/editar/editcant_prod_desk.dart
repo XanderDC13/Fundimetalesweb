@@ -306,6 +306,326 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
     );
   }
 
+  void _mostrarFormularioRechazo(BuildContext context, Proceso proceso) {
+    final TextEditingController cantidadController = TextEditingController();
+    final TextEditingController motivoController = TextEditingController();
+    bool puedeGuardar = false;
+    bool procesandoRechazo = false;
+    final cantidadDisponible = cantidadesPorProceso[proceso.id] ?? 0;
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                width: 400,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.report_problem,
+                          color: Colors.orange.shade700,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Rechazar desde ${proceso.nombre}',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2C3E50),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.orange.shade700,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Disponible en ${proceso.nombre}: $cantidadDisponible unidades',
+                              style: TextStyle(
+                                color: Colors.orange.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Campo cantidad a rechazar
+                    TextField(
+                      controller: cantidadController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Cantidad a rechazar',
+                        hintText: 'Máximo: $cantidadDisponible',
+                        prefixIcon: Icon(
+                          Icons.remove_circle_outline,
+                          color: Colors.orange.shade700,
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF8F9FA),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE9ECEF),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.orange.shade700),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        final cantidad = int.tryParse(value) ?? 0;
+                        final motivo = motivoController.text.trim();
+                        setModalState(() {
+                          puedeGuardar =
+                              cantidad > 0 &&
+                              cantidad <= cantidadDisponible &&
+                              motivo.isNotEmpty;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Campo motivo del rechazo
+                    TextField(
+                      controller: motivoController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: 'Motivo del rechazo',
+                        hintText: 'Describe el motivo del rechazo...',
+                        prefixIcon: Icon(
+                          Icons.description,
+                          color: Colors.orange.shade700,
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF8F9FA),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE9ECEF),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.orange.shade700),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        final cantidad =
+                            int.tryParse(cantidadController.text) ?? 0;
+                        final motivo = value.trim();
+                        setModalState(() {
+                          puedeGuardar =
+                              cantidad > 0 &&
+                              cantidad <= cantidadDisponible &&
+                              motivo.isNotEmpty;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text(
+                            'Cancelar',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton.icon(
+                          onPressed:
+                              (puedeGuardar && !procesandoRechazo)
+                                  ? () async {
+                                    setModalState(() {
+                                      procesandoRechazo = true;
+                                    });
+
+                                    try {
+                                      final cantidad =
+                                          int.tryParse(
+                                            cantidadController.text,
+                                          ) ??
+                                          0;
+                                      final motivo =
+                                          motivoController.text.trim();
+                                      await _procesarRechazo(
+                                        proceso,
+                                        cantidad,
+                                        motivo,
+                                      );
+                                      if (mounted) Navigator.pop(context);
+                                    } catch (e) {
+                                      setModalState(() {
+                                        procesandoRechazo = false;
+                                      });
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Error al procesar rechazo: $e',
+                                          ),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                  : null,
+                          icon:
+                              procesandoRechazo
+                                  ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                  : const Icon(Icons.report_problem),
+                          label: Text(
+                            procesandoRechazo
+                                ? 'Procesando...'
+                                : 'Registrar rechazo',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                procesandoRechazo
+                                    ? Colors.grey
+                                    : Colors.orange.shade700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 20,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _procesarRechazo(
+    Proceso proceso,
+    int cantidad,
+    String motivo,
+  ) async {
+    try {
+      final timestamp = Timestamp.now();
+      final usuario = await _obtenerDatosUsuario();
+
+      // Reducir cantidad en proceso actual
+      final docInventario = FirebaseFirestore.instance
+          .collection('inventarios')
+          .doc(proceso.id)
+          .collection('productos')
+          .doc(widget.producto.referencia);
+
+      final snapshot = await docInventario.get();
+      final cantidadActual = snapshot.exists ? (snapshot['cantidad'] ?? 0) : 0;
+
+      await docInventario.update({
+        'cantidad': cantidadActual - cantidad,
+        'ultima_actualizacion': timestamp,
+      });
+
+      // Registrar en colección de rechazos
+      await FirebaseFirestore.instance.collection('rechazos').add({
+        'producto_referencia': widget.producto.referencia,
+        'producto_nombre': widget.producto.nombre,
+        'proceso_id': proceso.id,
+        'proceso_nombre': proceso.nombre,
+        'cantidad': cantidad,
+        'motivo': motivo,
+        'fecha': timestamp,
+        'usuario_uid': usuario['uid']!,
+        'usuario_nombre': usuario['nombre']!,
+      });
+
+      // Registrar auditoría
+      await _guardarAuditoria(
+        accion: 'Rechazo de Producto',
+        detalle:
+            'Producto: ${widget.producto.nombre} (${widget.producto.referencia}), '
+            'Proceso: ${proceso.nombre}, Cantidad: $cantidad, Motivo: $motivo',
+        uid: usuario['uid']!,
+        nombreUsuario: usuario['nombre']!,
+        fecha: timestamp,
+      );
+
+      await _cargarSaldos();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Rechazo registrado: $cantidad unidades de ${proceso.nombre}',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error procesando rechazo: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al procesar el rechazo'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _mostrarFormularioMovimiento(
     BuildContext context,
     Proceso procesoActual,
@@ -673,17 +993,18 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
     final cantidad = cantidadesPorProceso[proceso.id] ?? 0;
 
     return Container(
+       width: 420,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       margin: const EdgeInsets.only(bottom: 3),
       child: Row(
         children: [
-          // Nombre del proceso (más pequeño)
+          // Nombre del proceso
           SizedBox(
-            width: 110,
+            width: 120,
             child: Text(
               proceso.nombre.toUpperCase(),
               style: const TextStyle(
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF2C3E50),
               ),
@@ -693,9 +1014,9 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
 
           const SizedBox(width: 8),
 
-          // Botón ENTRADA (más pequeño)
+          // Botón ENTRADA
           SizedBox(
-            width: 60,
+            width: 50,
             height: 28,
             child: ElevatedButton(
               onPressed:
@@ -718,9 +1039,9 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
 
           const SizedBox(width: 6),
 
-          // Botón MOVER (más pequeño)
+          // Botón MOVER
           SizedBox(
-            width: 50,
+            width: 45,
             height: 28,
             child: ElevatedButton(
               onPressed:
@@ -743,11 +1064,38 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
             ),
           ),
 
+          const SizedBox(width: 6),
+
+          // 🆕 NUEVO BOTÓN RECHAZO
+          SizedBox(
+            width: 45,
+            height: 28,
+            child: ElevatedButton(
+              onPressed:
+                  cantidad > 0
+                      ? () => _mostrarFormularioRechazo(context, proceso)
+                      : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange.shade700,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                minimumSize: Size.zero,
+              ),
+              child: const Text(
+                'RECHAZO',
+                style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+
           const SizedBox(width: 8),
 
-          // CANTIDAD (más compacta)
+          // CANTIDAD
           Container(
-            width: 80,
+            width: 50,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color:
@@ -770,7 +1118,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
             child: Text(
               'CANT: $cantidad',
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 8,
                 fontWeight: FontWeight.bold,
                 color:
                     cantidad <= 0
@@ -790,7 +1138,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: MediaQuery.of(context).size.width * 0.95, // 95% del ancho
+      width: MediaQuery.of(context).size.width * 0.98, // 95% del ancho
       constraints: const BoxConstraints(
         maxWidth: 1000, // Reducido para ser más compacto
       ),

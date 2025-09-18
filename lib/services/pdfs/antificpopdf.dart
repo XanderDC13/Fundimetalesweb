@@ -467,13 +467,11 @@ class PDFGeneratorAnticipo {
     required String numeroAnticipo,
     required String nombreSolicitante,
     required String montoAnticipo,
-    required String tipoAnticipo,
     required String motivo,
     required String justificacion,
     required String fechaSolicitud,
     required String fechaAprobacion,
     required String fechaDevolucion,
-    required bool urgente,
     required String nombreAprobador,
     required String cargoAprobador,
   }) async {
@@ -486,9 +484,8 @@ class PDFGeneratorAnticipo {
       fechaSolicitud: fechaSolicitud,
       fechaAprobacion: fechaAprobacion,
       fechaDevolucion: fechaDevolucion,
-      urgente: urgente,
       nombreAprobador: nombreAprobador,
-      cargoAprobador: cargoAprobador,
+      cargoAprobador: cargoAprobador, urgente: false,
     );
 
     await Printing.layoutPdf(
