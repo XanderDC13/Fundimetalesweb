@@ -123,7 +123,7 @@ class _OpcionesProformasDeskScreenState
                       _buildBoton(
                         icono: Icons.add_circle_outline,
                         titulo: 'Proforma Materia Prima',
-                        subtitulo: 'Genera proforma compra de meteria prima',
+                        subtitulo: 'Genera proforma compra de materia prima',
                         destino: _getProformaFundicionScreen(),
                       ),
                       const SizedBox(height: 20),

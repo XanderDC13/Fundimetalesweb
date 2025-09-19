@@ -111,12 +111,6 @@ class _ImportarContactosScreenState extends State<ImportarContactosScreen> {
         continue;
       }
 
-      // ✅ CAMBIAR ESTAS LÍNEAS:
-      // ANTES ERA:
-      // final rawRuc = fila[0].toString().trim();
-      // final ruc = rawRuc.startsWith("'") ? rawRuc.substring(1) : rawRuc;
-
-      // AHORA ES:
       final ruc = _procesarRuc(fila[0].toString());
 
       final nombre = fila[1].toString().trim();

@@ -429,15 +429,23 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
         children: [
           // Campo REF
           _buildTextField(
-            controller:
-                _formCodigoController, // CAMBIAR de items[0].codigoController
+            controller: _formCodigoController,
             label: 'REF',
             icon: Icons.qr_code,
-            onChanged:
-                (value) => _buscarProductoPorReferencia(
-                  value.trim(),
-                  -1,
-                ), // Usar -1 para indicar formulario
+            textCapitalization: TextCapitalization.characters,
+            onChanged: (value) {
+              // Convertir a mayúsculas y actualizar el controller
+              String upperValue = value.toUpperCase();
+              if (_formCodigoController.text != upperValue) {
+                _formCodigoController
+                    .value = _formCodigoController.value.copyWith(
+                  text: upperValue,
+                  selection: TextSelection.collapsed(offset: upperValue.length),
+                );
+              }
+              // Buscar el producto
+              _buscarProductoPorReferencia(upperValue.trim(), -1);
+            },
           ),
           SizedBox(height: 12),
 
@@ -965,6 +973,7 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
     int maxLines = 1,
     TextStyle? style,
     Function(String)? onChanged,
+    TextCapitalization textCapitalization = TextCapitalization.none,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -993,6 +1002,7 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
             enabled: enabled,
             keyboardType: keyboardType,
             maxLines: maxLines,
+            textCapitalization: textCapitalization,
             style:
                 style ??
                 TextStyle(
@@ -1111,7 +1121,8 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: _vistaPrevia ? const Color(0xFF4682B4) : Colors.grey[400],
+                  color:
+                      _vistaPrevia ? const Color(0xFF4682B4) : Colors.grey[400],
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
@@ -1150,7 +1161,8 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
     String referencia,
     int index,
   ) async {
-    // Asegurar que las listas tengan el índice necesario (solo si no es el formulario)
+    referencia = referencia.toUpperCase();
+
     if (index != -1) {
       while (_isSearchingProduct.length <= index) {
         _isSearchingProduct.add(false);
