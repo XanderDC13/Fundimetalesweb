@@ -1,5 +1,5 @@
-import 'package:basefundi/desktop/directorio/documentos_desk.dart';
-import 'package:basefundi/desktop/directorio/proforma_anticipo_desk.dart';
+import 'package:basefundi/desktop/directorio/proformas/documentos_desk.dart';
+import 'package:basefundi/desktop/directorio/proformas/proforma_anticipo_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas/proforma_fundicion_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas/proforma_ventas_desk.dart';
 import 'package:basefundi/services/transition.dart';

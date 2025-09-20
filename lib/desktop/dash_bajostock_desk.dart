@@ -77,7 +77,6 @@ class _BajoStockDeskScreenState extends State<BajoStockDeskScreen> {
           'nombre': data['nombre'] ?? 'Producto sin nombre',
           'referencia': referencia,
           'categoria': data['categoria'] ?? 'Sin categoría',
-          'precio': (data['precio'] ?? 0.0).toDouble(),
         };
       }
 
@@ -95,7 +94,6 @@ class _BajoStockDeskScreenState extends State<BajoStockDeskScreen> {
             'nombre': 'Producto sin nombre',
             'referencia': referenciaInventario,
             'categoria': 'Sin categoría',
-            'precio': 0.0,
           };
 
           productosBajoStock.add({
@@ -103,7 +101,6 @@ class _BajoStockDeskScreenState extends State<BajoStockDeskScreen> {
             'nombre': infoProducto['nombre'],
             'referencia': infoProducto['referencia'],
             'cantidad': cantidad.toInt(),
-            'precio': infoProducto['precio'],
             'categoria': infoProducto['categoria'],
           });
         }
@@ -309,7 +306,6 @@ class _BajoStockDeskScreenState extends State<BajoStockDeskScreen> {
     final cantidad = producto['cantidad'] ?? 0;
     final referencia = producto['referencia'] ?? '';
     final nombre = producto['nombre'] ?? 'Producto sin nombre';
-    final precio = producto['precio'] ?? 0.0;
     final categoria = producto['categoria'] ?? 'Sin categoría';
 
     final colorCriticidad = _getColorCriticidad(cantidad);
@@ -397,17 +393,6 @@ class _BajoStockDeskScreenState extends State<BajoStockDeskScreen> {
                   fontWeight: FontWeight.bold,
                   color: colorCriticidad,
                 ),
-              ),
-            ),
-            
-            // Precio
-            const SizedBox(height: 8),
-            Text(
-              '\$${precio.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF2C3E50),
               ),
             ),
           ],

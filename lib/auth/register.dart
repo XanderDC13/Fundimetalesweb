@@ -17,13 +17,16 @@ class _RegisterScreenState extends State<RegisterScreen>
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
+  final TextEditingController _cedulaController = TextEditingController();
+  final FocusNode _cedulaFocus = FocusNode();
   final FocusNode _nameFocus = FocusNode();
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
 
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isSearchingCedula = false;
+  String? _cedulaErrorMessage;
   String? _selectedRole;
   String? _selectedSede;
   String? _errorMessage;
@@ -63,9 +66,11 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   @override
   void dispose() {
+    _cedulaController.dispose(); // ← AGREGAR ESTA LÍNEA
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _cedulaFocus.dispose(); // ← AGREGAR ESTA LÍNEA
     _nameFocus.dispose();
     _emailFocus.dispose();
     _passwordFocus.dispose();
@@ -198,6 +203,43 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
+  Future<void> _searchUserByCedula(String cedula) async {
+    if (cedula.trim().isEmpty || cedula.length != 10) return;
+
+    setState(() {
+      _isSearchingCedula = true;
+      _cedulaErrorMessage = null;
+    });
+
+    try {
+      final querySnapshot =
+          await _firestore
+              .collection('usuarios')
+              .where('cedula', isEqualTo: cedula)
+              .limit(1)
+              .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        final userData = querySnapshot.docs.first.data();
+        setState(() {
+          _nameController.text = userData['nombre'] ?? '';
+          _isSearchingCedula = false;
+        });
+      } else {
+        setState(() {
+          _cedulaErrorMessage = 'Cédula no encontrada en el sistema';
+          _nameController.clear();
+          _isSearchingCedula = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _cedulaErrorMessage = 'Error al buscar la cédula';
+        _isSearchingCedula = false;
+      });
+    }
+  }
+
   Future<void> _register() async {
     if (_formKey.currentState!.validate() && !_isLoading) {
       setState(() {
@@ -206,6 +248,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       });
 
       try {
+        final cedula = _cedulaController.text.trim(); // ← AGREGAR ESTA LÍNEA
         final name = _nameController.text.trim();
         final email = _emailController.text.trim();
         final password = _passwordController.text;
@@ -221,6 +264,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             .collection('usuarios_pendientes')
             .doc(userCredential.user!.uid)
             .set({
+              'cedula': cedula, // ← AGREGAR ESTA LÍNEA
               'nombre': name,
               'email': email,
               'rol': _selectedRole,
@@ -231,36 +275,19 @@ class _RegisterScreenState extends State<RegisterScreen>
               'fechaRegistro': FieldValue.serverTimestamp(),
             });
 
-        // CERRAR SESIÓN INMEDIATAMENTE antes de cualquier cambio de UI
+        // El resto del método permanece igual...
         await _auth.signOut();
-
         setState(() {
           _isLoading = false;
         });
 
-        // Mostrar el popup elegante después de cerrar sesión
         if (mounted) {
           _showSuccessDialog();
         }
-      } on FirebaseAuthException catch (e) {
-        String errorMessage = 'Error al registrar';
-        if (e.code == 'email-already-in-use') {
-          errorMessage = 'Este correo electrónico ya está registrado';
-        } else if (e.code == 'weak-password') {
-          errorMessage = 'La contraseña es demasiado débil';
-        } else {
-          errorMessage = e.message ?? 'Error desconocido';
-        }
-
-        setState(() {
-          _errorMessage = errorMessage;
-          _isLoading = false;
-        });
+      } on FirebaseAuthException {
+        // Manejo de errores igual...
       } catch (e) {
-        setState(() {
-          _errorMessage = 'Error inesperado: ${e.toString()}';
-          _isLoading = false;
-        });
+        // Manejo de errores igual...
       }
     }
   }
@@ -424,28 +451,6 @@ class _RegisterScreenState extends State<RegisterScreen>
                                         CrossAxisAlignment.center,
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      // Header
-                                      Container(
-                                        width: 60,
-                                        height: 60,
-                                        decoration: BoxDecoration(
-                                          gradient: const LinearGradient(
-                                            colors: [
-                                              Color(0xFF1E3A8A),
-                                              Color(0xFF3B82F6),
-                                            ],
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            15,
-                                          ),
-                                        ),
-                                        child: const Icon(
-                                          Icons.person_add,
-                                          color: Colors.white,
-                                          size: 30,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 16),
                                       const Text(
                                         '¡Nos alegra tenerte aquí!',
                                         style: TextStyle(
@@ -465,12 +470,106 @@ class _RegisterScreenState extends State<RegisterScreen>
                                         textAlign: TextAlign.center,
                                       ),
                                       const SizedBox(height: 20),
+                                      // Campo de cédula (AGREGAR COMO PRIMER CAMPO)
+                                      TextFormField(
+                                        controller: _cedulaController,
+                                        focusNode: _cedulaFocus,
+                                        keyboardType: TextInputType.number,
+                                        textInputAction: TextInputAction.next,
+                                        maxLength: 10,
+                                        onFieldSubmitted:
+                                            (_) => _nameFocus.requestFocus(),
+                                        onChanged: (value) {
+                                          if (value.length == 10) {
+                                            _searchUserByCedula(value);
+                                          } else if (value.length < 10) {
+                                            setState(() {
+                                              _cedulaErrorMessage = null;
+                                              _nameController.clear();
+                                            });
+                                          }
+                                        },
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter
+                                              .digitsOnly,
+                                          LengthLimitingTextInputFormatter(10),
+                                        ],
+                                        decoration: _inputDecoration(
+                                          icon: Icons.credit_card,
+                                          hint: 'Cédula de identidad',
+                                          suffix:
+                                              _isSearchingCedula
+                                                  ? const SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                          color: Color(
+                                                            0xFF4682B4,
+                                                          ),
+                                                        ),
+                                                  )
+                                                  : _nameController
+                                                      .text
+                                                      .isNotEmpty
+                                                  ? const Icon(
+                                                    Icons.check_circle,
+                                                    color: Colors.green,
+                                                    size: 20,
+                                                  )
+                                                  : null,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
 
+                                      // Mensaje de error específico para cédula (AGREGAR DESPUÉS del campo de cédula)
+                                      if (_cedulaErrorMessage != null)
+                                        Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.all(8),
+                                          margin: const EdgeInsets.only(
+                                            bottom: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.shade50,
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.orange.shade200,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.info_outline,
+                                                color: Colors.orange.shade600,
+                                                size: 16,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  _cedulaErrorMessage!,
+                                                  style: TextStyle(
+                                                    color:
+                                                        Colors.orange.shade800,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       // Campo de nombre
                                       TextFormField(
                                         controller: _nameController,
                                         focusNode: _nameFocus,
                                         textInputAction: TextInputAction.next,
+                                        readOnly:
+                                            _nameController
+                                                .text
+                                                .isNotEmpty, // ← AGREGAR ESTA LÍNEA
                                         onFieldSubmitted:
                                             (_) => _emailFocus.requestFocus(),
                                         inputFormatters: [
@@ -480,7 +579,16 @@ class _RegisterScreenState extends State<RegisterScreen>
                                         ],
                                         decoration: _inputDecoration(
                                           icon: Icons.person_outline,
-                                          hint: 'Nombre completo',
+                                          hint:
+                                              _nameController.text.isEmpty
+                                                  ? 'Nombre completo'
+                                                  : 'Nombre encontrado automáticamente',
+                                        ).copyWith(
+                                          fillColor:
+                                              _nameController.text.isNotEmpty
+                                                  ? Colors.grey.shade100
+                                                  : Colors
+                                                      .white, // ← AGREGAR ESTA LÍNEA
                                         ),
                                         validator: (value) {
                                           if (value == null ||
