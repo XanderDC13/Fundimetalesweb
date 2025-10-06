@@ -734,7 +734,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
     List<Widget> botones = [];
 
     switch (rolUsuario) {
-      case 'Administrador General':
+      case 'Gerente':
         botones = [
           _gridButton(
             Icons.attach_money,
@@ -774,7 +774,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
         ];
         break;
 
-      case 'Gerente Sede':
+      case 'Administrador General':
         botones = [
           _gridButton(
             Icons.attach_money,

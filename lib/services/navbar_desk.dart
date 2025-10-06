@@ -230,31 +230,36 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
     switch (_menuStateManager.rolUsuario) {
       case 'Administrador General':
         menuItems.addAll(_buildAdminMenuItems());
+        menuItems.add(_buildAjustesMenuItem());
         break;
-      case 'Gerente Sede':
+      case 'Gerente':
         menuItems.addAll(_buildGerenteMenuItems());
+        menuItems.add(_buildAjustesMenuItem());
         break;
       case 'Vendedor':
         menuItems.addAll(_buildVendedorMenuItems());
+        menuItems.add(_buildAjustesMenuItem());
         break;
       case 'Supervisor Fundición':
         menuItems.addAll(_buildSupervisorFundicionMenuItems());
+        menuItems.add(_buildAjustesMenuItem());
         break;
       case 'Operador Fundición':
         menuItems.addAll(_buildOperadorFundicionMenuItems());
+        menuItems.add(_buildAjustesMenuItem());
         break;
       case 'Supervisor Mecanizado':
         menuItems.addAll(_buildSupervisorMecanizadoMenuItems());
+        menuItems.add(_buildAjustesMenuItem());
         break;
       case 'Operador Mecanizado':
         menuItems.addAll(_buildOperadorMecanizadoMenuItems());
+        menuItems.add(_buildAjustesMenuItem());
         break;
       default:
         menuItems.add(_buildDefaultMenuItem());
+        menuItems.add(_buildAjustesMenuItem());
     }
-
-    menuItems.add(_buildAjustesMenuItem());
-
     return menuItems;
   }
 
@@ -264,7 +269,7 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
     }
   }
 
-  List<Widget> _buildAdminMenuItems() {
+  List<Widget> _buildGerenteMenuItems() {
     return [
       _buildExpandableItem(
         icon: Icons.inventory,
@@ -372,7 +377,7 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
     ];
   }
 
-  List<Widget> _buildGerenteMenuItems() {
+  List<Widget> _buildAdminMenuItems() {
     return [
       _buildExpandableItem(
         icon: Icons.shopping_cart,
@@ -501,7 +506,7 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
         title: 'Inventario',
         menuKey: 'inventario',
         subItems: [
-           _buildSubItem(
+          _buildSubItem(
             label: 'Productos',
             onTap: () => _navigateToScreen(const TotalInvDeskScreen()),
           ),

@@ -1220,29 +1220,29 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
         final Map<String, dynamic> producto =
             doc.data() as Map<String, dynamic>;
 
-        // Verificar si tiene precios en array
         List<double> preciosDisponibles = [];
         List<String> nombrePrecios = [];
 
-        if (producto['precios'] != null && producto['precios'] is List) {
-          List precios = producto['precios'];
-          if (precios.length >= 2) {
-            preciosDisponibles.add((precios[0] ?? 0.0).toDouble()); // PVP
-            preciosDisponibles.add((precios[1] ?? 0.0).toDouble()); // 20%
-            nombrePrecios.add('PVP');
-            nombrePrecios.add('20%');
-          } else if (precios.length == 1) {
-            preciosDisponibles.add((precios[0] ?? 0.0).toDouble());
-            nombrePrecios.add('Precio único');
-          }
+        // Leer precio20 y pvp directamente
+        if (producto['precio20'] != null && producto['precio20'] > 0) {
+          preciosDisponibles.add((producto['precio20']).toDouble());
+          nombrePrecios.add('Precio 20%');
         }
 
-        // Si no tiene precios en array, usar costo
-        if (preciosDisponibles.isEmpty &&
-            producto['costo'] != null &&
-            producto['costo'] > 0) {
-          preciosDisponibles.add(producto['costo'].toDouble());
-          nombrePrecios.add('Costo');
+        if (producto['pvp'] != null && producto['pvp'] > 0) {
+          preciosDisponibles.add((producto['pvp']).toDouble());
+          nombrePrecios.add('PVP');
+        }
+
+        // Si no tiene ninguno de estos precios, usar precio o costo como fallback
+        if (preciosDisponibles.isEmpty) {
+          if (producto['precio'] != null && producto['precio'] > 0) {
+            preciosDisponibles.add((producto['precio']).toDouble());
+            nombrePrecios.add('Precio');
+          } else if (producto['costo'] != null && producto['costo'] > 0) {
+            preciosDisponibles.add((producto['costo']).toDouble());
+            nombrePrecios.add('Costo');
+          }
         }
 
         // Si tiene múltiples precios, mostrar diálogo de selección

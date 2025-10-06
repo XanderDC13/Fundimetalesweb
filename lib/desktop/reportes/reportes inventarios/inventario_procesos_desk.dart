@@ -20,16 +20,21 @@ class _InventarioProcesoDeskScreenState
   String searchQuery = '';
   String procesoSeleccionado = 'todos';
   DateTimeRange? _rangoFechas;
+  String sedeUsuario = '';
+  String sedeSeleccionada = 'todas';
+  String rolUsuario = '';
+  bool esSuperAdmin = false;
 
   late final AnimationController _controller;
   late final Animation<double> _fadeAnimation;
 
+  final List<String> sedes = ['Quito', 'Guayaquil', 'Tulcán'];
   final List<Map<String, String>> procesos = [
     {'value': 'todos', 'label': 'Todos los procesos'},
     {'value': 'bruto', 'label': 'Bruto'},
     {'value': 'mecanizado', 'label': 'Mecanizado'},
     {'value': 'pintura', 'label': 'Pintura'},
-    {'value': 'pulido', 'label': 'Pulido'},
+    {'value': 'bodega', 'label': 'Bodega'},
   ];
 
   @override
@@ -41,6 +46,8 @@ class _InventarioProcesoDeskScreenState
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
+
+    _cargarDatosUsuario(); // NUEVO
   }
 
   @override
@@ -127,6 +134,36 @@ class _InventarioProcesoDeskScreenState
     );
   }
 
+  Future<void> _cargarDatosUsuario() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('usuarios_activos')
+                .doc(user.uid)
+                .get();
+
+        if (userDoc.exists && userDoc.data() != null) {
+          final data = userDoc.data()!;
+          setState(() {
+            sedeUsuario = data['sede'] ?? 'Quito';
+            rolUsuario = data['rol'] ?? '';
+            esSuperAdmin =
+                rolUsuario == 'Gerente' || rolUsuario == 'Super Administrador';
+
+            // Si no es super admin, solo puede ver su sede
+            if (!esSuperAdmin) {
+              sedeSeleccionada = sedeUsuario;
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print('Error cargando datos del usuario: $e');
+    }
+  }
+
   Widget _buildBarraBusquedaYFiltro() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -150,6 +187,66 @@ class _InventarioProcesoDeskScreenState
             ),
           ),
           const SizedBox(width: 16),
+
+          // NUEVO: Filtro por sede (solo visible para Gerente/Super Admin)
+          if (esSuperAdmin) ...[
+            Expanded(
+              flex: 1,
+              child: DropdownButtonFormField<String>(
+                value: sedeSeleccionada,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white,
+                  prefixIcon: const Icon(
+                    Icons.location_city,
+                    color: Color(0xFF4682B4),
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: Colors.grey.shade400,
+                      width: 1.5,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+                dropdownColor: Colors.white,
+                items: [
+                  const DropdownMenuItem<String>(
+                    value: 'todas',
+                    child: Text(
+                      'Todas las sedes',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ),
+                  ...sedes.map((sede) {
+                    return DropdownMenuItem<String>(
+                      value: sede,
+                      child: Text(sede, style: const TextStyle(fontSize: 14)),
+                    );
+                  }).toList(),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    sedeSeleccionada = value!;
+                  });
+                },
+              ),
+            ),
+            const SizedBox(width: 16),
+          ],
+
           Expanded(
             flex: 1,
             child: DropdownButtonFormField<String>(
@@ -319,11 +416,14 @@ class _InventarioProcesoDeskScreenState
         return LayoutBuilder(
           builder: (context, constraints) {
             final totalWidth = constraints.maxWidth;
-            final double anchoFecha = totalWidth * 0.12;
-            final double anchoNombre = totalWidth * 0.25;
-            final double anchoReferencia = totalWidth * 0.20;
-            final double anchoCantidad = totalWidth * 0.10;
-            final double anchoAcciones = totalWidth * 0.15;
+            final double anchoFecha = totalWidth * 0.10;
+            final double anchoSede = totalWidth * 0.08;
+            final double anchoNombre =
+                totalWidth * 0.35; // ✅ Aumentado significativamente
+            final double anchoReferencia = totalWidth * 0.15; // ✅ Reducido
+            final double anchoProceso = totalWidth * 0.10; // ✅ Añadido
+            final double anchoCantidad = totalWidth * 0.08; // ✅ Reducido
+            final double anchoAcciones = totalWidth * 0.14;
 
             return SingleChildScrollView(
               scrollDirection: Axis.vertical,
@@ -339,6 +439,7 @@ class _InventarioProcesoDeskScreenState
                 dataTextStyle: const TextStyle(fontSize: 10),
                 columns: const [
                   DataColumn(label: Text('Fecha')),
+                  DataColumn(label: Text('Sede')), // NUEVO
                   DataColumn(label: Text('Nombre')),
                   DataColumn(label: Text('Referencia')),
                   DataColumn(
@@ -371,7 +472,17 @@ class _InventarioProcesoDeskScreenState
                           ),
                           DataCell(
                             SizedBox(
-                              width: anchoNombre,
+                              width: anchoSede, // ✅ Cambiado
+                              child: Text(
+                                data['sede'] ?? '-',
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            SizedBox(
+                              width:
+                                  anchoNombre, // ✅ Ahora usa la variable correcta
                               child: GestureDetector(
                                 child: SingleChildScrollView(
                                   scrollDirection: Axis.horizontal,
@@ -396,7 +507,8 @@ class _InventarioProcesoDeskScreenState
                             ),
                           ),
                           DataCell(
-                            IntrinsicWidth(
+                            SizedBox(
+                              width: anchoProceso, // ✅ Añadido ancho específico
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
@@ -472,94 +584,112 @@ class _InventarioProcesoDeskScreenState
       'bruto',
       'mecanizado',
       'pintura',
-      'pulido',
+      'bodega',
     ];
 
+    // Determinar qué sedes consultar
+    final List<String> sedesToQuery =
+        esSuperAdmin && sedeSeleccionada == 'todas'
+            ? sedes
+            : [sedeSeleccionada];
+
     try {
-      final futures =
-          procesosInventario
-              .map(
-                (proceso) => FirebaseFirestore.instance
-                    .collection('inventarios')
-                    .doc(proceso)
-                    .collection('productos')
-                    .get()
-                    .then(
-                      (snapshot) => {'proceso': proceso, 'snapshot': snapshot},
-                    ),
-              )
-              .toList();
-
-      final resultados = await Future.wait(futures);
-      final Set<String> todasLasReferencias = {};
-      final List<Map<String, dynamic>> productosConProceso = [];
-
-      for (final resultado in resultados) {
-        final proceso = resultado['proceso'] as String;
-        final snapshot = resultado['snapshot'] as QuerySnapshot;
-
-        for (var doc in snapshot.docs) {
-          final data = doc.data() as Map<String, dynamic>;
-          final referencia = doc.id;
-          final cantidad =
-              int.tryParse(data['cantidad']?.toString() ?? '0') ?? 0;
-
-          todasLasReferencias.add(referencia);
-          productosConProceso.add({
-            'referencia': referencia,
-            'proceso': proceso,
-            'cantidad': cantidad,
-            'ultima_actualizacion': data['ultima_actualizacion'],
-          });
-        }
-      }
-
-      final Map<String, String> nombresProductos = {};
-
-      if (todasLasReferencias.isNotEmpty) {
-        final lotes = <List<String>>[];
-        final listaReferencias = todasLasReferencias.toList();
-
-        for (int i = 0; i < listaReferencias.length; i += 10) {
-          final fin =
-              (i + 10 < listaReferencias.length)
-                  ? i + 10
-                  : listaReferencias.length;
-          lotes.add(listaReferencias.sublist(i, fin));
-        }
-
-        final futuresNombres =
-            lotes
+      for (String sede in sedesToQuery) {
+        final futures =
+            procesosInventario
                 .map(
-                  (lote) =>
-                      FirebaseFirestore.instance
-                          .collection('productos')
-                          .where('referencia', whereIn: lote)
-                          .get(),
+                  (proceso) => FirebaseFirestore.instance
+                      .collection('inventarios')
+                      .doc(sede)
+                      .collection('procesos')
+                      .doc(proceso)
+                      .collection('productos')
+                      .get() // ✅ Quité .doc(referencia) - ahora obtiene todos
+                      .then(
+                        (snapshot) => {
+                          'sede': sede,
+                          'proceso': proceso,
+                          'snapshot': snapshot,
+                        },
+                      ),
                 )
                 .toList();
 
-        final resultadosNombres = await Future.wait(futuresNombres);
+        final resultados = await Future.wait(futures);
+        final Set<String> todasLasReferencias = {};
+        final List<Map<String, dynamic>> productosConProceso = [];
 
-        for (final snapshot in resultadosNombres) {
-          for (final doc in snapshot.docs) {
-            final data = doc.data();
-            nombresProductos[data['referencia']] =
-                data['nombre'] ?? 'Sin nombre';
+        for (final resultado in resultados) {
+          final sede = resultado['sede'] as String;
+          final proceso = resultado['proceso'] as String;
+          final snapshot = resultado['snapshot'] as QuerySnapshot;
+
+          for (var doc in snapshot.docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            final referencia =
+                doc.id; // ✅ Aquí obtienes cada referencia (PR, etc.)
+            final cantidad =
+                int.tryParse(data['cantidad']?.toString() ?? '0') ?? 0;
+
+            todasLasReferencias.add(referencia);
+            productosConProceso.add({
+              'referencia': referencia,
+              'sede': sede,
+              'proceso': proceso,
+              'cantidad': cantidad,
+              'ultima_actualizacion': data['ultima_actualizacion'],
+            });
           }
         }
-      }
 
-      for (final producto in productosConProceso) {
-        todosLosProductos.add({
-          'referencia': producto['referencia'],
-          'nombre':
-              nombresProductos[producto['referencia']] ??
-              'Producto no encontrado',
-          'proceso': producto['proceso'],
-          'cantidad': producto['cantidad'],
-          'ultima_actualizacion': producto['ultima_actualizacion'],
-        });
+        final Map<String, String> nombresProductos = {};
+
+        if (todasLasReferencias.isNotEmpty) {
+          final lotes = <List<String>>[];
+          final listaReferencias = todasLasReferencias.toList();
+
+          for (int i = 0; i < listaReferencias.length; i += 10) {
+            final fin =
+                (i + 10 < listaReferencias.length)
+                    ? i + 10
+                    : listaReferencias.length;
+            lotes.add(listaReferencias.sublist(i, fin));
+          }
+
+          final futuresNombres =
+              lotes
+                  .map(
+                    (lote) =>
+                        FirebaseFirestore.instance
+                            .collection('productos')
+                            .where('referencia', whereIn: lote)
+                            .get(),
+                  )
+                  .toList();
+
+          final resultadosNombres = await Future.wait(futuresNombres);
+
+          for (final snapshot in resultadosNombres) {
+            for (final doc in snapshot.docs) {
+              final data = doc.data();
+              nombresProductos[data['referencia']] =
+                  data['nombre'] ?? 'Sin nombre';
+            }
+          }
+        }
+
+        for (final producto in productosConProceso) {
+          todosLosProductos.add({
+            'referencia': producto['referencia'],
+            'nombre':
+                nombresProductos[producto['referencia']] ??
+                'Producto no encontrado',
+            'sede': producto['sede'],
+            'proceso': producto['proceso'],
+            'cantidad': producto['cantidad'],
+            'ultima_actualizacion': producto['ultima_actualizacion'],
+          });
+        }
       }
     } catch (e) {
       print('Error obteniendo inventarios optimizado: $e');
@@ -894,8 +1024,11 @@ class _InventarioProcesoDeskScreenState
         final nombreUsuario =
             userDoc.data()?['nombre'] ?? currentUser.email ?? '---';
 
+        // ✅ Ruta correcta para eliminar
         await FirebaseFirestore.instance
             .collection('inventarios')
+            .doc(data['sede'])
+            .collection('procesos')
             .doc(data['proceso'])
             .collection('productos')
             .doc(data['referencia'])
@@ -904,7 +1037,7 @@ class _InventarioProcesoDeskScreenState
         await FirebaseFirestore.instance.collection('auditoria_general').add({
           'accion': 'Eliminar Cant Inventario ${data['proceso'].toUpperCase()}',
           'detalle':
-              'Producto: ${data['nombre']}, Referencia: ${data['referencia']}, Cantidad eliminada: ${data['cantidad']}',
+              'Producto: ${data['nombre']}, Referencia: ${data['referencia']}, Cantidad eliminada: ${data['cantidad']}, Sede: ${data['sede']}',
           'fecha': DateTime.now(),
           'usuario_uid': currentUser.uid,
           'usuario_nombre': nombreUsuario,
@@ -940,7 +1073,6 @@ class _InventarioProcesoDeskScreenState
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Título
                       Text(
                         'Editar cantidad',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -949,8 +1081,6 @@ class _InventarioProcesoDeskScreenState
                         ),
                       ),
                       const SizedBox(height: 12),
-
-                      // Subtítulo con nombre del producto
                       Text(
                         data['nombre'] ?? 'Producto',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -958,9 +1088,7 @@ class _InventarioProcesoDeskScreenState
                           color: Colors.grey[700],
                         ),
                       ),
-
                       const SizedBox(height: 15),
-                      // Campo cantidad
                       TextField(
                         controller: cantidadController,
                         keyboardType: TextInputType.number,
@@ -976,10 +1104,7 @@ class _InventarioProcesoDeskScreenState
                           }
                         },
                       ),
-
                       const SizedBox(height: 20),
-
-                      // Botones
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -1039,7 +1164,6 @@ class _InventarioProcesoDeskScreenState
           return;
         }
 
-        // Buscar el nombre en la colección usuarios_activos
         final usuarioDoc =
             await FirebaseFirestore.instance
                 .collection('usuarios_activos')
@@ -1051,9 +1175,11 @@ class _InventarioProcesoDeskScreenState
                 ? (usuarioDoc['nombre'] ?? 'Desconocido')
                 : 'Desconocido';
 
-        // Actualizar la cantidad en Firestore
+        // ✅ Ruta correcta para actualizar
         await FirebaseFirestore.instance
             .collection('inventarios')
+            .doc(data['sede'])
+            .collection('procesos')
             .doc(data['proceso'])
             .collection('productos')
             .doc(data['referencia'])
@@ -1062,19 +1188,18 @@ class _InventarioProcesoDeskScreenState
               'ultima_actualizacion': FieldValue.serverTimestamp(),
             });
 
-        // Registrar en auditoría
         await FirebaseFirestore.instance.collection('auditoria_general').add({
           'fecha': FieldValue.serverTimestamp(),
           'usuario_nombre': usuarioNombre,
           'usuario_uid': user.uid,
           'accion': 'Edición de cantidad de inventario procesos',
           'detalle':
-              'Proceso: ${data['proceso']}, Producto: ${data['nombre']}, Referencia: ${data['referencia']}, Cantidad anterior: ${data['cantidad']}, Cantidad nueva: $nuevaCantidad',
+              'Sede: ${data['sede']}, Proceso: ${data['proceso']}, Producto: ${data['nombre']}, Referencia: ${data['referencia']}, Cantidad anterior: ${data['cantidad']}, Cantidad nueva: $nuevaCantidad',
         });
 
         if (mounted) {
           _mostrarSnackBar('Cantidad actualizada correctamente');
-          setState(() {}); // Refrescar la tabla
+          setState(() {});
         }
       } catch (e) {
         if (mounted) _mostrarSnackBar('Error al actualizar cantidad: $e');

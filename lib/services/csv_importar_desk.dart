@@ -91,6 +91,7 @@ class _ImportarDualScreenState extends State<ImportarDualScreen> {
   }
 
   Future<void> _procesarProductosCSV(String contenido) async {
+    // Usar punto y coma como delimitador
     final rowsAsListOfValues = const CsvToListConverter(
       fieldDelimiter: ';',
       eol: '\n',
@@ -110,7 +111,8 @@ class _ImportarDualScreenState extends State<ImportarDualScreen> {
     for (int i = 1; i < rowsAsListOfValues.length; i++) {
       final fila = rowsAsListOfValues[i];
 
-      if (fila.length < 11) {
+      // Ahora esperamos: CODIGO, REF, NOMBRE, P.V.P, 20%, CATEGORIA
+      if (fila.length < 6) {
         print('⚠️ Fila $i incompleta, saltada.');
         continue;
       }
@@ -119,17 +121,9 @@ class _ImportarDualScreenState extends State<ImportarDualScreen> {
       final codigo = rawCodigo.startsWith("'") ? rawCodigo.substring(1) : rawCodigo;
       final referencia = fila[1].toString().trim();
       final nombre = fila[2].toString().trim();
-      final costo = double.tryParse(fila[3].toString().trim()) ?? 0.0;
-
-      List<double> precios = [];
-      for (int j = 4; j <= 9; j++) {
-        final precio = double.tryParse(fila[j].toString().trim()) ?? 0.0;
-        if (precio > 0) {
-          precios.add(precio);
-        }
-      }
-
-      final categoria = fila[10].toString().trim();
+      final pvp = double.tryParse(fila[3].toString().trim()) ?? 0.0;
+      final precio20 = double.tryParse(fila[4].toString().trim()) ?? 0.0;
+      final categoria = fila[5].toString().trim();
 
       if (codigo.isEmpty || nombre.isEmpty || categoria.isEmpty) {
         print('⚠️ Fila $i inválida (faltan datos), saltada.');
@@ -145,8 +139,8 @@ class _ImportarDualScreenState extends State<ImportarDualScreen> {
           'codigo': codigo,
           'referencia': referencia,
           'nombre': nombre,
-          'costo': costo,
-          'precios': precios,
+          'pvp': pvp,
+          'precio20': precio20,
           'categoria': categoria,
           'fecha': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
@@ -178,7 +172,6 @@ class _ImportarDualScreenState extends State<ImportarDualScreen> {
       return;
     }
 
-    // Asumiendo que el CSV tiene: referencia, fundicion, bruto, mecanizado, pulido, pintura, bodega
     setState(() {
       totalFilas = rowsAsListOfValues.length - 1;
       filasProcesadas = 0;
@@ -187,7 +180,7 @@ class _ImportarDualScreenState extends State<ImportarDualScreen> {
     for (int i = 1; i < rowsAsListOfValues.length; i++) {
       final fila = rowsAsListOfValues[i];
 
-      if (fila.length < 7) { // referencia + 6 subcolecciones
+      if (fila.length < 7) {
         print('⚠️ Fila $i incompleta, saltada.');
         continue;
       }
@@ -199,7 +192,6 @@ class _ImportarDualScreenState extends State<ImportarDualScreen> {
         continue;
       }
 
-      // Procesar cada subcolección
       for (int j = 1; j < fila.length && j <= 6; j++) {
         final cantidad = int.tryParse(fila[j].toString().trim()) ?? 0;
         final subcoleccion = subcoleccionesInventario[j - 1];
@@ -401,7 +393,7 @@ class _ImportarDualScreenState extends State<ImportarDualScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'Formato CSV:',
+                                            'Formato CSV (separado por punto y coma):',
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Color(0xFF4682B4),
@@ -411,8 +403,8 @@ class _ImportarDualScreenState extends State<ImportarDualScreen> {
                                           Text('• Código', style: TextStyle(fontSize: 12)),
                                           Text('• Referencia', style: TextStyle(fontSize: 12)),
                                           Text('• Nombre', style: TextStyle(fontSize: 12)),
-                                          Text('• Costo', style: TextStyle(fontSize: 12)),
-                                          Text('• Precios (6 columnas)', style: TextStyle(fontSize: 12)),
+                                          Text('• P.V.P', style: TextStyle(fontSize: 12)),
+                                          Text('• 20%', style: TextStyle(fontSize: 12)),
                                           Text('• Categoría', style: TextStyle(fontSize: 12)),
                                         ],
                                       ),
@@ -538,8 +530,7 @@ class _ImportarDualScreenState extends State<ImportarDualScreen> {
                             ),
                           ],
                         ),
-                      )
-,
+                      ),
               ),
             ),
           ),

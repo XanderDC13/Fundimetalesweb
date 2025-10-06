@@ -119,12 +119,6 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
           categorias.sort();
         }
 
-        final precios =
-            (data['precios'] as List<dynamic>?)
-                ?.map((e) => e.toString())
-                .toList() ??
-            [];
-
         setState(() {
           nombreController.text = data['nombre'] ?? widget.nombreInicial;
           referenciaController.text = data['referencia'] ?? '';
@@ -132,17 +126,8 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
               categoriaEnDB ??
               (categorias.isNotEmpty ? categorias.first : null);
 
-          precio1Controller.text = precios.isNotEmpty ? precios[0] : '';
-          precio2Controller.text = precios.length > 1 ? precios[1] : '';
-
-          originalCodigo = widget.codigoBarras;
-          originalNombre = nombreController.text;
-          originalReferencia = referenciaController.text;
-          originalCategoria = categoriaSeleccionada;
-          originalPrecios = [
-            precio1Controller.text,
-            precio2Controller.text,
-          ];
+          precio1Controller.text = data['pvp']?.toString() ?? '';
+          precio2Controller.text = data['precio20']?.toString() ?? '';
         });
       }
     } catch (e) {
@@ -158,9 +143,7 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
 
     if (codigo.isEmpty || nombre.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Código y nombre son obligatorios'),
-        ),
+        const SnackBar(content: Text('Código y nombre son obligatorios')),
       );
       return;
     }
@@ -221,7 +204,8 @@ class _EditarProductoDeskScreenState extends State<EditarProductoDeskScreen> {
       'codigo': codigo,
       'nombre': nombre,
       'referencia': referencia,
-      'precios': precios.map((e) => double.tryParse(e) ?? 0).toList(),
+      'pvp': double.tryParse(precios.isNotEmpty ? precios[0] : '0') ?? 0.0,
+      'precio20': double.tryParse(precios.length > 1 ? precios[1] : '0') ?? 0.0,
       'categoria': categoriaSeleccionada,
       'fecha': FieldValue.serverTimestamp(),
     };

@@ -681,14 +681,14 @@ class _RegisterScreenState extends State<RegisterScreen>
                                         dropdownColor: Colors.white,
                                         items: const [
                                           DropdownMenuItem(
+                                            value: 'Gerente',
+                                            child: Text('Gerente'),
+                                          ),
+                                          DropdownMenuItem(
                                             value: 'Administrador',
                                             child: Text(
                                               'Administrador General',
                                             ),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'Gerente',
-                                            child: Text('Gerente'),
                                           ),
                                           DropdownMenuItem(
                                             value: 'Vendedor',

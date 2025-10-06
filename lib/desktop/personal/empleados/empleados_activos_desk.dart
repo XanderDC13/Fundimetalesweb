@@ -161,8 +161,8 @@ class _EmpleadosActivosDeskScreenState
                                         final rol =
                                             empleado['rol'] ?? 'Empleado';
                                         final roles = [
+                                          'Gerente',
                                           'Administrador General',
-                                          'Gerente Sede',
                                           'Vendedor',
                                           'Supervisor Fundición',
                                           'Operador Fundición',
@@ -255,7 +255,7 @@ class _EmpleadosActivosDeskScreenState
                                                         accion:
                                                             'Cambiar Rol Usuario',
                                                         detalle:
-                                                            'Usuario: $nombre, Rol anterior: $rol, Nuevo rol: $nuevoRol'
+                                                            'Usuario: $nombre, Rol anterior: $rol, Nuevo rol: $nuevoRol',
                                                       );
                                                     }
                                                   },

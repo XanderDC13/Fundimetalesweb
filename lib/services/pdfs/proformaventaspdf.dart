@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-export 'package:basefundi/services/proforma_ventas_desk_screen.dart';
+
 
 class PDFGenerator {
   static Future<pw.Document> generarPDF({

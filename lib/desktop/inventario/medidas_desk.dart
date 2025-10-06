@@ -415,7 +415,8 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen> {
 
     // Crear controladores para cada campo con los valores actuales
     for (String columna in columnas) {
-      if (columna != 'PVP' && columna != 'Desc. 20%' && columna != 'Acciones') {
+      if (columna != 'Acciones') {
+        // ✅ SOLO EXCLUIR ACCIONES
         controladores[columna] = TextEditingController();
 
         // Llenar con datos actuales
@@ -472,8 +473,6 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen> {
                         ...columnas
                             .where(
                               (columna) =>
-                                  columna != 'PVP' &&
-                                  columna != 'Desc. 20%' &&
                                   columna != 'Acciones',
                             )
                             .map((columna) {
@@ -542,6 +541,7 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen> {
   }
 
   // Función para obtener valor para edición
+  // Función para obtener valor para edición
   String _obtenerValorParaEdicion(Map<String, dynamic> data, String columna) {
     switch (categoriaSeleccionada) {
       case 'Discos':
@@ -562,6 +562,8 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen> {
             return data['huecos']?.toString() ?? '';
           case 'S/V':
             return data['tipo']?.toString() ?? '';
+          case 'PVP': // AGREGAR ESTE CASO
+            return data['pvp']?.toString() ?? '';
           case '20%':
             return data['descuento20']?.toString() ?? '';
           case 'Peso':
@@ -569,6 +571,45 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen> {
           default:
             return '';
         }
+      case 'Tambores':
+        switch (columna) {
+          case 'Referencia':
+            return data['referencia']?.toString() ?? '';
+          case 'Nombre':
+            return data['nombre']?.toString() ?? '';
+          case 'Diámetro':
+            return data['diametro']?.toString() ?? '';
+          case 'Hueco':
+            return data['hueco']?.toString() ?? '';
+          case 'Banda':
+            return data['banda']?.toString() ?? '';
+          case 'Bocín':
+            return data['bocin']?.toString() ?? '';
+          case 'POC':
+            return data['poc']?.toString() ?? '';
+          case 'Observaciones':
+            return data['observaciones']?.toString() ?? '';
+          case 'PVP': // AGREGAR ESTE CASO
+            return data['pvp']?.toString() ?? '';
+          case '20%':
+            return data['descuento20']?.toString() ?? '';
+          case 'Peso':
+            return data['peso']?.toString() ?? '';
+          default:
+            return '';
+        }
+      // AGREGAR CASOS PARA LAS OTRAS CATEGORÍAS
+      case 'Soporteria':
+      case 'Rejillas':
+      case 'Accesorios':
+      case 'Sumideros':
+        if (columna == 'PVP') {
+          return data['pvp']?.toString() ?? '';
+        }
+        if (columna == 'Desc') {
+          return data['descuento']?.toString() ?? '';
+        }
+        return data[_convertirColumnaNombreCampo(columna)]?.toString() ?? '';
       default:
         return data[_convertirColumnaNombreCampo(columna)]?.toString() ?? '';
     }
@@ -683,8 +724,6 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen> {
                         ...columnas
                             .where(
                               (columna) =>
-                                  columna != 'PVP' &&
-                                  columna != 'Desc. 20%' &&
                                   columna != 'Acciones',
                             )
                             .map((columna) {
@@ -835,6 +874,10 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen> {
         return 'huecos';
       case 'Tipo (S/V)':
         return 'tipo';
+      case 'PVP':
+        return 'pvp';
+      case '20%': 
+      return 'descuento20';
       case 'Peso':
         return 'peso';
       case 'Hueco':

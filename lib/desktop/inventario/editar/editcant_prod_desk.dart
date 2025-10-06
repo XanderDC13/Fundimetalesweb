@@ -13,10 +13,14 @@ class EditInvProdDeskScreen extends StatefulWidget {
 
 class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
   Map<String, int> cantidadesPorProceso = {};
+  Map<String, Map<String, int>> cantidadesPorSucursalProceso = {};
   List<Proceso> procesos = [];
   bool cargando = true;
+  String sucursalUsuario = ''; 
+  String sucursalSeleccionada = '';
 
   final _auth = FirebaseAuth.instance;
+  final List<String> sucursales = ['Quito', 'Guayaquil', 'Tulcán'];
 
   @override
   void initState() {
@@ -25,8 +29,10 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
   }
 
   Future<void> _inicializar() async {
+    await _cargarSucursalUsuario();
     await _cargarProcesos();
     await _cargarSaldos();
+    await _cargarSaldosTodasSucursales();
   }
 
   Future<void> _cargarProcesos() async {
@@ -56,6 +62,8 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
         final doc =
             await FirebaseFirestore.instance
                 .collection('inventarios')
+                .doc(sucursalUsuario) // MODIFICADO: Usar sucursal del usuario
+                .collection('procesos')
                 .doc(proceso.id)
                 .collection('productos')
                 .doc(widget.producto.referencia)
@@ -79,7 +87,11 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
   Future<Map<String, String>> _obtenerDatosUsuario() async {
     final user = _auth.currentUser;
     if (user == null) {
-      return {'uid': 'desconocido', 'nombre': 'Desconocido'};
+      return {
+        'uid': 'desconocido',
+        'nombre': 'Desconocido',
+        'sucursal': sucursalUsuario,
+      };
     }
 
     try {
@@ -91,10 +103,81 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
 
       final nombre =
           userDoc.exists ? (userDoc['nombre'] ?? 'Desconocido') : 'Desconocido';
-      return {'uid': user.uid, 'nombre': nombre};
+      // Cambiar 'sucursal' por 'sede'
+      final sucursal =
+          userDoc.exists
+              ? (userDoc['sede'] ?? sucursalUsuario)
+              : sucursalUsuario;
+
+      return {'uid': user.uid, 'nombre': nombre, 'sucursal': sucursal};
     } catch (e) {
-      return {'uid': user.uid, 'nombre': 'Usuario'};
+      return {
+        'uid': user.uid,
+        'nombre': 'Usuario',
+        'sucursal': sucursalUsuario,
+      };
     }
+  }
+
+  Future<void> _cargarSucursalUsuario() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('usuarios_activos')
+                .doc(user.uid)
+                .get();
+
+        if (userDoc.exists && userDoc.data() != null) {
+          final data = userDoc.data()!;
+          // Cambiar 'sucursal' por 'sede'
+          sucursalUsuario = data['sede'] ?? 'QUITO';
+          sucursalSeleccionada = sucursalUsuario;
+        } else {
+          sucursalUsuario = 'QUITO';
+          sucursalSeleccionada = 'QUITO';
+        }
+      }
+    } catch (e) {
+      print('Error cargando sucursal del usuario: $e');
+      sucursalUsuario = 'QUITO';
+      sucursalSeleccionada = 'QUITO';
+    }
+  }
+
+  Future<void> _cargarSaldosTodasSucursales() async {
+    Map<String, Map<String, int>> nuevasCantidadesSucursales = {};
+
+    for (String sucursal in sucursales) {
+      nuevasCantidadesSucursales[sucursal] = {};
+
+      for (var proceso in procesos) {
+        try {
+          final doc =
+              await FirebaseFirestore.instance
+                  .collection('inventarios')
+                  .doc(sucursal)
+                  .collection('procesos')
+                  .doc(proceso.id)
+                  .collection('productos')
+                  .doc(widget.producto.referencia)
+                  .get();
+
+          nuevasCantidadesSucursales[sucursal]![proceso.id] =
+              doc.exists ? (doc['cantidad'] ?? 0) : 0;
+        } catch (e) {
+          print('Error cargando saldo para $sucursal-${proceso.id}: $e');
+          nuevasCantidadesSucursales[sucursal]![proceso.id] = 0;
+        }
+      }
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      cantidadesPorSucursalProceso = nuevasCantidadesSucursales;
+    });
   }
 
   Future<void> _guardarAuditoria({
@@ -102,6 +185,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
     required String detalle,
     required String uid,
     required String nombreUsuario,
+    required String sucursal, // NUEVO: Parámetro sucursal
     required Timestamp fecha,
   }) async {
     try {
@@ -111,6 +195,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
         'fecha': fecha,
         'usuario_nombre': nombreUsuario,
         'usuario_uid': uid,
+        'sucursal': sucursal, // NUEVO: Guardar sucursal en auditoría
       });
     } catch (e) {
       print('Error guardando auditoría: $e');
@@ -122,6 +207,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
     required String procesoDestino,
     required int cantidad,
     required String usuarioUid,
+    required String sucursal, // NUEVO: Parámetro sucursal
   }) async {
     try {
       await FirebaseFirestore.instance.collection('movimientos').add({
@@ -131,6 +217,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
         'cantidad': cantidad,
         'fecha': Timestamp.now(),
         'usuario': usuarioUid,
+        'sucursal': sucursal, // NUEVO: Guardar sucursal en movimientos
       });
     } catch (e) {
       print('Error registrando movimiento: $e');
@@ -562,9 +649,11 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
       final timestamp = Timestamp.now();
       final usuario = await _obtenerDatosUsuario();
 
-      // Reducir cantidad en proceso actual
+      // MODIFICADO: Reducir cantidad en proceso actual de la sucursal
       final docInventario = FirebaseFirestore.instance
           .collection('inventarios')
+          .doc(usuario['sucursal']!)
+          .collection('procesos')
           .doc(proceso.id)
           .collection('productos')
           .doc(widget.producto.referencia);
@@ -588,6 +677,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
         'fecha': timestamp,
         'usuario_uid': usuario['uid']!,
         'usuario_nombre': usuario['nombre']!,
+        'sucursal': usuario['sucursal']!, // NUEVO: Guardar sucursal en rechazos
       });
 
       // Registrar auditoría
@@ -595,19 +685,21 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
         accion: 'Rechazo de Producto',
         detalle:
             'Producto: ${widget.producto.nombre} (${widget.producto.referencia}), '
-            'Proceso: ${proceso.nombre}, Cantidad: $cantidad, Motivo: $motivo',
+            'Proceso: ${proceso.nombre}, Cantidad: $cantidad, Motivo: $motivo, Sucursal: ${usuario['sucursal']}',
         uid: usuario['uid']!,
         nombreUsuario: usuario['nombre']!,
+        sucursal: usuario['sucursal']!,
         fecha: timestamp,
       );
 
       await _cargarSaldos();
+      await _cargarSaldosTodasSucursales(); // NUEVO: Recargar todas las sucursales
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Rechazo registrado: $cantidad unidades de ${proceso.nombre}',
+              'Rechazo registrado: $cantidad unidades de ${proceso.nombre} (${usuario['sucursal']})',
             ),
             backgroundColor: Colors.orange,
           ),
@@ -852,9 +944,11 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
       final timestamp = Timestamp.now();
       final usuario = await _obtenerDatosUsuario();
 
-      // Actualizar inventario del proceso
+      // MODIFICADO: Actualizar inventario de la sucursal del usuario
       final docInventario = FirebaseFirestore.instance
           .collection('inventarios')
+          .doc(usuario['sucursal']!) // MODIFICADO: Usar sucursal del usuario
+          .collection('procesos')
           .doc(proceso.id)
           .collection('productos')
           .doc(widget.producto.referencia);
@@ -872,19 +966,21 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
         accion: 'Agregar Cantidad Inventario',
         detalle:
             'Producto: ${widget.producto.nombre} (${widget.producto.referencia}), '
-            'Proceso: ${proceso.nombre}, Cantidad: $cantidad',
+            'Proceso: ${proceso.nombre}, Cantidad: $cantidad, Sucursal: ${usuario['sucursal']}',
         uid: usuario['uid']!,
         nombreUsuario: usuario['nombre']!,
+        sucursal: usuario['sucursal']!,
         fecha: timestamp,
       );
 
       await _cargarSaldos();
+      await _cargarSaldosTodasSucursales(); // NUEVO: Recargar todas las sucursales
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Entrada registrada: $cantidad unidades a ${proceso.nombre}',
+              'Entrada registrada: $cantidad unidades a ${proceso.nombre} (${usuario['sucursal']})',
             ),
             backgroundColor: Colors.green,
           ),
@@ -912,9 +1008,11 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
       final timestamp = Timestamp.now();
       final usuario = await _obtenerDatosUsuario();
 
-      // Reducir cantidad en proceso origen
+      // MODIFICADO: Reducir cantidad en proceso origen de la sucursal
       final docOrigen = FirebaseFirestore.instance
           .collection('inventarios')
+          .doc(usuario['sucursal']!)
+          .collection('procesos')
           .doc(origen.id)
           .collection('productos')
           .doc(widget.producto.referencia);
@@ -928,9 +1026,11 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
         'ultima_actualizacion': timestamp,
       });
 
-      // Aumentar cantidad en proceso destino
+      // MODIFICADO: Aumentar cantidad en proceso destino de la sucursal
       final docDestino = FirebaseFirestore.instance
           .collection('inventarios')
+          .doc(usuario['sucursal']!)
+          .collection('procesos')
           .doc(destino.id)
           .collection('productos')
           .doc(widget.producto.referencia);
@@ -950,6 +1050,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
         procesoDestino: destino.id,
         cantidad: cantidad,
         usuarioUid: usuario['uid']!,
+        sucursal: usuario['sucursal']!,
       );
 
       // Registrar auditoría
@@ -957,19 +1058,21 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
         accion: 'Movimiento Cantidad Procesos',
         detalle:
             'Producto: ${widget.producto.nombre} (${widget.producto.referencia}), '
-            'De: ${origen.nombre} a ${destino.nombre}, Cantidad: $cantidad',
+            'De: ${origen.nombre} a ${destino.nombre}, Cantidad: $cantidad, Sucursal: ${usuario['sucursal']}',
         uid: usuario['uid']!,
         nombreUsuario: usuario['nombre']!,
+        sucursal: usuario['sucursal']!,
         fecha: timestamp,
       );
 
       await _cargarSaldos();
+      await _cargarSaldosTodasSucursales(); // NUEVO: Recargar todas las sucursales
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Movimiento realizado: $cantidad unidades de ${origen.nombre} a ${destino.nombre}',
+              'Movimiento realizado: $cantidad unidades de ${origen.nombre} a ${destino.nombre} (${usuario['sucursal']})',
             ),
             backgroundColor: Colors.green,
           ),
@@ -988,12 +1091,165 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
     }
   }
 
-  // 🎯 NUEVO MÉTODO: Construir fila horizontal de proceso (COMPACTO)
+  Widget _buildResumenSucursales() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'INVENTARIO POR SUCURSALES',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue.shade700,
+                ),
+              ),
+              // Dropdown para seleccionar sucursal a visualizar
+              // Dropdown para seleccionar sucursal a visualizar
+              DropdownButton<String>(
+                value:
+                    sucursalSeleccionada.isEmpty
+                        ? null
+                        : sucursalSeleccionada, // CAMBIO AQUÍ
+                items:
+                    sucursales.map((sucursal) {
+                      return DropdownMenuItem<String>(
+                        value: sucursal,
+                        child: Text(
+                          sucursal,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      );
+                    }).toList(),
+                onChanged: (String? nueva) {
+                  if (nueva != null) {
+                    setState(() {
+                      sucursalSeleccionada = nueva;
+                      if (cantidadesPorSucursalProceso.containsKey(nueva)) {
+                        cantidadesPorProceso = Map<String, int>.from(
+                          cantidadesPorSucursalProceso[nueva]!,
+                        );
+                      }
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Mostrar totales por sucursal
+          ...sucursales.map((sucursal) {
+            final totalSucursal =
+                cantidadesPorSucursalProceso[sucursal]?.values.fold<int>(
+                  0,
+                  (sum, cantidad) => sum + cantidad,
+                ) ??
+                0;
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '$sucursal:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight:
+                          sucursal == sucursalUsuario
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                      color:
+                          sucursal == sucursalUsuario
+                              ? Colors.blue.shade700
+                              : Colors.grey.shade600,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          sucursal == sucursalUsuario
+                              ? Colors.blue.shade100
+                              : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '$totalSucursal unidades',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color:
+                            sucursal == sucursalUsuario
+                                ? Colors.blue.shade700
+                                : Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+
+          const Divider(height: 16),
+
+          // Total general
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'TOTAL GENERAL:',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2C3E50),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.green.shade300),
+                ),
+                child: Text(
+                  '${cantidadesPorSucursalProceso.values.expand((sucursal) => sucursal.values).fold<int>(0, (sum, cantidad) => sum + cantidad)} unidades',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFilaProceso(Proceso proceso) {
     final cantidad = cantidadesPorProceso[proceso.id] ?? 0;
 
     return Container(
-       width: 420,
+      width: 420,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       margin: const EdgeInsets.only(bottom: 3),
       child: Row(
@@ -1002,9 +1258,9 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
           SizedBox(
             width: 120,
             child: Text(
-              proceso.nombre.toUpperCase(),
+              '${proceso.nombre.toUpperCase()} ($sucursalSeleccionada)',
               style: const TextStyle(
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF2C3E50),
               ),
@@ -1014,84 +1270,90 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
 
           const SizedBox(width: 8),
 
-          // Botón ENTRADA
-          SizedBox(
-            width: 50,
-            height: 28,
-            child: ElevatedButton(
-              onPressed:
-                  () => _mostrarFormularioEntradaDirecta(context, proceso),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4682B4),
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(3),
+          // Solo mostrar botones si es la sucursal del usuario actual
+          if (sucursalSeleccionada == sucursalUsuario) ...[
+            // Botón ENTRADA
+            SizedBox(
+              width: 50,
+              height: 28,
+              child: ElevatedButton(
+                onPressed:
+                    () => _mostrarFormularioEntradaDirecta(context, proceso),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4682B4),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  minimumSize: Size.zero,
                 ),
-                minimumSize: Size.zero,
-              ),
-              child: const Text(
-                'ENTRADA',
-                style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+                child: const Text(
+                  'ENTRADA',
+                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
-          ),
 
-          const SizedBox(width: 6),
+            const SizedBox(width: 6),
 
-          // Botón MOVER
-          SizedBox(
-            width: 45,
-            height: 28,
-            child: ElevatedButton(
-              onPressed:
-                  cantidad > 0
-                      ? () => _mostrarFormularioMovimiento(context, proceso)
-                      : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF27AE60),
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(3),
+            // Botón MOVER
+            SizedBox(
+              width: 45,
+              height: 28,
+              child: ElevatedButton(
+                onPressed:
+                    cantidad > 0
+                        ? () => _mostrarFormularioMovimiento(context, proceso)
+                        : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF27AE60),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  minimumSize: Size.zero,
                 ),
-                minimumSize: Size.zero,
-              ),
-              child: const Text(
-                'MOVER',
-                style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+                child: const Text(
+                  'MOVER',
+                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
-          ),
 
-          const SizedBox(width: 6),
+            const SizedBox(width: 6),
 
-          // 🆕 NUEVO BOTÓN RECHAZO
-          SizedBox(
-            width: 45,
-            height: 28,
-            child: ElevatedButton(
-              onPressed:
-                  cantidad > 0
-                      ? () => _mostrarFormularioRechazo(context, proceso)
-                      : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange.shade700,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(3),
+            // Botón RECHAZO
+            SizedBox(
+              width: 45,
+              height: 28,
+              child: ElevatedButton(
+                onPressed:
+                    cantidad > 0
+                        ? () => _mostrarFormularioRechazo(context, proceso)
+                        : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange.shade700,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  minimumSize: Size.zero,
                 ),
-                minimumSize: Size.zero,
-              ),
-              child: const Text(
-                'RECHAZO',
-                style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+                child: const Text(
+                  'RECHAZO',
+                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
-          ),
 
-          const SizedBox(width: 8),
+            const SizedBox(width: 8),
+          ] else ...[
+            // Espacio vacío para mantener alineación cuando solo se visualiza
+            const SizedBox(width: 152),
+          ],
 
           // CANTIDAD
           Container(
@@ -1138,11 +1400,9 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: MediaQuery.of(context).size.width * 0.98, // 95% del ancho
-      constraints: const BoxConstraints(
-        maxWidth: 1000, // Reducido para ser más compacto
-      ),
-      padding: const EdgeInsets.all(16), // Menos padding
+      width: MediaQuery.of(context).size.width * 0.98,
+      constraints: const BoxConstraints(maxWidth: 1000),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color.fromARGB(255, 244, 250, 255),
         borderRadius: BorderRadius.circular(12),
@@ -1151,7 +1411,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header más compacto
+          // Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1159,7 +1419,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                 child: Text(
                   widget.producto.nombre,
                   style: const TextStyle(
-                    fontSize: 18, // Más pequeño
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF2C3E50),
                   ),
@@ -1172,12 +1432,15 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
             ],
           ),
 
-          const SizedBox(height: 25), // Menos espacio
-          // 🎯 NUEVA VISTA: Lista vertical compacta
+          const SizedBox(height: 16),
+
+          // NUEVO: Resumen por sucursales
+          _buildResumenSucursales(),
+
+          // Lista de procesos
           Container(
-            constraints: const BoxConstraints(maxHeight: 300), // Altura máxima
+            constraints: const BoxConstraints(maxHeight: 300),
             child: SingleChildScrollView(
-              // Por si hay muchos procesos
               child: Column(
                 children:
                     procesos

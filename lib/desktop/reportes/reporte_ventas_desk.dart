@@ -20,7 +20,8 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
     with SingleTickerProviderStateMixin {
   String _filtroCliente = '';
   String? _vendedorSeleccionado;
-  List<String> _vendedoresDisponibles = [];
+  String? _sedeSeleccionada;
+
   DateTime? _fechaInicio;
   DateTime? _fechaFin;
 
@@ -32,6 +33,8 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
   double _totalGeneralNotas = 0.0;
   int _cantidadFacturas = 0;
   int _cantidadNotas = 0;
+
+  final List<String> _sedesDisponibles = ['Tulcán', 'Quito', 'Guayaquil'];
 
   @override
   void initState() {
@@ -52,15 +55,13 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
 
       if (!mounted) return;
 
-      final vendedores =
-          ventasSnapshot.docs
+      ventasSnapshot.docs
               .map((doc) => doc.data()['usuario_nombre'] ?? '')
               .where((nombre) => nombre.toString().trim().isNotEmpty)
               .toSet()
               .toList();
 
       setState(() {
-        _vendedoresDisponibles = vendedores.cast<String>();
       });
     } catch (e) {
       if (!mounted) return;
@@ -119,6 +120,11 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
         if (_vendedorSeleccionado != null) {
           cumpleFiltros =
               cumpleFiltros && data['usuario_nombre'] == _vendedorSeleccionado;
+        }
+
+        // NUEVO: Filtro por sede
+        if (_sedeSeleccionada != null) {
+          cumpleFiltros = cumpleFiltros && data['sede'] == _sedeSeleccionada;
         }
 
         if (!cumpleFiltros) continue;
@@ -192,6 +198,7 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
       _fechaFin = null;
       _filtroCliente = '';
       _vendedorSeleccionado = null;
+      _sedeSeleccionada = null; // NUEVO
     });
     _calcularMetricas();
   }
@@ -857,6 +864,10 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
           _vendedorSeleccionado == null ||
           _vendedorSeleccionado == v['usuario_nombre'];
 
+      // NUEVO: Filtro de sede
+      final coincideSede =
+          _sedeSeleccionada == null || _sedeSeleccionada == v['sede'];
+
       bool coincideFecha = true;
       if (_fechaInicio != null && v['fecha'] != null) {
         final fechaVenta = v['fecha'] as DateTime;
@@ -874,6 +885,7 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
       return (esFactura ? esFacturaReal : esNotaVenta) &&
           coincideCliente &&
           coincideVendedor &&
+          coincideSede && // NUEVO
           coincideFecha;
     }).toList();
   }
@@ -1370,18 +1382,18 @@ class _ReporteVentasDeskScreenState extends State<ReporteVentasDeskScreen>
                               borderSide: BorderSide.none,
                             ),
                           ),
-                          value: _vendedorSeleccionado,
-                          hint: const Text('Filtrar por vendedor'),
+                          value: _sedeSeleccionada,
+                          hint: const Text('Filtrar por sede'),
                           items:
-                              _vendedoresDisponibles.map((vendedor) {
+                              _sedesDisponibles.map((sede) {
                                 return DropdownMenuItem(
-                                  value: vendedor,
-                                  child: Text(vendedor),
+                                  value: sede,
+                                  child: Text(sede),
                                 );
                               }).toList(),
                           onChanged: (value) {
                             _safeSetState(() {
-                              _vendedorSeleccionado = value;
+                              _sedeSeleccionada = value;
                             });
                             _calcularMetricas();
                           },
