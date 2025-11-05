@@ -4,7 +4,10 @@ import 'package:basefundi/desktop/dashboard_desk.dart';
 import 'package:basefundi/desktop/directorio/contactos_desk.dart';
 import 'package:basefundi/desktop/directorio/pedidos_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas_desk.dart';
+import 'package:basefundi/desktop/fundicion/listado_empleados_desk.dart';
+import 'package:basefundi/desktop/fundicion/productos_fundir_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareas_cumplir_desk.dart';
+import 'package:basefundi/desktop/fundicion/tareasextras_desk.dart';
 import 'package:basefundi/desktop/inventario/medidas_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_proformas_desk.dart';
 import 'package:basefundi/desktop/inventario/productos_desk.dart';
@@ -281,12 +284,12 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             onTap: () => _navigateToScreen(const TotalInvDeskScreen()),
           ),
           _buildSubItem(
-            label: 'Insumos',
-            onTap: () => _navigateToScreen(const InsumosDeskScreen()),
-          ),
-          _buildSubItem(
             label: 'Catálogo',
             onTap: () => _navigateToScreen(const VisualizarCatalogoScreen()),
+          ),
+          _buildSubItem(
+            label: 'Insumos',
+            onTap: () => _navigateToScreen(const InsumosDeskScreen()),
           ),
         ],
       ),
@@ -338,6 +341,25 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
           _buildSubItem(
             label: 'Contactos',
             onTap: () => _navigateToScreen(const ContactosDeskScreen()),
+          ),
+        ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.shopping_cart,
+        title: 'Fundición',
+        menuKey: 'fundicion',
+        subItems: [
+          _buildSubItem(
+            label: 'Productos Fundir',
+            onTap: () => _navigateToScreen(const ProductosFundirDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Actividades',
+            onTap: () => _navigateToScreen(const OperadoresListDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Tareas Extras',
+            onTap: () => _navigateToScreen(const TareasExtrasScreen()),
           ),
         ],
       ),
