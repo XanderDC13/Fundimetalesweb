@@ -25,7 +25,8 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
 
   // ✅ Agregar estos controladores
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _searchHistorialController = TextEditingController();
+  final TextEditingController _searchHistorialController =
+      TextEditingController();
 
   @override
   void initState() {
@@ -34,12 +35,12 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
   }
 
   @override
-void dispose() {
-  _tabController.dispose();
-  _searchController.dispose();
-  _searchHistorialController.dispose(); // ✅ Agregar esta línea
-  super.dispose();
-}
+  void dispose() {
+    _tabController.dispose();
+    _searchController.dispose();
+    _searchHistorialController.dispose(); // ✅ Agregar esta línea
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -994,93 +995,94 @@ void dispose() {
     return filteredByTarea;
   }
 
-Widget _buildFiltersAsignadas() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      // Campo de búsqueda con controlador
-      TextField(
-        controller: _searchHistorialController,
-        decoration: InputDecoration(
-          hintText: 'Buscar por referencia o descripción...',
-          prefixIcon: const Icon(Icons.search),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 12,
-            horizontal: 16,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          suffixIcon: _searchHistorialController.text.isNotEmpty 
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    setState(() {
-                      _searchTarea = '';
-                    });
-                  },
-                )
-              : null,
-        ),
-        onChanged: (value) {
-          setState(() {
-            _searchTarea = value;
-          });
-        },
-      ),
-      const SizedBox(height: 10),
-
-      // Filtro de fecha en Row
-      Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          ElevatedButton.icon(
-            onPressed: () async {
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: _selectedDate ?? DateTime.now(),
-                firstDate: DateTime(2020),
-                lastDate: DateTime.now(),
-              );
-              if (picked != null) {
-                setState(() {
-                  _selectedDate = picked;
-                });
-              }
-            },
-            icon: const Icon(Icons.calendar_today),
-            label: Text(
-              _selectedDate == null
-                  ? 'Filtrar por fecha'
-                  : 'Filtrado: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
+  Widget _buildFiltersAsignadas() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Campo de búsqueda con controlador
+        TextField(
+          controller: _searchHistorialController,
+          decoration: InputDecoration(
+            hintText: 'Buscar por referencia o descripción...',
+            prefixIcon: const Icon(Icons.search),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 12,
+              horizontal: 16,
             ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4682B4),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            suffixIcon:
+                _searchHistorialController.text.isNotEmpty
+                    ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        setState(() {
+                          _searchTarea = '';
+                        });
+                      },
+                    )
+                    : null,
+          ),
+          onChanged: (value) {
+            setState(() {
+              _searchTarea = value;
+            });
+          },
+        ),
+        const SizedBox(height: 10),
+
+        // Filtro de fecha en Row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            ElevatedButton.icon(
+              onPressed: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _selectedDate ?? DateTime.now(),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now(),
+                );
+                if (picked != null) {
+                  setState(() {
+                    _selectedDate = picked;
+                  });
+                }
+              },
+              icon: const Icon(Icons.calendar_today),
+              label: Text(
+                _selectedDate == null
+                    ? 'Filtrar por fecha'
+                    : 'Filtrado: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4682B4),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
-          ),
-          if (_selectedDate != null) ...[
-            const SizedBox(width: 8),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _selectedDate = null;
-                });
-              },
-              child: const Text('Limpiar'),
-            ),
+            if (_selectedDate != null) ...[
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _selectedDate = null;
+                  });
+                },
+                child: const Text('Limpiar'),
+              ),
+            ],
           ],
-        ],
-      ),
-    ],
-  );
-}
+        ),
+      ],
+    );
+  }
 
   // Filtros para historial (con contador y suma de cantidades)
   Widget _buildFiltersHistorial(List<Map<String, dynamic>> allTareas) {
@@ -1120,31 +1122,31 @@ Widget _buildFiltersAsignadas() {
     );
 
     return Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      // Campo de búsqueda
-      TextField(
-        controller: _searchHistorialController, // ✅ Agregar controlador
-        decoration: InputDecoration(
-          hintText: 'Buscar por referencia o descripción...',
-          prefixIcon: const Icon(Icons.search),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 12,
-            horizontal: 16,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Campo de búsqueda
+        TextField(
+          controller: _searchHistorialController, // ✅ Agregar controlador
+          decoration: InputDecoration(
+            hintText: 'Buscar por referencia o descripción...',
+            prefixIcon: const Icon(Icons.search),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 12,
+              horizontal: 16,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
           ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
+          onChanged: (value) {
+            setState(() {
+              _searchTarea = value;
+            });
+          },
         ),
-        onChanged: (value) {
-          setState(() {
-            _searchTarea = value;
-          });
-        },
-      ),
         const SizedBox(height: 10),
 
         // Row con resumen + botón de filtro
@@ -1299,42 +1301,499 @@ Widget _buildFiltersAsignadas() {
   }
 
   void _completarTareaRapido(QueryDocumentSnapshot tarea) {
+    final cantidadTotal = tarea['cantidad'] ?? 0;
+    int cantidadCompletada = cantidadTotal;
+    String tipoCompletado = 'completa'; // 'completa' o 'parcial'
+
     showDialog(
       context: context,
       builder:
+          (context) => StatefulBuilder(
+            builder:
+                (context, setDialogState) => AlertDialog(
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  title: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline,
+                        color: Color(0xFF4682B4),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Completar: ${tarea['referencia']}',
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                    ],
+                  ),
+                  content: SizedBox(
+                    width: 400,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Información de la tarea
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Cantidad total: $cantidadTotal',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Descripción: ${tarea['descripcion'] ?? 'Sin descripción'}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Selector de tipo de completado
+                        const Text(
+                          'Tipo de completado:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: RadioListTile<String>(
+                                title: const Text(
+                                  'Completa',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                                subtitle: Text(
+                                  'Todas ($cantidadTotal)',
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                                value: 'completa',
+                                groupValue: tipoCompletado,
+                                activeColor: Colors.green,
+                                contentPadding: EdgeInsets.zero,
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    tipoCompletado = value!;
+                                    cantidadCompletada = cantidadTotal;
+                                  });
+                                },
+                              ),
+                            ),
+                            Expanded(
+                              child: RadioListTile<String>(
+                                title: const Text(
+                                  'Parcial',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                                subtitle: const Text(
+                                  'Especificar cantidad',
+                                  style: TextStyle(fontSize: 11),
+                                ),
+                                value: 'parcial',
+                                groupValue: tipoCompletado,
+                                activeColor: Colors.orange,
+                                contentPadding: EdgeInsets.zero,
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    tipoCompletado = value!;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Campo de cantidad (solo si es parcial)
+                        if (tipoCompletado == 'parcial') ...[
+                          const SizedBox(height: 16),
+                          TextField(
+                            decoration: InputDecoration(
+                              labelText: 'Cantidad completada',
+                              hintText: 'Ej: 20',
+                              prefixIcon: const Icon(Icons.numbers),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF4682B4),
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            keyboardType: TextInputType.number,
+                            onChanged: (value) {
+                              cantidadCompletada = int.tryParse(value) ?? 0;
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Quedarán pendientes: ${cantidadTotal - cantidadCompletada}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange[700],
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text(
+                        'Cancelar',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        // Validaciones
+                        if (tipoCompletado == 'parcial') {
+                          if (cantidadCompletada <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Ingrese una cantidad válida'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                            return;
+                          }
+                          if (cantidadCompletada >= cantidadTotal) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'La cantidad completada debe ser menor a la total',
+                                ),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                            return;
+                          }
+                        }
+
+                        try {
+                          // Mostrar loading
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder:
+                                (context) => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                          );
+
+                          final batch = FirebaseFirestore.instance.batch();
+                          final tareaRef = FirebaseFirestore.instance
+                              .collection('tareas_operador')
+                              .doc(tarea.id);
+
+                          if (tipoCompletado == 'completa') {
+                            // ✅ COMPLETADO TOTAL - Actualizar estado a completada
+                            batch.update(tareaRef, {
+                              'estado': 'completada',
+                              'fecha_completada': DateTime.now(),
+                              'cantidad_completada': cantidadTotal,
+                              'tipo_completado': 'completa',
+                            });
+                          } else {
+                            // ✅ COMPLETADO PARCIAL
+                            final cantidadRestante =
+                                cantidadTotal - cantidadCompletada;
+
+                            // 1. Crear registro de lo completado (en historial)
+                            final tareaCompletadaRef =
+                                FirebaseFirestore.instance
+                                    .collection('tareas_operador')
+                                    .doc();
+
+                            batch.set(tareaCompletadaRef, {
+                              'operador_id': tarea['operador_id'],
+                              'referencia': tarea['referencia'],
+                              'descripcion': tarea['descripcion'],
+                              'cantidad': cantidadCompletada,
+                              'cantidad_completada': cantidadCompletada,
+                              'prioridad': tarea['prioridad'],
+                              'estado': 'completada',
+                              'tipo_completado': 'parcial',
+                              'fecha_asignacion': tarea['fecha_asignacion'],
+                              'fecha_completada': DateTime.now(),
+                              'tarea_original_id': tarea.id,
+                            });
+
+                            // 2. Actualizar tarea original con cantidad restante
+                            batch.update(tareaRef, {
+                              'cantidad': cantidadRestante,
+                              'cantidad_original': cantidadTotal,
+                              'cantidad_ya_completada': FieldValue.increment(
+                                cantidadCompletada,
+                              ),
+                              'es_tarea_parcial': true,
+                              'ultima_actualizacion': DateTime.now(),
+                            });
+                          }
+
+                          await batch.commit();
+
+                          // Cerrar loading
+                          Navigator.of(context).pop();
+                          // Cerrar diálogo
+                          Navigator.of(context).pop();
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                tipoCompletado == 'completa'
+                                    ? 'Tarea completada exitosamente'
+                                    : 'Completado parcial: $cantidadCompletada de $cantidadTotal',
+                              ),
+                              backgroundColor:
+                                  tipoCompletado == 'completa'
+                                      ? Colors.green
+                                      : Colors.orange,
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        } catch (e) {
+                          Navigator.of(context).pop(); // Cerrar loading
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                      icon: Icon(
+                        tipoCompletado == 'completa'
+                            ? Icons.check_circle
+                            : Icons.pending,
+                      ),
+                      label: Text(
+                        tipoCompletado == 'completa'
+                            ? 'Completar Todo'
+                            : 'Completar Parcial',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            tipoCompletado == 'completa'
+                                ? Colors.green
+                                : Colors.orange,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+          ),
+    );
+  }
+
+  Future<void> _mostrarAgregarTarea() async {
+    // Primero obtener productos disponibles
+    final pedidosSnapshot =
+        await FirebaseFirestore.instance
+            .collection('pedidos')
+            .where('estado', isEqualTo: 'pendiente')
+            .get();
+
+    List<Map<String, dynamic>> productosDisponibles = [];
+    for (var pedido in pedidosSnapshot.docs) {
+      final productosAFundirArray =
+          pedido['productosAFundir'] as List<dynamic>? ?? [];
+      for (var producto in productosAFundirArray) {
+        final productoMap = producto as Map<String, dynamic>;
+        productosDisponibles.add({
+          ...productoMap,
+          'pedidoId': pedido.id,
+          'cliente': pedido['cliente'] ?? 'Desconocido',
+        });
+      }
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
           (context) => AlertDialog(
-            title: Text('Completar: ${tarea['referencia']}'),
-            content: const Text('¿Marcar esta tarea como completada?'),
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Text(
+              'Agregar Tarea - ${widget.operadorNombre}',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Color(0xFF333333),
+              ),
+            ),
+            content: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.6,
+              height: MediaQuery.of(context).size.height * 0.6,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Seleccione un producto o agregue manualmente:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: productosDisponibles.length + 1,
+                      itemBuilder: (context, index) {
+                        // Última posición: opción manual
+                        if (index == productosDisponibles.length) {
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            color: const Color(0xFFE3F2FD),
+                            child: ListTile(
+                              leading: const Icon(
+                                Icons.add_circle_outline,
+                                color: Color(0xFF4682B4),
+                                size: 28,
+                              ),
+                              title: const Text(
+                                'Agregar tarea manualmente',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF4682B4),
+                                ),
+                              ),
+                              subtitle: const Text(
+                                'Crear una nueva tarea personalizada',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                              trailing: const Icon(
+                                Icons.arrow_forward_ios,
+                                color: Color(0xFF4682B4),
+                                size: 16,
+                              ),
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                _mostrarFormularioManual();
+                              },
+                            ),
+                          );
+                        }
+
+                        // Productos disponibles
+                        final producto = productosDisponibles[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            dense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            leading: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF27AE60).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.inventory_2,
+                                color: Color(0xFF27AE60),
+                                size: 20,
+                              ),
+                            ),
+                            title: Text(
+                              producto['nombre'] ?? 'Sin nombre',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Cantidad: ${producto['cantidadAFundir']}',
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ],
+                            ),
+                            trailing: ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                _asignarProductoExistente(producto);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF27AE60),
+                                minimumSize: const Size(60, 32),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                              ),
+                              child: const Text(
+                                'Usar',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancelar'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  await FirebaseFirestore.instance
-                      .collection('tareas_operador')
-                      .doc(tarea.id)
-                      .update({
-                        'estado': 'completada',
-                        'fecha_completada': DateTime.now(),
-                      });
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Tarea completada exitosamente'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                },
-                child: const Text('Completar'),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                ),
+                child: const Text(
+                  'Cancelar',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                ),
               ),
             ],
           ),
     );
   }
 
-  void _mostrarAgregarTarea() {
+  Future<void> _mostrarFormularioManual() async {
     String referencia = '';
     String descripcion = '';
     int cantidad = 0;
@@ -1342,17 +1801,18 @@ Widget _buildFiltersAsignadas() {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder:
           (context) => AlertDialog(
-            backgroundColor: Colors.white, // 🔹 Fondo blanco puro
+            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16), // 🔹 Bordes redondeados
+              borderRadius: BorderRadius.circular(16),
             ),
-            title: Text(
-              'Agregar Tarea - ${widget.operadorNombre}',
-              style: const TextStyle(
+            title: const Text(
+              'Agregar Tarea Manual',
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 20,
+                fontSize: 18,
                 color: Color(0xFF333333),
               ),
             ),
@@ -1361,7 +1821,9 @@ Widget _buildFiltersAsignadas() {
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Campo Referencia
                     TextField(
                       decoration: InputDecoration(
                         labelText: 'Referencia (ej: 635TD)',
@@ -1370,27 +1832,32 @@ Widget _buildFiltersAsignadas() {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
                             color: Color(0xFFC0C0C0),
-                          ), // 🔹 Borde blanco
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
                             color: Color(0xFFC0C0C0),
-                          ), // 🔹 Borde blanco
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
-                            color: Color(0xFFC0C0C0),
+                            color: Color(0xFF4682B4),
                             width: 2,
-                          ), // 🔹 Borde blanco al enfocar
+                          ),
                         ),
                         filled: true,
-                        fillColor: Colors.white, // 🔹 Fondo blanco
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
                       ),
                       onChanged: (value) => referencia = value,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                    // Campo Descripción
                     TextField(
                       decoration: InputDecoration(
                         labelText: 'Descripción de la tarea',
@@ -1410,17 +1877,22 @@ Widget _buildFiltersAsignadas() {
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
-                            color: Color(0xFFC0C0C0),
+                            color: Color(0xFF4682B4),
                             width: 2,
                           ),
                         ),
                         filled: true,
                         fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
                       ),
                       maxLines: 2,
                       onChanged: (value) => descripcion = value,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                    // Campo Cantidad
                     TextField(
                       decoration: InputDecoration(
                         labelText: 'Cantidad',
@@ -1440,17 +1912,22 @@ Widget _buildFiltersAsignadas() {
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
-                            color: Color(0xFFC0C0C0),
+                            color: Color(0xFF4682B4),
                             width: 2,
                           ),
                         ),
                         filled: true,
                         fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
                       ),
                       keyboardType: TextInputType.number,
                       onChanged: (value) => cantidad = int.tryParse(value) ?? 0,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                    // Dropdown Prioridad
                     DropdownButtonFormField<String>(
                       value: prioridad,
                       decoration: InputDecoration(
@@ -1471,48 +1948,71 @@ Widget _buildFiltersAsignadas() {
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
-                            color: Color(0xFFC0C0C0),
-                            width: 2,
-                          ),
-                        ),
-                        errorBorder: OutlineInputBorder(
-                          // 🔹 Evita borde rojo en error
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFC0C0C0),
-                          ),
-                        ),
-                        focusedErrorBorder: OutlineInputBorder(
-                          // 🔹 Evita borde rojo al enfocar en error
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFC0C0C0),
+                            color: Color(0xFF4682B4),
                             width: 2,
                           ),
                         ),
                         filled: true,
-                        fillColor: Colors.white, // 🔹 Fuerza fondo blanco
-                        errorStyle: const TextStyle(
-                          height: 0,
-                        ), // 🔹 Oculta mensaje de error
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
                       ),
-                      dropdownColor:
-                          Colors
-                              .white, // 🔹 Fondo blanco en el menú desplegable
+                      dropdownColor: Colors.white,
                       items: const [
                         DropdownMenuItem(
                           value: 'urgente',
-                          child: Text('Urgente'),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.priority_high,
+                                color: Colors.red,
+                                size: 16,
+                              ),
+                              SizedBox(width: 8),
+                              Text('Urgente'),
+                            ],
+                          ),
                         ),
                         DropdownMenuItem(
                           value: 'prioritario',
-                          child: Text('Prioritario'),
+                          child: Row(
+                            children: [
+                              Icon(Icons.star, color: Colors.orange, size: 16),
+                              SizedBox(width: 8),
+                              Text('Prioritario'),
+                            ],
+                          ),
                         ),
                         DropdownMenuItem(
                           value: 'normal',
-                          child: Text('Normal'),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.remove,
+                                color: Color(0xFF4682B4),
+                                size: 16,
+                              ),
+                              SizedBox(width: 8),
+                              Text('Normal'),
+                            ],
+                          ),
                         ),
-                        DropdownMenuItem(value: 'baja', child: Text('Baja')),
+                        DropdownMenuItem(
+                          value: 'baja',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.keyboard_arrow_down,
+                                color: Colors.green,
+                                size: 16,
+                              ),
+                              SizedBox(width: 8),
+                              Text('Baja'),
+                            ],
+                          ),
+                        ),
                       ],
                       onChanged: (value) => prioridad = value ?? 'prioritario',
                     ),
@@ -1523,14 +2023,21 @@ Widget _buildFiltersAsignadas() {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                ),
                 child: const Text(
                   'Cancelar',
-                  style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
                 ),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4682B4), // 🔹 Azul elegante
+                  backgroundColor: const Color(0xFF4682B4),
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -1538,36 +2045,259 @@ Widget _buildFiltersAsignadas() {
                     horizontal: 20,
                     vertical: 12,
                   ),
+                  elevation: 2,
                 ),
                 onPressed: () async {
-                  if (referencia.isNotEmpty && descripcion.isNotEmpty) {
+                  if (referencia.trim().isEmpty || descripcion.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Complete todos los campos'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                    return;
+                  }
+
+                  try {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder:
+                          (context) =>
+                              const Center(child: CircularProgressIndicator()),
+                    );
+
                     await FirebaseFirestore.instance
                         .collection('tareas_operador')
                         .add({
                           'operador_id': widget.operadorId,
-                          'referencia': referencia,
-                          'descripcion': descripcion,
+                          'referencia': referencia.trim(),
+                          'descripcion': descripcion.trim(),
                           'cantidad': cantidad,
                           'prioridad': prioridad,
                           'estado': 'asignada',
                           'fecha_asignacion': DateTime.now(),
                         });
+
+                    Navigator.of(context).pop(); // Cerrar loading
+                    Navigator.of(context).pop(); // Cerrar diálogo
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Tarea "$referencia" asignada exitosamente',
+                        ),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } catch (e) {
                     Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Tarea asignada exitosamente'),
-                        backgroundColor: Colors.green,
+                        content: Text('Error al asignar tarea'),
+                        backgroundColor: Colors.red,
                       ),
                     );
                   }
                 },
-                child: const Text(
-                  'Asignar Tarea',
-                  style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add_task, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Asignar',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
+    );
+  }
+
+  Future<void> _asignarProductoExistente(Map<String, dynamic> producto) async {
+    String prioridad = 'prioritario';
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text('Asignar Producto'),
+            content: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Card(
+                    color: const Color(0xFFF7F7F7),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildInfoRow('Nombre', producto['nombre']),
+                          _buildInfoRow('Referencia', producto['referencia']),
+                          _buildInfoRow(
+                            'Cantidad a fundir',
+                            producto['cantidadAFundir'].toString(),
+                          ),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<String>(
+                            value: prioridad,
+                            decoration: InputDecoration(
+                              labelText: 'Prioridad',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'urgente',
+                                child: Text('Urgente'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'prioritario',
+                                child: Text('Prioritario'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'normal',
+                                child: Text('Normal'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'baja',
+                                child: Text('Baja'),
+                              ),
+                            ],
+                            onChanged:
+                                (value) => prioridad = value ?? 'prioritario',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  try {
+                    // ✅ AGREGAR ESTA LÍNEA - Crear la tarea en tareas_operador
+                    await FirebaseFirestore.instance
+                        .collection('tareas_operador')
+                        .add({
+                          'operador_id': widget.operadorId,
+                          'referencia': producto['referencia'],
+                          'descripcion': producto['nombre'],
+                          'cantidad': producto['cantidadAFundir'],
+                          'prioridad': prioridad,
+                          'estado': 'asignada',
+                          'fecha_asignacion': DateTime.now(),
+                        });
+
+                    // ✅ AGREGAR ESTE BLOQUE - Actualizar el pedido con el operador asignado
+                    final pedidoId = producto['pedidoId'];
+                    final productoId = producto['id'];
+
+                    // Obtener el documento del pedido
+                    final pedidoDoc =
+                        await FirebaseFirestore.instance
+                            .collection('pedidos')
+                            .doc(pedidoId)
+                            .get();
+
+                    if (pedidoDoc.exists) {
+                      // Obtener el array de productos
+                      List<dynamic> productosAFundir = List.from(
+                        pedidoDoc['productosAFundir'] ?? [],
+                      );
+
+                      // Buscar el producto específico y agregar el operador
+                      for (int i = 0; i < productosAFundir.length; i++) {
+                        if (productosAFundir[i]['id'] == productoId) {
+                          productosAFundir[i]['operador'] =
+                              widget.operadorNombre;
+                          productosAFundir[i]['operador_id'] =
+                              widget.operadorId;
+                          productosAFundir[i]['fecha_asignacion'] =
+                              DateTime.now();
+                          break;
+                        }
+                      }
+
+                      // Actualizar el documento con el array modificado
+                      await FirebaseFirestore.instance
+                          .collection('pedidos')
+                          .doc(pedidoId)
+                          .update({'productosAFundir': productosAFundir});
+                    }
+                    // ✅ FIN DEL BLOQUE NUEVO
+
+                    Navigator.of(context).pop();
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Tarea "${producto['referencia']}" asignada',
+                        ),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error al asignar tarea: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF27AE60),
+                ),
+                child: const Text(
+                  'Asignar',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+          ),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 13))),
+        ],
+      ),
     );
   }
 }

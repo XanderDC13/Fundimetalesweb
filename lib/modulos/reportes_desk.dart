@@ -1,6 +1,7 @@
 import 'package:basefundi/desktop/reportes/auditoria_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_compras_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_documentos_desk.dart';
+import 'package:basefundi/desktop/reportes/reporte_fundicion_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_proformas_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_ventas_desk.dart';
 import 'package:basefundi/desktop/reportes/reportes%20inventarios/inventario_procesos_desk.dart';
@@ -224,6 +225,21 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
                                   navegarConFade(
                                     context,
                                     const ReporteComprasDeskScreen(),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 20),
+                            ],
+
+                             if (_puedeVerReporte("Reporte Fundición")) ...[
+                              _buildBoton(
+                                icon: LucideIcons.clipboardList,
+                                titulo: 'Reporte Fundición',
+                                subtitulo: 'Tareas asignadas y completadas',
+                                onTap: () {
+                                  navegarConFade(
+                                    context,
+                                    const ReportePedidosDeskScreen(),
                                   );
                                 },
                               ),

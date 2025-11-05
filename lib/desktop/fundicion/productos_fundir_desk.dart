@@ -194,7 +194,6 @@ class _ProductosFundirDeskScreenState extends State<ProductosFundirDeskScreen> {
                               List<Map<String, dynamic>> productosAFundir = [];
                               
                               for (var pedido in allPedidos) {
-                                final cliente = pedido['cliente'] ?? 'Desconocido';
                                 final fecha = pedido['fecha']?.toDate();
                                 final productosAFundirArray = pedido['productosAFundir'] as List<dynamic>? ?? [];
                                 
@@ -202,7 +201,6 @@ class _ProductosFundirDeskScreenState extends State<ProductosFundirDeskScreen> {
                                   final productoMap = producto as Map<String, dynamic>;
                                   productosAFundir.add({
                                     ...productoMap,
-                                    'cliente': cliente,
                                     'fechaPedido': fecha,
                                     'pedidoId': pedido.id,
                                   });
@@ -241,9 +239,7 @@ class _ProductosFundirDeskScreenState extends State<ProductosFundirDeskScreen> {
                                 itemBuilder: (context, index) {
                                   final producto = filteredProductos[index];
                                   final nombre = producto['nombre'] ?? 'Sin nombre';
-                                  final referencia = producto['referencia'] ?? 'Sin referencia';
                                   final cantidadAFundir = producto['cantidadAFundir'] ?? 0;
-                                  final cliente = producto['cliente'] ?? 'Desconocido';
                                   final fecha = producto['fechaPedido'] as DateTime?;
                                   final pedidoId = producto['pedidoId'] ?? '';
                                   final productoId = producto['id'] ?? '';
@@ -314,23 +310,6 @@ class _ProductosFundirDeskScreenState extends State<ProductosFundirDeskScreen> {
                                                   ),
                                                   maxLines: 2,
                                                   overflow: TextOverflow.ellipsis,
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  'Ref: $referencia',
-                                                  style: const TextStyle(
-                                                    color: Colors.black54,
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  'Cliente: $cliente',
-                                                  style: const TextStyle(
-                                                    color: Colors.black54,
-                                                    fontSize: 13,
-                                                  ),
                                                 ),
                                                 const SizedBox(height: 4),
                                                 Text(

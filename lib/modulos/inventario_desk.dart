@@ -95,15 +95,6 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
                       ),
                       const SizedBox(height: 20),
                       _buildBoton(
-                        icon: Icons.inventory_2,
-                        titulo: 'Insumos',
-                        subtitulo: 'Solicitud de insumos',
-                        onTap: () {
-                          navegarConFade(context, const InsumosDeskScreen());
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      _buildBoton(
                         icon: LucideIcons.clipboardList,
                         titulo: 'Catálogo de Productos',
                         subtitulo: 'Listado completo',
@@ -112,6 +103,16 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
                             context,
                             const VisualizarCatalogoScreen(),
                           );
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+                      _buildBoton(
+                        icon: Icons.inventory_2,
+                        titulo: 'Insumos',
+                        subtitulo: 'Solicitud de insumos',
+                        onTap: () {
+                          navegarConFade(context, const InsumosDeskScreen());
                         },
                       ),
                     ],

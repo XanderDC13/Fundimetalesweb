@@ -1,5 +1,6 @@
 import 'package:basefundi/desktop/fundicion/listado_empleados_desk.dart';
 import 'package:basefundi/desktop/fundicion/productos_fundir_desk.dart';
+import 'package:basefundi/desktop/fundicion/tareasextras_desk.dart';
 import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -107,6 +108,15 @@ class _FundicionDeskScreenState extends State<FundicionDeskScreen>
                             context,
                             const OperadoresListDeskScreen(),
                           );
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      _buildBoton(
+                        icon: LucideIcons.flame,
+                        titulo: 'Tareas Extras',
+                        subtitulo: 'Funciones extras de los usuarios',
+                        onTap: () {
+                          navegarConFade(context, const TareasExtrasScreen());
                         },
                       ),
                       const SizedBox(height: 20),

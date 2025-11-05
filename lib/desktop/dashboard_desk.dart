@@ -1,5 +1,8 @@
 import 'package:basefundi/desktop/dash_bajostock_desk.dart';
+import 'package:basefundi/desktop/fundicion/listado_empleados_desk.dart';
+import 'package:basefundi/desktop/fundicion/productos_fundir_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareas_cumplir_desk.dart';
+import 'package:basefundi/desktop/fundicion/tareasextras_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_realizar_desk.dart';
 import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
 import 'package:basefundi/modulos/ajustes_desk.dart';
@@ -839,10 +842,20 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
           _gridButton(
             Icons.local_fire_department,
             'Fundición',
-            () => navegarConFade(context, const FundicionDeskScreen()),
+            () => navegarConFade(context, const ProductosFundirDeskScreen()),
           ),
           _gridButton(
-            Icons.bar_chart,
+            Icons.assignment_turned_in,
+            'Control Actividades',
+            () => navegarConFade(context, const OperadoresListDeskScreen()),
+          ),
+          _gridButton(
+            Icons.build_circle,
+            'Funciones extra',
+            () => navegarConFade(context, const TareasExtrasScreen()),
+          ),
+          _gridButton(
+            Icons.inventory,
             'Insumos',
             () => navegarConFade(context, const InsumosDeskScreen()),
           ),
