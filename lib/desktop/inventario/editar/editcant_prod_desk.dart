@@ -16,7 +16,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
   Map<String, Map<String, int>> cantidadesPorSucursalProceso = {};
   List<Proceso> procesos = [];
   bool cargando = true;
-  String sucursalUsuario = ''; 
+  String sucursalUsuario = '';
   String sucursalSeleccionada = '';
 
   final _auth = FirebaseAuth.instance;
@@ -51,6 +51,287 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
       });
     } catch (e) {
       print('Error cargando procesos: $e');
+    }
+  }
+
+  void _mostrarFormularioSalidaDirecta(BuildContext context, Proceso proceso) {
+    final TextEditingController cantidadController = TextEditingController();
+      bool puedeGuardar = false;
+    bool procesandoSalida = false;
+    final cantidadDisponible = cantidadesPorProceso[proceso.id] ?? 0;
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                width: 400,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.remove_circle_outline,
+                          color: Colors.red.shade700,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Salida directa de ${proceso.nombre}',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2C3E50),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.red.shade700,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Disponible en ${proceso.nombre}: $cantidadDisponible unidades',
+                              style: TextStyle(
+                                color: Colors.red.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    TextField(
+                      controller: cantidadController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Cantidad a descontar',
+                        hintText: 'Máximo: $cantidadDisponible',
+                        prefixIcon: Icon(
+                          Icons.remove,
+                          color: Colors.red.shade700,
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF8F9FA),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE9ECEF),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.red.shade700),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        final cantidad = int.tryParse(value) ?? 0;
+                        setModalState(() {
+                          puedeGuardar =
+                              cantidad > 0 && cantidad <= cantidadDisponible;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text(
+                            'Cancelar',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton.icon(
+                          onPressed:
+                              (puedeGuardar && !procesandoSalida)
+                                  ? () async {
+                                    setModalState(() {
+                                      procesandoSalida = true;
+                                    });
+
+                                    try {
+                                      final cantidad =
+                                          int.tryParse(
+                                            cantidadController.text,
+                                          ) ??
+                                          0;
+
+                                      await _procesarSalidaDirecta(
+                                        proceso,
+                                        cantidad,
+                                        'Salida manual', // Motivo por defecto
+                                      );
+                                      if (mounted) Navigator.pop(context);
+                                    } catch (e) {
+                                      setModalState(() {
+                                        procesandoSalida = false;
+                                      });
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Error al procesar salida: $e',
+                                          ),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                  : null,
+                          icon:
+                              procesandoSalida
+                                  ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                  : const Icon(Icons.remove_circle),
+                          label: Text(
+                            procesandoSalida
+                                ? 'Procesando...'
+                                : 'Registrar salida',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                procesandoSalida
+                                    ? Colors.grey
+                                    : Colors.red.shade700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 20,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _procesarSalidaDirecta(
+    Proceso proceso,
+    int cantidad,
+    String motivo,
+  ) async {
+    try {
+      final timestamp = Timestamp.now();
+      final usuario = await _obtenerDatosUsuario();
+
+      // Reducir cantidad en proceso actual de la sucursal
+      final docInventario = FirebaseFirestore.instance
+          .collection('inventarios')
+          .doc(usuario['sucursal']!)
+          .collection('procesos')
+          .doc(proceso.id)
+          .collection('productos')
+          .doc(widget.producto.referencia);
+
+      final snapshot = await docInventario.get();
+      final cantidadActual = snapshot.exists ? (snapshot['cantidad'] ?? 0) : 0;
+
+      await docInventario.update({
+        'cantidad': cantidadActual - cantidad,
+        'ultima_actualizacion': timestamp,
+      });
+
+      // Registrar en colección de salidas
+      await FirebaseFirestore.instance.collection('salidas_manuales').add({
+        'producto_referencia': widget.producto.referencia,
+        'producto_nombre': widget.producto.nombre,
+        'proceso_id': proceso.id,
+        'proceso_nombre': proceso.nombre,
+        'cantidad': cantidad,
+        'motivo': motivo,
+        'fecha': timestamp,
+        'usuario_uid': usuario['uid']!,
+        'usuario_nombre': usuario['nombre']!,
+        'sucursal': usuario['sucursal']!,
+      });
+
+      // Registrar auditoría
+      await _guardarAuditoria(
+        accion: 'Salida Manual de Producto',
+        detalle:
+            'Producto: ${widget.producto.nombre} (${widget.producto.referencia}), '
+            'Proceso: ${proceso.nombre}, Cantidad: $cantidad, Motivo: $motivo, Sucursal: ${usuario['sucursal']}',
+        uid: usuario['uid']!,
+        nombreUsuario: usuario['nombre']!,
+        sucursal: usuario['sucursal']!,
+        fecha: timestamp,
+      );
+
+      await _cargarSaldos();
+      await _cargarSaldosTodasSucursales();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Salida registrada: $cantidad unidades de ${proceso.nombre} (${usuario['sucursal']})',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error procesando salida directa: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al procesar la salida'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -1274,7 +1555,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
           if (sucursalSeleccionada == sucursalUsuario) ...[
             // Botón ENTRADA
             SizedBox(
-              width: 50,
+              width: 27,
               height: 28,
               child: ElevatedButton(
                 onPressed:
@@ -1289,14 +1570,40 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                   minimumSize: Size.zero,
                 ),
                 child: const Text(
-                  'ENTRADA',
-                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+                  '+',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
 
             const SizedBox(width: 6),
+            // Botón SALIDA
+            SizedBox(
+              width: 27,
+              height: 28,
+              child: ElevatedButton(
+                onPressed:
+                    cantidad > 0
+                        ? () =>
+                            _mostrarFormularioSalidaDirecta(context, proceso)
+                        : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade700,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  minimumSize: Size.zero,
+                ),
+                child: const Text(
+                  '-',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
 
+            const SizedBox(width: 6),
             // Botón MOVER
             SizedBox(
               width: 45,
@@ -1352,7 +1659,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
             const SizedBox(width: 8),
           ] else ...[
             // Espacio vacío para mantener alineación cuando solo se visualiza
-            const SizedBox(width: 152),
+            const SizedBox(width: 197),
           ],
 
           // CANTIDAD
