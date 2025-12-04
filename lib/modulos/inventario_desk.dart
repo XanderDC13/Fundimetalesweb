@@ -1,3 +1,4 @@
+import 'package:basefundi/desktop/inventario/kardex_lista.dart';
 import 'package:basefundi/desktop/inventario/medidas_desk.dart';
 import 'package:basefundi/desktop/inventario/productos_desk.dart';
 import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
@@ -113,6 +114,15 @@ class _InventarioDeskScreenState extends State<InventarioDeskScreen>
                         subtitulo: 'Solicitud de insumos',
                         onTap: () {
                           navegarConFade(context, const InsumosDeskScreen());
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      _buildBoton(
+                        icon: Icons.inventory_2,
+                        titulo: 'Kardex',
+                        subtitulo: 'Cantidades por referencia',
+                        onTap: () {
+                          navegarConFade(context, const KardexListScreen());
                         },
                       ),
                     ],

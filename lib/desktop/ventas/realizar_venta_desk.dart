@@ -32,62 +32,108 @@ class _VentasDetalleDeskScreenState extends State<VentasDetalleDeskScreen> {
 
   // En VentasDetalleDeskScreen - Método fetchProductosCombinados corregido
 
-Future<List<Map<String, dynamic>>> fetchProductosCombinados() async {
-  try {
-    // 1. Obtener todos los productos base
-    final productosSnapshot = await FirebaseFirestore.instance
-        .collection('productos')
-        .get();
+  Future<List<Map<String, dynamic>>> fetchProductosCombinados() async {
+    try {
+      // 1. Obtener productos base
+      final productosSnapshot =
+          await FirebaseFirestore.instance.collection('productos').get();
 
-    // 2. Obtener todos los documentos dentro de la subcolección 'bodega'
-    final inventarioBodegaSnapshot = await FirebaseFirestore.instance
-        .collection('inventarios')
-        .doc('bodega')
-        .collection('productos')
-        .get();
+      final Map<String, Map<String, dynamic>> productosDisponibles = {};
 
-    final Map<String, Map<String, dynamic>> productosDisponibles = {};
+      // Procesar productos base
+      for (var doc in productosSnapshot.docs) {
+        final data = doc.data();
+        final referencia = (data['referencia'] ?? doc.id).toString();
 
-    // Procesar productos base - USAR REFERENCIA COMO CLAVE
-    for (var doc in productosSnapshot.docs) {
-      final data = doc.data();
-      final referencia = data['referencia'] ?? doc.id; // ✅ Si no hay referencia, usar el ID
+        // Manejar costo de forma segura
+        double costo = 0.0;
+        if (data['costo'] != null) {
+          if (data['costo'] is num) {
+            costo = (data['costo'] as num).toDouble();
+          }
+        }
 
-      productosDisponibles[referencia] = {
-        'referencia': referencia,
-        'nombre': data['nombre'] ?? '',
-        'codigo': doc.id,
-        'categoria': data['categoria'] ?? '',
-        'costo': data['costo'] ?? 0,
-        'precios': List<double>.from(data['precios'] ?? []),
-        'cantidad': 0,
-      };
-    }
+        // Manejar precios de forma segura
+        List<double> precios = [];
+        if (data['precios'] != null && data['precios'] is List) {
+          precios =
+              (data['precios'] as List)
+                  .where((precio) => precio != null && precio is num)
+                  .map((precio) => (precio as num).toDouble())
+                  .toList();
+        }
 
-    // ✅ BUSCAR POR REFERENCIA EN INVENTARIO DE BODEGA
-    for (var doc in inventarioBodegaSnapshot.docs) {
-      final data = doc.data();
-      final referenciaInventario = doc.id; // El ID del documento es la referencia
-      final cantidad = (data['cantidad'] ?? 0) as int;
-      
-      // Buscar directamente por la referencia
-      if (productosDisponibles.containsKey(referenciaInventario)) {
-        productosDisponibles[referenciaInventario]!['cantidad'] = cantidad;
-
-      } else {
-
+        productosDisponibles[referencia] = {
+          'referencia': referencia,
+          'nombre': data['nombre'] ?? '',
+          'codigo': doc.id,
+          'categoria': data['categoria'] ?? '',
+          'costo': costo,
+          'precios': precios,
+          'cantidad': 0,
+        };
       }
-    }
 
-    final resultado = productosDisponibles.values
-        .where((producto) => producto['cantidad'] >= 0) 
-        .toList();
-  
-    return resultado;
-  } catch (e) {
-    return [];
+      // 2. Obtener inventario de TODAS las sucursales en proceso bodega
+      final sucursales = ['Quito', 'Guayaquil', 'Tulcán'];
+
+      for (String sucursal in sucursales) {
+        try {
+          final inventarioBodegaSnapshot =
+              await FirebaseFirestore.instance
+                  .collection('inventarios')
+                  .doc(sucursal)
+                  .collection('procesos')
+                  .doc('bodega')
+                  .collection('productos')
+                  .get();
+
+          // Combinar inventario de esta sucursal
+          for (var doc in inventarioBodegaSnapshot.docs) {
+            final data = doc.data();
+            final referenciaInventario = doc.id.toString();
+
+            // Manejar cantidad de forma segura
+            int cantidad = 0;
+            if (data['cantidad'] != null) {
+              if (data['cantidad'] is int) {
+                cantidad = data['cantidad'] as int;
+              } else if (data['cantidad'] is num) {
+                cantidad = (data['cantidad'] as num).toInt();
+              }
+            }
+
+            if (productosDisponibles.containsKey(referenciaInventario)) {
+              // Sumar la cantidad de todas las sucursales
+              int cantidadActual =
+                  productosDisponibles[referenciaInventario]!['cantidad']
+                      as int;
+              productosDisponibles[referenciaInventario]!['cantidad'] =
+                  cantidadActual + cantidad;
+            } else {
+              // Si hay en inventario pero no en productos, añadirlo igual
+              productosDisponibles[referenciaInventario] = {
+                'referencia': referenciaInventario,
+                'nombre': data['nombre'] ?? '',
+                'codigo': referenciaInventario,
+                'categoria': '',
+                'costo': 0.0,
+                'precios': <double>[],
+                'cantidad': cantidad,
+              };
+            }
+          }
+        } catch (e) {
+          print('Error cargando inventario de $sucursal: $e');
+        }
+      }
+
+      return productosDisponibles.values.toList();
+    } catch (e) {
+      print('Error al combinar productos: $e');
+      return [];
+    }
   }
-}
 
   // Método actualizado para agregar productos al carrito
   Future<void> _seleccionarPrecioYAgregar(
@@ -458,155 +504,169 @@ Future<List<Map<String, dynamic>>> fetchProductosCombinados() async {
     );
   }
 
+  Widget _buildProductoCard(Map<String, dynamic> data, BuildContext context) {
+    final cantidadDisponible = data['cantidad'] ?? 0;
+    final categoria = data['categoria']?.toString().toUpperCase() ?? '';
 
-Widget _buildProductoCard(Map<String, dynamic> data, BuildContext context) {
-  final cantidadDisponible = data['cantidad'] ?? 0;
-  final categoria = data['categoria']?.toString().toUpperCase() ?? '';
-  
-  // ✅ EXCEPCIÓN: Los productos de TRANSPORTE siempre están disponibles
-  final esTransporte = categoria == 'TRANSPORTE';
-  final tieneStock = cantidadDisponible > 0 || esTransporte;
-  
-  return GestureDetector(
-    onTap: tieneStock ? () {
-      _seleccionarPrecioYAgregar(data, context);
-    } : null,
-    child: Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: tieneStock 
-            ? Colors.grey.shade300 
-            : Colors.red.shade300, 
+    // ✅ EXCEPCIÓN: Los productos de TRANSPORTE siempre están disponibles
+    final esTransporte = categoria == 'TRANSPORTE';
+    final tieneStock = cantidadDisponible > 0 || esTransporte;
+
+    return GestureDetector(
+      onTap:
+          tieneStock
+              ? () {
+                _seleccionarPrecioYAgregar(data, context);
+              }
+              : null,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: tieneStock ? Colors.grey.shade300 : Colors.red.shade300,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // ✅ Ícono diferente para TRANSPORTE
-          Icon(
-            esTransporte ? Icons.local_shipping_rounded : Icons.shopping_bag_rounded,
-            size: 48,
-            color: tieneStock 
-              ? const Color(0xFF2C3E50) 
-              : Colors.grey.shade400,
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: Column(
-              children: [
-                Text(
-                  data['nombre'],
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: tieneStock 
-                      ? const Color(0xFF2C3E50)
-                      : Colors.grey.shade600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Ref: ${data['referencia']}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF7F8C8D),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          
-          // ✅ MOSTRAR ESTADO SEGÚN CATEGORÍA
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-            decoration: BoxDecoration(
-              color: esTransporte
-                  ? const Color(0xFF3498DB).withOpacity(0.1) // Azul para transporte
-                  : cantidadDisponible > 5
-                      ? const Color(0xFF27AE60).withOpacity(0.1) // Verde si > 5
-                      : cantidadDisponible > 0
-                          ? const Color(0xFFF39C12).withOpacity(0.1) // Naranja si 1-5
-                          : const Color(0xFFE74C3C).withOpacity(0.1), // Rojo si 0
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // ✅ Ícono diferente para TRANSPORTE
+            Icon(
               esTransporte
-                  ? 'Servicio disponible'
-                  : cantidadDisponible > 0 
-                      ? '$cantidadDisponible disponibles'
-                      : 'Sin stock',
-              style: TextStyle(
-                fontSize: 12,
-                color: esTransporte
-                    ? const Color(0xFF3498DB) // Azul para transporte
-                    : cantidadDisponible > 5
-                        ? const Color(0xFF27AE60) // Verde
-                        : cantidadDisponible > 0
-                            ? const Color(0xFDF39C12) // Naranja
-                            : const Color(0xFFE74C3C), // Rojo
-                fontWeight: FontWeight.w600,
+                  ? Icons.local_shipping_rounded
+                  : Icons.shopping_bag_rounded,
+              size: 48,
+              color:
+                  tieneStock ? const Color(0xFF2C3E50) : Colors.grey.shade400,
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: Column(
+                children: [
+                  Text(
+                    data['nombre'],
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color:
+                          tieneStock
+                              ? const Color(0xFF2C3E50)
+                              : Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ref: ${data['referencia']}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF7F8C8D),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: tieneStock 
-                  ? const Color(0xFF4682B4)
-                  : Colors.grey.shade400,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                elevation: 0,
+            const SizedBox(height: 8),
+
+            // ✅ MOSTRAR ESTADO SEGÚN CATEGORÍA
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+              decoration: BoxDecoration(
+                color:
+                    esTransporte
+                        ? const Color(0xFF3498DB).withOpacity(
+                          0.1,
+                        ) // Azul para transporte
+                        : cantidadDisponible > 5
+                        ? const Color(0xFF27AE60).withOpacity(
+                          0.1,
+                        ) // Verde si > 5
+                        : cantidadDisponible > 0
+                        ? const Color(0xFFF39C12).withOpacity(
+                          0.1,
+                        ) // Naranja si 1-5
+                        : const Color(0xFFE74C3C).withOpacity(0.1), // Rojo si 0
+                borderRadius: BorderRadius.circular(8),
               ),
-              icon: Icon(
-                tieneStock 
-                  ? (esTransporte ? Icons.add_business : Icons.add_shopping_cart)
-                  : Icons.block,
-                color: Colors.white,
-                size: 20,
-              ),
-              label: Text(
-                tieneStock 
-                  ? 'Agregar' 
-                  : 'Sin stock',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
+              child: Text(
+                esTransporte
+                    ? 'Servicio disponible'
+                    : cantidadDisponible > 0
+                    ? '$cantidadDisponible disponibles'
+                    : 'Sin stock',
+                style: TextStyle(
+                  fontSize: 12,
+                  color:
+                      esTransporte
+                          ? const Color(0xFF3498DB) // Azul para transporte
+                          : cantidadDisponible > 5
+                          ? const Color(0xFF27AE60) // Verde
+                          : cantidadDisponible > 0
+                          ? const Color(0xFDF39C12) // Naranja
+                          : const Color(0xFFE74C3C), // Rojo
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              onPressed: tieneStock ? () {
-                _seleccionarPrecioYAgregar(data, context);
-              } : null,
             ),
-          ),
-        ],
+
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      tieneStock
+                          ? const Color(0xFF4682B4)
+                          : Colors.grey.shade400,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 0,
+                ),
+                icon: Icon(
+                  tieneStock
+                      ? (esTransporte
+                          ? Icons.add_business
+                          : Icons.add_shopping_cart)
+                      : Icons.block,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                label: Text(
+                  tieneStock ? 'Agregar' : 'Sin stock',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onPressed:
+                    tieneStock
+                        ? () {
+                          _seleccionarPrecioYAgregar(data, context);
+                        }
+                        : null,
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Future<double?> _mostrarDialogPrecioPersonalizado(
     BuildContext context,
