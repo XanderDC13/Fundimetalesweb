@@ -56,7 +56,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
 
   void _mostrarFormularioSalidaDirecta(BuildContext context, Proceso proceso) {
     final TextEditingController cantidadController = TextEditingController();
-      bool puedeGuardar = false;
+    bool puedeGuardar = false;
     bool procesandoSalida = false;
     final cantidadDisponible = cantidadesPorProceso[proceso.id] ?? 0;
 
@@ -295,6 +295,18 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
         'usuario_uid': usuario['uid']!,
         'usuario_nombre': usuario['nombre']!,
         'sucursal': usuario['sucursal']!,
+      });
+
+      // AGREGAR después de la transacción
+      await FirebaseFirestore.instance.collection('kardex_movimientos').add({
+        'referencia': widget.producto.referencia,
+        'tipo': 'salida',
+        'cantidad': cantidad,
+        'fecha': timestamp,
+        'usuario_uid': usuario['uid']!,
+        'usuario_nombre': usuario['nombre']!,
+        'sucursal': usuario['sucursal']!,
+        'motivo': motivo,
       });
 
       // Registrar auditoría
@@ -961,6 +973,17 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
         'sucursal': usuario['sucursal']!, // NUEVO: Guardar sucursal en rechazos
       });
 
+      await FirebaseFirestore.instance.collection('kardex_movimientos').add({
+        'referencia': widget.producto.referencia,
+        'tipo': 'rechazo',
+        'cantidad': cantidad,
+        'fecha': timestamp,
+        'usuario_uid': usuario['uid']!,
+        'usuario_nombre': usuario['nombre']!,
+        'sucursal': usuario['sucursal']!,
+        'motivo': motivo,
+      });
+
       // Registrar auditoría
       await _guardarAuditoria(
         accion: 'Rechazo de Producto',
@@ -1242,6 +1265,18 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
         'ultima_actualizacion': timestamp,
       }, SetOptions(merge: true));
 
+      // AGREGAR después de la transacción
+      await FirebaseFirestore.instance.collection('kardex_movimientos').add({
+        'referencia': widget.producto.referencia,
+        'tipo': 'entrada',
+        'cantidad': cantidad,
+        'fecha': timestamp,
+        'usuario_uid': usuario['uid']!,
+        'usuario_nombre': usuario['nombre']!,
+        'sucursal': usuario['sucursal']!,
+        'motivo': 'Entrada manual a ${proceso.nombre}',
+      });
+
       // Registrar auditoría
       await _guardarAuditoria(
         accion: 'Agregar Cantidad Inventario',
@@ -1333,6 +1368,18 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
         usuarioUid: usuario['uid']!,
         sucursal: usuario['sucursal']!,
       );
+
+      // Registrar la salida del proceso origen
+      await FirebaseFirestore.instance.collection('kardex_movimientos').add({
+        'referencia': widget.producto.referencia,
+        'tipo': 'movimiento',
+        'cantidad': cantidad,
+        'fecha': timestamp,
+        'usuario_uid': usuario['uid']!,
+        'usuario_nombre': usuario['nombre']!,
+        'sucursal': usuario['sucursal']!,
+        'motivo': 'Movimiento de ${origen.nombre} a ${destino.nombre}',
+      });
 
       // Registrar auditoría
       await _guardarAuditoria(

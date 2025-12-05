@@ -770,7 +770,12 @@ class _InventarioProcesoDeskScreenState
         if (!continuar) return;
       }
 
-      final datosParaPDF = filtered.take(maxRegistrosTotal).toList();
+      // ✅ AGREGAR: Filtrar productos con cantidad 0
+      final datosParaPDF =
+          filtered
+              .where((data) => (data['cantidad'] ?? 0) > 0)
+              .take(maxRegistrosTotal)
+              .toList();
 
       final lista =
           datosParaPDF.map((data) {

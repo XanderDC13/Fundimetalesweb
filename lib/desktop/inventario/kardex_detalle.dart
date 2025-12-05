@@ -1,3 +1,4 @@
+import 'package:basefundi/services/navbar_desk.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -28,9 +29,10 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
       context: context,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
-      initialDateRange: fechaInicio != null && fechaFin != null
-          ? DateTimeRange(start: fechaInicio!, end: fechaFin!)
-          : null,
+      initialDateRange:
+          fechaInicio != null && fechaFin != null
+              ? DateTimeRange(start: fechaInicio!, end: fechaFin!)
+              : null,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -71,25 +73,30 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
   Future<void> _confirmarEliminarMovimiento(String movimientoId) async {
     final confirmar = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Eliminar movimiento'),
-        content: const Text('¿Estás seguro de eliminar este movimiento del kardex?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Eliminar'),
+            title: const Text('Eliminar movimiento'),
+            content: const Text(
+              '¿Estás seguro de eliminar este movimiento del kardex?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Eliminar'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (confirmar == true) {
@@ -127,37 +134,40 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
 
     final nuevaCantidad = await showDialog<int>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Editar cantidad'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Nueva cantidad',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4682B4),
-              foregroundColor: Colors.white,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            onPressed: () {
-              final valor = int.tryParse(controller.text);
-              if (valor != null && valor > 0) {
-                Navigator.pop(context, valor);
-              }
-            },
-            child: const Text('Guardar'),
+            title: const Text('Editar cantidad'),
+            content: TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Nueva cantidad',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4682B4),
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  final valor = int.tryParse(controller.text);
+                  if (valor != null && valor > 0) {
+                    Navigator.pop(context, valor);
+                  }
+                },
+                child: const Text('Guardar'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (nuevaCantidad != null) {
@@ -190,31 +200,31 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFD6EAF8),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Container(
+    return MainDeskLayout(
+      child: Column(
+        children: [
+          // Header
+          Transform.translate(
+            offset: const Offset(-0.5, 0),
+            child: Container(
               width: double.infinity,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Color(0xFF2C3E50), Color(0xFF34495E)],
                 ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
               ),
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 38), 
               child: Column(
                 children: [
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(
+                          Icons.arrow_back_ios,
+                          color: Colors.white,
+                        ),
+                        onPressed:
+                            () => Navigator.pop(context), // ← CAMBIAR AQUÍ
                       ),
                       Expanded(
                         child: Column(
@@ -246,401 +256,462 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
                 ],
               ),
             ),
+          ),
 
-            const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-            // Filtros
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  // Filtro de tipo
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: DropdownButton<String>(
-                      value: tipoFiltro,
-                      isExpanded: true,
-                      underline: Container(),
-                      icon: const Icon(Icons.filter_list, color: Color(0xFF4682B4)),
-                      items: ['Todos', 'entrada', 'salida', 'rechazo', 'movimiento']
-                          .map((tipo) {
-                        return DropdownMenuItem<String>(
-                          value: tipo,
-                          child: Text(tipo == 'Todos' ? tipo : tipo.toUpperCase()),
-                        );
-                      }).toList(),
-                      onChanged: (valor) {
-                        setState(() {
-                          tipoFiltro = valor!;
-                        });
-                      },
-                    ),
+          // Filtros
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                // Filtro de tipo
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: DropdownButton<String>(
+                    value: tipoFiltro,
+                    isExpanded: true,
+                    underline: Container(),
+                    icon: const Icon(
+                      Icons.filter_list,
+                      color: Color(0xFF4682B4),
+                    ),
+                    items:
+                        [
+                          'Todos',
+                          'entrada',
+                          'salida',
+                          'rechazo',
+                          'movimiento',
+                        ].map((tipo) {
+                          return DropdownMenuItem<String>(
+                            value: tipo,
+                            child: Text(
+                              tipo == 'Todos' ? tipo : tipo.toUpperCase(),
+                            ),
+                          );
+                        }).toList(),
+                    onChanged: (valor) {
+                      setState(() {
+                        tipoFiltro = valor!;
+                      });
+                    },
+                  ),
+                ),
 
-                  const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-                  // Botones de filtro de fecha
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFF4682B4),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          icon: const Icon(Icons.date_range),
-                          label: Text(
-                            fechaInicio != null
-                                ? '${DateFormat('dd/MM/yy').format(fechaInicio!)} - ${DateFormat('dd/MM/yy').format(fechaFin!)}'
-                                : 'Filtrar por fecha',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          onPressed: _seleccionarRangoFechas,
+                // Botones de filtro de fecha
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF4682B4),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
+                        icon: const Icon(Icons.date_range),
+                        label: Text(
+                          fechaInicio != null
+                              ? '${DateFormat('dd/MM/yy').format(fechaInicio!)} - ${DateFormat('dd/MM/yy').format(fechaFin!)}'
+                              : 'Filtrar por fecha',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        onPressed: _seleccionarRangoFechas,
                       ),
-                      if (fechaInicio != null) ...[
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.clear, color: Colors.red),
-                          onPressed: _limpiarFiltros,
+                    ),
+                    if (fechaInicio != null) ...[
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.red),
+                        onPressed: _limpiarFiltros,
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Tabla de movimientos
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream:
+                  FirebaseFirestore.instance
+                      .collection('kardex_movimientos')
+                      .where('referencia', isEqualTo: widget.referencia)
+                      .orderBy('fecha', descending: true)
+                      .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.inbox_outlined,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'No hay movimientos registrados',
+                          style: TextStyle(color: Colors.grey, fontSize: 16),
                         ),
                       ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
+                    ),
+                  );
+                }
 
-            const SizedBox(height: 16),
+                // Aplicar filtros
+                var movimientos =
+                    snapshot.data!.docs.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final tipo = data['tipo'] as String;
+                      final fecha = (data['fecha'] as Timestamp).toDate();
 
-            // Tabla de movimientos
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('kardex_movimientos')
-                    .where('referencia', isEqualTo: widget.referencia)
-                    .orderBy('fecha', descending: true)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                      // Filtro de tipo
+                      if (tipoFiltro != 'Todos' && tipo != tipoFiltro) {
+                        return false;
+                      }
+
+                      // Filtro de fecha
+                      if (fechaInicio != null && fechaFin != null) {
+                        if (fecha.isBefore(fechaInicio!) ||
+                            fecha.isAfter(fechaFin!)) {
+                          return false;
+                        }
+                      }
+
+                      return true;
+                    }).toList();
+
+                // Calcular totales
+                int totalEntradas = 0;
+                int totalSalidas = 0;
+                int totalRechazos = 0;
+
+                for (var doc in movimientos) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final tipo = data['tipo'] as String;
+                  final cantidad = (data['cantidad'] ?? 0) as int;
+
+                  if (tipo == 'entrada') {
+                    totalEntradas += cantidad;
+                  } else if (tipo == 'salida') {
+                    totalSalidas += cantidad;
+                  } else if (tipo == 'rechazo') {
+                    totalRechazos += cantidad;
                   }
+                }
 
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
+                final saldoActual =
+                    totalEntradas - totalSalidas - totalRechazos;
 
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                return Column(
+                  children: [
+                    // Tarjetas de totales
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
                         children: [
-                          Icon(Icons.inbox_outlined, size: 64, color: Colors.grey),
-                          SizedBox(height: 16),
-                          Text(
-                            'No hay movimientos registrados',
-                            style: TextStyle(color: Colors.grey, fontSize: 16),
+                          Expanded(
+                            child: _buildTotalCard(
+                              'Entradas',
+                              totalEntradas,
+                              Icons.arrow_upward,
+                              Colors.blue,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildTotalCard(
+                              'Salidas',
+                              totalSalidas,
+                              Icons.arrow_downward,
+                              Colors.orange,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildTotalCard(
+                              'Rechazos',
+                              totalRechazos,
+                              Icons.cancel,
+                              Colors.red,
+                            ),
                           ),
                         ],
                       ),
-                    );
-                  }
+                    ),
 
-                  // Aplicar filtros
-                  var movimientos = snapshot.data!.docs.where((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    final tipo = data['tipo'] as String;
-                    final fecha = (data['fecha'] as Timestamp).toDate();
+                    const SizedBox(height: 8),
 
-                    // Filtro de tipo
-                    if (tipoFiltro != 'Todos' && tipo != tipoFiltro) {
-                      return false;
-                    }
-
-                    // Filtro de fecha
-                    if (fechaInicio != null && fechaFin != null) {
-                      if (fecha.isBefore(fechaInicio!) || fecha.isAfter(fechaFin!)) {
-                        return false;
-                      }
-                    }
-
-                    return true;
-                  }).toList();
-
-                  // Calcular totales
-                  int totalEntradas = 0;
-                  int totalSalidas = 0;
-                  int totalRechazos = 0;
-
-                  for (var doc in movimientos) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    final tipo = data['tipo'] as String;
-                    final cantidad = (data['cantidad'] ?? 0) as int;
-
-                    if (tipo == 'entrada') {
-                      totalEntradas += cantidad;
-                    } else if (tipo == 'salida') {
-                      totalSalidas += cantidad;
-                    } else if (tipo == 'rechazo') {
-                      totalRechazos += cantidad;
-                    }
-                  }
-
-                  final saldoActual = totalEntradas - totalSalidas - totalRechazos;
-
-                  return Column(
-                    children: [
-                      // Tarjetas de totales
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                    // Saldo actual
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: saldoActual > 0 ? Colors.green : Colors.red,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Expanded(
-                              child: _buildTotalCard(
-                                'Entradas',
-                                totalEntradas,
-                                Icons.arrow_upward,
-                                Colors.blue,
+                            const Text(
+                              'SALDO ACTUAL',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildTotalCard(
-                                'Salidas',
-                                totalSalidas,
-                                Icons.arrow_downward,
-                                Colors.orange,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildTotalCard(
-                                'Rechazos',
-                                totalRechazos,
-                                Icons.cancel,
-                                Colors.red,
+                            Text(
+                              '$saldoActual',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
                         ),
                       ),
+                    ),
 
-                      const SizedBox(height: 8),
+                    const SizedBox(height: 16),
 
-                      // Saldo actual
-                      Padding(
+                    // Tabla de movimientos
+                    Expanded(
+                      child: ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: saldoActual > 0 ? Colors.green : Colors.red,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'SALDO ACTUAL',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                '$saldoActual',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                        itemCount: movimientos.length,
+                        itemBuilder: (context, index) {
+                          final doc = movimientos[index];
+                          final data = doc.data() as Map<String, dynamic>;
+                          final tipo = data['tipo'] as String;
+                          final cantidad = (data['cantidad'] ?? 0) as int;
+                          final fecha = (data['fecha'] as Timestamp).toDate();
+                          final usuario =
+                              data['usuario_nombre'] ?? 'Desconocido';
+                          final sucursal = data['sucursal'] ?? '';
+                          final motivo = data['motivo'] ?? '';
 
-                      const SizedBox(height: 16),
+                          Color colorTipo;
+                          IconData iconoTipo;
 
-                      // Tabla de movimientos
-                      Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: movimientos.length,
-                          itemBuilder: (context, index) {
-                            final doc = movimientos[index];
-                            final data = doc.data() as Map<String, dynamic>;
-                            final tipo = data['tipo'] as String;
-                            final cantidad = (data['cantidad'] ?? 0) as int;
-                            final fecha = (data['fecha'] as Timestamp).toDate();
-                            final usuario = data['usuario_nombre'] ?? 'Desconocido';
-                            final sucursal = data['sucursal'] ?? '';
-                            final motivo = data['motivo'] ?? '';
+                          switch (tipo) {
+                            case 'entrada':
+                              colorTipo = Colors.blue;
+                              iconoTipo = Icons.arrow_upward;
+                              break;
+                            case 'salida':
+                              colorTipo = Colors.orange;
+                              iconoTipo = Icons.arrow_downward;
+                              break;
+                            case 'rechazo':
+                              colorTipo = Colors.red;
+                              iconoTipo = Icons.cancel;
+                              break;
+                            default:
+                              colorTipo = Colors.purple;
+                              iconoTipo = Icons.swap_horiz;
+                          }
 
-                            Color colorTipo;
-                            IconData iconoTipo;
-
-                            switch (tipo) {
-                              case 'entrada':
-                                colorTipo = Colors.blue;
-                                iconoTipo = Icons.arrow_upward;
-                                break;
-                              case 'salida':
-                                colorTipo = Colors.orange;
-                                iconoTipo = Icons.arrow_downward;
-                                break;
-                              case 'rechazo':
-                                colorTipo = Colors.red;
-                                iconoTipo = Icons.cancel;
-                                break;
-                              default:
-                                colorTipo = Colors.purple;
-                                iconoTipo = Icons.swap_horiz;
-                            }
-
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: colorTipo.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Icon(
-                                            iconoTipo,
-                                            color: colorTipo,
-                                            size: 20,
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: colorTipo.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
                                           ),
                                         ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                tipo.toUpperCase(),
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
-                                                  color: colorTipo,
-                                                ),
-                                              ),
-                                              Text(
-                                                dateFormat.format(fecha),
-                                                style: const TextStyle(
-                                                  fontSize: 11,
-                                                  color: Colors.grey,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                        child: Icon(
+                                          iconoTipo,
+                                          color: colorTipo,
+                                          size: 20,
                                         ),
-                                        Text(
-                                          tipo == 'entrada' ? '+$cantidad' : '-$cantidad',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: colorTipo,
-                                          ),
-                                        ),
-                                        PopupMenuButton(
-                                          icon: const Icon(Icons.more_vert, size: 20),
-                                          itemBuilder: (context) => [
-                                            PopupMenuItem(
-                                              child: const Row(
-                                                children: [
-                                                  Icon(Icons.edit, size: 18),
-                                                  SizedBox(width: 8),
-                                                  Text('Editar cantidad'),
-                                                ],
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              tipo.toUpperCase(),
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                                color: colorTipo,
                                               ),
-                                              onTap: () {
-                                                Future.delayed(
-                                                  Duration.zero,
-                                                  () => _editarCantidad(doc.id, cantidad),
-                                                );
-                                              },
                                             ),
-                                            PopupMenuItem(
-                                              child: const Row(
-                                                children: [
-                                                  Icon(Icons.delete, size: 18, color: Colors.red),
-                                                  SizedBox(width: 8),
-                                                  Text('Eliminar', style: TextStyle(color: Colors.red)),
-                                                ],
+                                            Text(
+                                              dateFormat.format(fecha),
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey,
                                               ),
-                                              onTap: () {
-                                                Future.delayed(
-                                                  Duration.zero,
-                                                  () => _confirmarEliminarMovimiento(doc.id),
-                                                );
-                                              },
                                             ),
                                           ],
                                         ),
-                                      ],
-                                    ),
-                                    if (sucursal.isNotEmpty) ...[
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            sucursal,
-                                            style: const TextStyle(fontSize: 11, color: Colors.grey),
-                                          ),
-                                        ],
                                       ),
-                                    ],
-                                    if (motivo.isNotEmpty) ...[
-                                      const SizedBox(height: 4),
                                       Text(
-                                        'Motivo: $motivo',
-                                        style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
+                                        tipo == 'entrada'
+                                            ? '+$cantidad'
+                                            : '-$cantidad',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: colorTipo,
+                                        ),
+                                      ),
+                                      PopupMenuButton(
+                                        icon: const Icon(
+                                          Icons.more_vert,
+                                          size: 20,
+                                        ),
+                                        itemBuilder:
+                                            (context) => [
+                                              PopupMenuItem(
+                                                child: const Row(
+                                                  children: [
+                                                    Icon(Icons.edit, size: 18),
+                                                    SizedBox(width: 8),
+                                                    Text('Editar cantidad'),
+                                                  ],
+                                                ),
+                                                onTap: () {
+                                                  Future.delayed(
+                                                    Duration.zero,
+                                                    () => _editarCantidad(
+                                                      doc.id,
+                                                      cantidad,
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                              PopupMenuItem(
+                                                child: const Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.delete,
+                                                      size: 18,
+                                                      color: Colors.red,
+                                                    ),
+                                                    SizedBox(width: 8),
+                                                    Text(
+                                                      'Eliminar',
+                                                      style: TextStyle(
+                                                        color: Colors.red,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                onTap: () {
+                                                  Future.delayed(
+                                                    Duration.zero,
+                                                    () =>
+                                                        _confirmarEliminarMovimiento(
+                                                          doc.id,
+                                                        ),
+                                                  );
+                                                },
+                                              ),
+                                            ],
                                       ),
                                     ],
+                                  ),
+                                  if (sucursal.isNotEmpty) ...[
                                     const SizedBox(height: 8),
                                     Row(
                                       children: [
-                                        const Icon(Icons.person, size: 14, color: Colors.grey),
+                                        const Icon(
+                                          Icons.location_on,
+                                          size: 14,
+                                          color: Colors.grey,
+                                        ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          usuario,
-                                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                          sucursal,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey,
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ],
-                                ),
+                                  if (motivo.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Motivo: $motivo',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.person,
+                                        size: 14,
+                                        color: Colors.grey,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        usuario,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
-                    ],
-                  );
-                },
-              ),
+                    ),
+                  ],
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -665,13 +736,7 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
               color: color,
             ),
           ),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10,
-              color: Colors.grey,
-            ),
-          ),
+          Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
         ],
       ),
     );
