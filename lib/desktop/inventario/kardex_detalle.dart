@@ -213,7 +213,7 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
                   colors: [Color(0xFF2C3E50), Color(0xFF34495E)],
                 ),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 38), 
+              padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 38),
               child: Column(
                 children: [
                   Row(
@@ -340,6 +340,8 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
 
           const SizedBox(height: 16),
 
+          const SizedBox(height: 16),
+
           // Tabla de movimientos
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
@@ -385,12 +387,10 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
                       final tipo = data['tipo'] as String;
                       final fecha = (data['fecha'] as Timestamp).toDate();
 
-                      // Filtro de tipo
                       if (tipoFiltro != 'Todos' && tipo != tipoFiltro) {
                         return false;
                       }
 
-                      // Filtro de fecha
                       if (fechaInicio != null && fechaFin != null) {
                         if (fecha.isBefore(fechaInicio!) ||
                             fecha.isAfter(fechaFin!)) {
@@ -498,212 +498,326 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
 
                     const SizedBox(height: 16),
 
-                    // Tabla de movimientos
+                    // Tabla
                     Expanded(
-                      child: ListView.builder(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: movimientos.length,
-                        itemBuilder: (context, index) {
-                          final doc = movimientos[index];
-                          final data = doc.data() as Map<String, dynamic>;
-                          final tipo = data['tipo'] as String;
-                          final cantidad = (data['cantidad'] ?? 0) as int;
-                          final fecha = (data['fecha'] as Timestamp).toDate();
-                          final usuario =
-                              data['usuario_nombre'] ?? 'Desconocido';
-                          final sucursal = data['sucursal'] ?? '';
-                          final motivo = data['motivo'] ?? '';
+                        child: SingleChildScrollView(
+                          child: Builder(
+                            builder: (context) {
+                              // Agrupar movimientos
+                              Map<String, Map<String, dynamic>> agrupados = {};
 
-                          Color colorTipo;
-                          IconData iconoTipo;
+                              for (var doc in movimientos) {
+                                final data = doc.data() as Map<String, dynamic>;
+                                final tipo = data['tipo'] as String;
+                                final cantidad = (data['cantidad'] ?? 0) as int;
+                                final fecha =
+                                    (data['fecha'] as Timestamp).toDate();
+                                final motivo = data['motivo'] ?? '';
+                                final sucursal = data['sucursal'] ?? '';
 
-                          switch (tipo) {
-                            case 'entrada':
-                              colorTipo = Colors.blue;
-                              iconoTipo = Icons.arrow_upward;
-                              break;
-                            case 'salida':
-                              colorTipo = Colors.orange;
-                              iconoTipo = Icons.arrow_downward;
-                              break;
-                            case 'rechazo':
-                              colorTipo = Colors.red;
-                              iconoTipo = Icons.cancel;
-                              break;
-                            default:
-                              colorTipo = Colors.purple;
-                              iconoTipo = Icons.swap_horiz;
-                          }
+                                String clave =
+                                    '${dateFormat.format(fecha)}_${tipo}_${motivo}_${sucursal}';
 
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: colorTipo.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
+                                if (agrupados.containsKey(clave)) {
+                                  agrupados[clave]!['cantidad'] += cantidad;
+                                  agrupados[clave]!['ids'].add(doc.id);
+                                } else {
+                                  agrupados[clave] = {
+                                    'id': doc.id,
+                                    'ids': [doc.id],
+                                    'fecha': fecha,
+                                    'tipo': tipo,
+                                    'cantidad': cantidad,
+                                    'motivo': motivo,
+                                    'sucursal': sucursal,
+                                  };
+                                }
+                              }
+
+                              // Ordenar por fecha (del más antiguo al más reciente)
+                              List<Map<String, dynamic>> filasOrdenadas =
+                                  agrupados.values.toList()..sort(
+                                    (a, b) => (a['fecha'] as DateTime)
+                                        .compareTo(b['fecha'] as DateTime),
+                                  );
+
+                              // Calcular saldos acumulados desde el más antiguo
+                              int saldoAcumulado = 0;
+
+                              for (var fila in filasOrdenadas) {
+                                if (fila['tipo'] == 'entrada') {
+                                  saldoAcumulado += fila['cantidad'] as int;
+                                } else if (fila['tipo'] == 'salida' ||
+                                    fila['tipo'] == 'rechazo') {
+                                  saldoAcumulado -= fila['cantidad'] as int;
+                                }
+                                fila['saldo'] = saldoAcumulado;
+                              }
+
+                              return DataTable(
+                                headingRowColor: WidgetStateProperty.all(
+                                  const Color(0xFF4682B4).withOpacity(0.1),
+                                ),
+                                columns: const [
+                                  DataColumn(
+                                    label: Text(
+                                      'FECHA',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                  DataColumn(
+                                    label: Text(
+                                      'DETALLE',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                  DataColumn(
+                                    label: Text(
+                                      'INVENTARIO\nINICIAL',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                  DataColumn(
+                                    label: Text(
+                                      'ENTRADAS',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                  DataColumn(
+                                    label: Text(
+                                      'SALIDAS',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                  DataColumn(
+                                    label: Text(
+                                      'SALDO',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                  DataColumn(
+                                    label: Text(
+                                      'ACCIONES',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                rows: () {
+                                  final filasReversed =
+                                      filasOrdenadas.reversed.toList();
+                                  return List.generate(filasReversed.length, (
+                                    index,
+                                  ) {
+                                    Map<String, dynamic> fila =
+                                        filasReversed[index];
+
+                                    // Calcular inventario inicial
+                                    // Si es la primera fila (más reciente), el inventario inicial es el saldo de la siguiente fila
+                                    // Si es cualquier otra fila, el inventario inicial es el saldo de la fila anterior
+                                    int inventarioInicial = 0;
+
+                                    // La fila siguiente en el tiempo (anterior en la lista reversed)
+                                    int indexAnteriorEnTiempo =
+                                        filasOrdenadas.length - 1 - index - 1;
+                                    if (indexAnteriorEnTiempo >= 0) {
+                                      inventarioInicial =
+                                          filasOrdenadas[indexAnteriorEnTiempo]['saldo']
+                                              as int;
+                                    }
+
+                                    return DataRow(
+                                      cells: [
+                                        DataCell(
+                                          Text(
+                                            dateFormat.format(fila['fecha']),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                            ),
                                           ),
                                         ),
-                                        child: Icon(
-                                          iconoTipo,
-                                          color: colorTipo,
-                                          size: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              tipo.toUpperCase(),
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 14,
-                                                color: colorTipo,
-                                              ),
+                                        DataCell(
+                                          SizedBox(
+                                            width: 180,
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                if (fila['sucursal'].isNotEmpty)
+                                                  Text(
+                                                    fila['sucursal'],
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                if (fila['motivo'].isNotEmpty)
+                                                  Text(
+                                                    fila['motivo'],
+                                                    style: const TextStyle(
+                                                      fontSize: 10,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                              ],
                                             ),
-                                            Text(
-                                              dateFormat.format(fecha),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Center(
+                                            child: Text(
+                                              '$inventarioInicial',
                                               style: const TextStyle(
-                                                fontSize: 11,
+                                                fontSize: 13,
                                                 color: Colors.grey,
+                                                fontWeight: FontWeight.bold,
                                               ),
                                             ),
-                                          ],
+                                          ),
                                         ),
-                                      ),
-                                      Text(
-                                        tipo == 'entrada'
-                                            ? '+$cantidad'
-                                            : '-$cantidad',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: colorTipo,
-                                        ),
-                                      ),
-                                      PopupMenuButton(
-                                        icon: const Icon(
-                                          Icons.more_vert,
-                                          size: 20,
-                                        ),
-                                        itemBuilder:
-                                            (context) => [
-                                              PopupMenuItem(
-                                                child: const Row(
-                                                  children: [
-                                                    Icon(Icons.edit, size: 18),
-                                                    SizedBox(width: 8),
-                                                    Text('Editar cantidad'),
-                                                  ],
-                                                ),
-                                                onTap: () {
-                                                  Future.delayed(
-                                                    Duration.zero,
-                                                    () => _editarCantidad(
-                                                      doc.id,
-                                                      cantidad,
-                                                    ),
-                                                  );
-                                                },
+                                        DataCell(
+                                          Center(
+                                            child: Text(
+                                              fila['tipo'] == 'entrada'
+                                                  ? '${fila['cantidad']}'
+                                                  : '',
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.blue,
+                                                fontWeight: FontWeight.bold,
                                               ),
-                                              PopupMenuItem(
-                                                child: const Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.delete,
-                                                      size: 18,
-                                                      color: Colors.red,
-                                                    ),
-                                                    SizedBox(width: 8),
-                                                    Text(
-                                                      'Eliminar',
-                                                      style: TextStyle(
-                                                        color: Colors.red,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                onTap: () {
-                                                  Future.delayed(
-                                                    Duration.zero,
-                                                    () =>
-                                                        _confirmarEliminarMovimiento(
-                                                          doc.id,
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Center(
+                                            child: Text(
+                                              fila['tipo'] == 'salida' ||
+                                                      fila['tipo'] == 'rechazo'
+                                                  ? '${fila['cantidad']}'
+                                                  : '',
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.orange,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Center(
+                                            child: Text(
+                                              '${fila['saldo']}',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                                color:
+                                                    fila['saldo'] > 0
+                                                        ? Colors.green
+                                                        : (fila['saldo'] < 0
+                                                            ? Colors.red
+                                                            : Colors.grey),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          PopupMenuButton(
+                                            icon: const Icon(
+                                              Icons.more_vert,
+                                              size: 18,
+                                            ),
+                                            itemBuilder:
+                                                (context) => [
+                                                  PopupMenuItem(
+                                                    child: const Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.edit,
+                                                          size: 18,
                                                         ),
-                                                  );
-                                                },
-                                              ),
-                                            ],
-                                      ),
-                                    ],
-                                  ),
-                                  if (sucursal.isNotEmpty) ...[
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.location_on,
-                                          size: 14,
-                                          color: Colors.grey,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          sucursal,
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.grey,
+                                                        SizedBox(width: 8),
+                                                        Text('Editar cantidad'),
+                                                      ],
+                                                    ),
+                                                    onTap: () {
+                                                      Future.delayed(
+                                                        Duration.zero,
+                                                        () => _editarCantidad(
+                                                          fila['id'],
+                                                          fila['cantidad'],
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
+                                                  PopupMenuItem(
+                                                    child: const Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.delete,
+                                                          size: 18,
+                                                          color: Colors.red,
+                                                        ),
+                                                        SizedBox(width: 8),
+                                                        Text(
+                                                          'Eliminar',
+                                                          style: TextStyle(
+                                                            color: Colors.red,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    onTap: () {
+                                                      Future.delayed(
+                                                        Duration.zero,
+                                                        () =>
+                                                            _confirmarEliminarMovimiento(
+                                                              fila['id'],
+                                                            ),
+                                                      );
+                                                    },
+                                                  ),
+                                                ],
                                           ),
                                         ),
                                       ],
-                                    ),
-                                  ],
-                                  if (motivo.isNotEmpty) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Motivo: $motivo',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.person,
-                                        size: 14,
-                                        color: Colors.grey,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        usuario,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
+                                    );
+                                  });
+                                }(),
+                              );
+                            },
+                          ),
+                        ),
                       ),
                     ),
                   ],

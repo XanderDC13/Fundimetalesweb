@@ -24,7 +24,8 @@ class _InventarioProcesoDeskScreenState
   String sedeSeleccionada = 'todas';
   String rolUsuario = '';
   bool esSuperAdmin = false;
-
+  int _totalCantidadEntradas = 0;
+  int _totalCantidadSalidas = 0;
   late final AnimationController _controller;
   late final Animation<double> _fadeAnimation;
 
@@ -47,7 +48,8 @@ class _InventarioProcesoDeskScreenState
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
 
-    _cargarDatosUsuario(); // NUEVO
+    _cargarDatosUsuario();
+    _calcularMetricasMovimientos(); // ✅ AGREGAR ESTA LÍNEA
   }
 
   @override
@@ -112,6 +114,7 @@ class _InventarioProcesoDeskScreenState
                 ),
               ),
             ),
+            _buildIndicadoresMovimientos(),
             Expanded(
               child: FadeTransition(
                 opacity: _fadeAnimation,
@@ -130,6 +133,223 @@ class _InventarioProcesoDeskScreenState
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _calcularMetricasMovimientos() async {
+    try {
+      Query query = FirebaseFirestore.instance.collection('kardex_movimientos');
+
+      final snapshot = await query.get();
+
+      int cantidadEntradas = 0;
+      int cantidadSalidas = 0;
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+
+        // Filtrar por rango de fechas
+        if (_rangoFechas != null && data['fecha'] != null) {
+          DateTime? fechaDoc;
+          if (data['fecha'] is Timestamp) {
+            fechaDoc = (data['fecha'] as Timestamp).toDate();
+          }
+
+          if (fechaDoc != null) {
+            if (fechaDoc.isBefore(_rangoFechas!.start) ||
+                fechaDoc.isAfter(
+                  _rangoFechas!.end.add(const Duration(days: 1)),
+                )) {
+              continue;
+            }
+          }
+        }
+
+        // Filtrar por sede/sucursal
+        if (!esSuperAdmin || sedeSeleccionada != 'todas') {
+          final sucursalDoc = data['sucursal'] ?? '';
+          final sedeAFiltrar = esSuperAdmin ? sedeSeleccionada : sedeUsuario;
+          if (sucursalDoc != sedeAFiltrar) continue;
+        }
+
+        // Filtrar por búsqueda (referencia)
+        if (searchQuery.isNotEmpty) {
+          final referencia =
+              (data['referencia'] ?? '').toString().toLowerCase();
+          if (!referencia.contains(searchQuery)) {
+            continue;
+          }
+        }
+
+        // Obtener tipo y cantidad
+        final tipo = (data['tipo'] ?? '').toString().toLowerCase();
+        final cantidad =
+            (data['cantidad'] ?? 0) is int
+                ? data['cantidad'] as int
+                : int.tryParse(data['cantidad'].toString()) ?? 0;
+
+        // Sumar cantidades según tipo
+        if (tipo == 'entrada') {
+          cantidadEntradas += cantidad;
+        } else if (tipo == 'salida') {
+          cantidadSalidas += cantidad;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _totalCantidadEntradas = cantidadEntradas;
+          _totalCantidadSalidas = cantidadSalidas;
+        });
+      }
+    } catch (e) {
+      print('Error al calcular métricas: $e');
+    }
+  }
+
+  // 3. Agregar el widget de indicadores (COLOCAR EN EL BUILD, DESPUÉS DEL HEADER)
+  Widget _buildIndicadoresMovimientos() {
+    return Container(
+      color: Colors.grey.shade100,
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          // TOTAL ENTRADAS
+          Expanded(
+            child: Card(
+              color: const Color(0xFF4682B4),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.arrow_upward,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Total Entradas',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$_totalCantidadEntradas',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'unidades',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          // TOTAL SALIDAS
+          Expanded(
+            child: Card(
+              color: const Color(0xFF4682B4),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.arrow_downward,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Total Salidas',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$_totalCantidadSalidas',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'unidades',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          // STOCK NETO
+          Expanded(
+            child: Card(
+              color: const Color(0xFF4682B4),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.inventory_2,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Stock Neto',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${_totalCantidadEntradas - _totalCantidadSalidas}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'unidades',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -172,8 +392,10 @@ class _InventarioProcesoDeskScreenState
           Expanded(
             flex: 2,
             child: TextField(
-              onChanged:
-                  (value) => setState(() => searchQuery = value.toLowerCase()),
+              onChanged: (value) {
+                setState(() => searchQuery = value.toLowerCase());
+                _calcularMetricasMovimientos(); // ✅ AGREGAR
+              },
               decoration: InputDecoration(
                 hintText: 'Buscar por nombre o referencia...',
                 prefixIcon: const Icon(Icons.search, color: Color(0xFF4682B4)),
@@ -241,6 +463,7 @@ class _InventarioProcesoDeskScreenState
                   setState(() {
                     sedeSeleccionada = value!;
                   });
+                  _calcularMetricasMovimientos(); // ✅ AGREGAR
                 },
               ),
             ),
@@ -293,6 +516,7 @@ class _InventarioProcesoDeskScreenState
                 setState(() {
                   procesoSeleccionado = value!;
                 });
+                _calcularMetricasMovimientos(); // ✅ AGREGAR
               },
             ),
           ),
@@ -348,6 +572,7 @@ class _InventarioProcesoDeskScreenState
                     setState(() {
                       _rangoFechas = null;
                     });
+                    _calcularMetricasMovimientos();
                   },
                 ),
             ],

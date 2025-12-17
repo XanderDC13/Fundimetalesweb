@@ -3,6 +3,8 @@ import 'package:basefundi/desktop/directorio/pedidos_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas_desk.dart';
 import 'package:basefundi/services/navbar_desk.dart';
 import 'package:basefundi/services/transition.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class DirectorioDeskScreen extends StatefulWidget {
@@ -39,7 +41,6 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
     return MainDeskLayout(
       child: Column(
         children: [
-          // ✅ CABECERA con Transform.translate
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
@@ -76,7 +77,6 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
             ),
           ),
 
-          // ✅ CONTENIDO con FadeTransition
           Expanded(
             child: Container(
               color: Colors.white,
@@ -84,33 +84,51 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
                 opacity: _fadeAnimation,
                 child: Padding(
                   padding: const EdgeInsets.all(32),
-                  child: ListView(
-                    children: [
-                      _buildCard(
-                        context: context,
-                        title: 'Proformas',
-                        subtitle: 'Control de proformas e inventario',
-                        icon: Icons.receipt_long,
-                        destination: OpcionesProformasDeskScreen(),
-                      ),
-                      const SizedBox(height: 20),
-                      _buildCard(
-                        context: context,
-                        title: 'Pedidos',
-                        subtitle: 'Control de nuevos pedidos y envíos',
-                        icon: Icons.assignment,
-                        destination: PedidosDeskScreen(),
-                      ),
-                      const SizedBox(height: 20),
-                      _buildCard(
-                        context: context,
-                        title: 'Contactos',
-                        subtitle: 'Gestión y contactos de clientes y proveedores',
-                        icon: Icons.people_outline,
-                        destination: const ContactosDeskScreen(),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
+                  child: FutureBuilder<String>(
+                    future:
+                        _obtenerRolUsuario(), // ✅ AGREGAR ESTE FUTUREBUILDER
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final rol = snapshot.data ?? '';
+
+                      return ListView(
+                        children: [
+                          _buildCard(
+                            context: context,
+                            title: 'Proformas',
+                            subtitle: 'Control de proformas e inventario',
+                            icon: Icons.receipt_long,
+                            destination: OpcionesProformasDeskScreen(),
+                          ),
+
+                          // ✅ SOLO MOSTRAR PEDIDOS SI NO ES VENDEDOR
+                          if (rol != 'Vendedor') ...[
+                            const SizedBox(height: 20),
+                            _buildCard(
+                              context: context,
+                              title: 'Pedidos',
+                              subtitle: 'Control de nuevos pedidos y envíos',
+                              icon: Icons.assignment,
+                              destination: PedidosDeskScreen(),
+                            ),
+                          ],
+
+                          const SizedBox(height: 20),
+                          _buildCard(
+                            context: context,
+                            title: 'Contactos',
+                            subtitle:
+                                'Gestión y contactos de clientes y proveedores',
+                            icon: Icons.people_outline,
+                            destination: const ContactosDeskScreen(),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),
@@ -119,6 +137,23 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
         ],
       ),
     );
+  }
+
+  // ✅ AGREGAR ESTE MÉTODO AL FINAL DE LA CLASE
+  Future<String> _obtenerRolUsuario() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return '';
+
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('usuarios_activos')
+            .doc(user.uid)
+            .get();
+
+    if (doc.exists) {
+      return doc.data()?['rol'] ?? '';
+    }
+    return '';
   }
 
   Widget _buildCard({

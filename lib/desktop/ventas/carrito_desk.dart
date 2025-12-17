@@ -779,25 +779,45 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
     CarritoController carrito,
   ) async {
     final firestore = FirebaseFirestore.instance;
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) {
+      throw Exception('No hay usuario autenticado');
+    }
+
+    // ✅ Obtener la sucursal del usuario
+    final userDoc =
+        await firestore
+            .collection('usuarios_activos')
+            .doc(currentUser.uid)
+            .get();
+
+    final sucursalUsuario = userDoc.data()?['sede'] as String?;
+
+    if (sucursalUsuario == null) {
+      throw Exception('Usuario no tiene sucursal asignada');
+    }
 
     for (var producto in productos) {
       final referencia = producto.referencia;
       final cantidadVendida = producto.cantidad;
 
+      // ✅ Solo actualizar inventario si NO es producto exento (transporte)
       if (!producto.exentoIva) {
-        // ✅ USAR LA REFERENCIA COMO ID DEL DOCUMENTO
-        final inventarioRef = firestore
-            .collection('inventarios')
-            .doc('bodega')
-            .collection('productos')
-            .doc(referencia); // ← Usar directamente la referencia como ID
+        try {
+          final inventarioRef = firestore
+              .collection('inventarios')
+              .doc(sucursalUsuario) // ✅ Solo la sucursal del usuario
+              .collection('procesos')
+              .doc('bodega')
+              .collection('productos')
+              .doc(referencia);
 
-        {
           final docSnapshot = await inventarioRef.get();
+
           if (docSnapshot.exists) {
             final cantidadActual =
                 (docSnapshot.data()?['cantidad'] ?? 0) as int;
-            // ✅ CORREGIDO: Usar update en lugar de batch para operación individual
             final nuevaCantidad =
                 (cantidadActual - cantidadVendida)
                     .clamp(0, double.infinity)
@@ -809,16 +829,19 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
               'ultima_venta': DateTime.now().toIso8601String(),
             });
           } else {
+            // Si no existe el documento, crearlo con cantidad 0
             await inventarioRef.set({
-              'cantidad': 0, // Ya vendido, cantidad 0
+              'cantidad': 0,
               'referencia': referencia,
               'ultima_actualizacion': Timestamp.now(),
               'ultima_venta': DateTime.now().toIso8601String(),
             });
           }
-          // ignore: empty_catches
+        } catch (e) {
+          print('Error actualizando inventario de $referencia: $e');
+          rethrow;
         }
-      } else {}
+      }
     }
   }
 

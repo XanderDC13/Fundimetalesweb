@@ -2,6 +2,8 @@ import 'package:basefundi/services/navbar_desk.dart';
 import 'package:basefundi/desktop/ventas/modificar_ventas_desk.dart';
 import 'package:basefundi/desktop/ventas/realizar_venta_desk.dart';
 import 'package:basefundi/services/transition.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class VentasDeskScreen extends StatefulWidget {
@@ -15,7 +17,6 @@ class _VentasDeskScreenState extends State<VentasDeskScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-
 
   @override
   void initState() {
@@ -39,7 +40,6 @@ class _VentasDeskScreenState extends State<VentasDeskScreen>
     return MainDeskLayout(
       child: Column(
         children: [
-          // CABECERA CON Transform.translate
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
@@ -76,7 +76,6 @@ class _VentasDeskScreenState extends State<VentasDeskScreen>
             ),
           ),
 
-          // CONTENIDO PRINCIPAL CON FADE
           Expanded(
             child: Container(
               color: Colors.white,
@@ -84,22 +83,38 @@ class _VentasDeskScreenState extends State<VentasDeskScreen>
                 opacity: _fadeAnimation,
                 child: Padding(
                   padding: const EdgeInsets.all(32),
-                  child: ListView(
-                    children: [
-                      _buildBoton(
-                        icono: Icons.shopping_cart,
-                        titulo: 'Realizar Venta',
-                        subtitulo: 'Registrar nueva venta',
-                        destino: const VentasDetalleDeskScreen(),
-                      ),
-                      const SizedBox(height: 20),
-                      _buildBoton(
-                        icono: Icons.edit_note,
-                        titulo: 'Modificar Ventas',
-                        subtitulo: 'Editar ventas registradas',
-                        destino: const ModificarVentaDeskScreen(),
-                      ),
-                    ],
+                  child: FutureBuilder<String>(
+                    future:
+                        _obtenerRolUsuario(), // ✅ AGREGAR ESTE FUTUREBUILDER
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final rol = snapshot.data ?? '';
+
+                      return ListView(
+                        children: [
+                          _buildBoton(
+                            icono: Icons.shopping_cart,
+                            titulo: 'Realizar Venta',
+                            subtitulo: 'Registrar nueva venta',
+                            destino: const VentasDetalleDeskScreen(),
+                          ),
+
+                          // ✅ SOLO MOSTRAR MODIFICAR VENTAS SI NO ES VENDEDOR
+                          if (rol != 'Vendedor') ...[
+                            const SizedBox(height: 20),
+                            _buildBoton(
+                              icono: Icons.edit_note,
+                              titulo: 'Modificar Ventas',
+                              subtitulo: 'Editar ventas registradas',
+                              destino: const ModificarVentaDeskScreen(),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),
@@ -108,6 +123,23 @@ class _VentasDeskScreenState extends State<VentasDeskScreen>
         ],
       ),
     );
+  }
+
+  // ✅ AGREGAR ESTE MÉTODO AL FINAL DE LA CLASE
+  Future<String> _obtenerRolUsuario() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return '';
+
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('usuarios_activos')
+            .doc(user.uid)
+            .get();
+
+    if (doc.exists) {
+      return doc.data()?['rol'] ?? '';
+    }
+    return '';
   }
 
   Widget _buildBoton({

@@ -3,6 +3,7 @@ import 'package:basefundi/desktop/fundicion/listado_empleados_desk.dart';
 import 'package:basefundi/desktop/fundicion/productos_fundir_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareas_cumplir_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareasextras_desk.dart';
+import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_realizar_desk.dart';
 import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
 import 'package:basefundi/modulos/ajustes_desk.dart';
@@ -20,6 +21,7 @@ import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:basefundi/desktop/personal/empleados/empleados_activos_desk.dart';
 
 class DashboardDeskScreen extends StatefulWidget {
   const DashboardDeskScreen({super.key});
@@ -202,21 +204,49 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
   }
 
   Future<void> _cargarProductosBajoStock() async {
-    final bodegaSnapshot =
-        await FirebaseFirestore.instance
-            .collection('inventarios')
-            .doc('bodega')
-            .collection('productos')
-            .get();
+    // ✅ CAMBIO: Obtener de TODAS las sucursales
+    final sucursales = ['Quito', 'Guayaquil', 'Tulcán'];
 
-    int bajoStock = 0;
+    // Mapa para acumular cantidades de todas las sucursales
+    Map<String, int> stockPorProducto = {};
 
-    for (var doc in bodegaSnapshot.docs) {
-      final cantidad = doc.data()['cantidad'] ?? 0;
-      if (cantidad is int && cantidad < 5) {
-        bajoStock++;
+    // Recorrer todas las sucursales
+    for (String sucursal in sucursales) {
+      try {
+        final bodegaSnapshot =
+            await FirebaseFirestore.instance
+                .collection('inventarios')
+                .doc(sucursal)
+                .collection('procesos')
+                .doc('bodega')
+                .collection('productos')
+                .get();
+
+        for (var doc in bodegaSnapshot.docs) {
+          final cantidad = doc.data()['cantidad'] ?? 0;
+          final referencia = doc.id; // El ID del documento ES la referencia
+
+          // Acumular la cantidad de esta sucursal
+          if (cantidad is int) {
+            stockPorProducto[referencia] =
+                (stockPorProducto[referencia] ?? 0) + cantidad;
+          } else if (cantidad is num) {
+            stockPorProducto[referencia] =
+                (stockPorProducto[referencia] ?? 0) + cantidad.toInt();
+          }
+        }
+      } catch (e) {
+        print('Error al cargar inventario de $sucursal: $e');
       }
     }
+
+    // Contar productos con stock total menor a 5
+    int bajoStock = 0;
+    stockPorProducto.forEach((referencia, cantidadTotal) {
+      if (cantidadTotal < 5 && cantidadTotal >= 0) {
+        bajoStock++;
+      }
+    });
 
     setState(() {
       productosBajoStock = bajoStock;
@@ -335,6 +365,8 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
                                     child: _buildMetricCard(
                                       '$numeroUsuarios',
                                       'Usuarios Activos',
+                                      isClickable:
+                                          true, // ✅ AGREGAR ESTE PARÁMETRO
                                     ),
                                   ),
                                   const SizedBox(height: 20),
@@ -348,7 +380,6 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
                                 ],
                               ),
                               const SizedBox(width: 20),
-
                               Expanded(child: _buildFlujoDineroChart()),
                             ],
                           ),
@@ -412,9 +443,22 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
       ),
     );
 
+    // ✅ AGREGAR ESTA CONDICIÓN
     if (isClickable && label == 'Bajo Stock') {
       return GestureDetector(
         onTap: () => navegarConFade(context, const BajoStockDeskScreen()),
+        child: card,
+      );
+    }
+
+    // ✅ AGREGAR ESTA NUEVA CONDICIÓN PARA USUARIOS ACTIVOS
+    if (isClickable && label == 'Usuarios Activos') {
+      return GestureDetector(
+        onTap:
+            () => navegarConFade(
+              context,
+              const EmpleadosActivosDeskScreen(), // Asegúrate de importar esta pantalla
+            ),
         child: card,
       );
     }
@@ -895,12 +939,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
           _gridButton(
             Icons.task_alt,
             'Tareas',
-            () => navegarConFade(context, const TareasPendientesDeskScreen()),
-          ),
-          _gridButton(
-            Icons.bar_chart,
-            'Reportes',
-            () => navegarConFade(context, const ReportesDeskScreen()),
+            () => navegarConFade(context, const FuncionesDeskScreen()),
           ),
           _gridButton(
             Icons.settings,

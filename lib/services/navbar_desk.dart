@@ -8,6 +8,7 @@ import 'package:basefundi/desktop/fundicion/listado_empleados_desk.dart';
 import 'package:basefundi/desktop/fundicion/productos_fundir_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareas_cumplir_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareasextras_desk.dart';
+import 'package:basefundi/desktop/inventario/kardex_lista.dart';
 import 'package:basefundi/desktop/inventario/medidas_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_proformas_desk.dart';
 import 'package:basefundi/desktop/inventario/productos_desk.dart';
@@ -18,14 +19,13 @@ import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
 import 'package:basefundi/desktop/reportes/auditoria_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_compras_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_documentos_desk.dart';
-import 'package:basefundi/desktop/reportes/reporte_inv_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_ventas_desk.dart';
+import 'package:basefundi/desktop/reportes/reportes%20inventarios/inventario_procesos_desk.dart';
 import 'package:basefundi/desktop/ventas/modificar_ventas_desk.dart';
 import 'package:basefundi/desktop/ventas/realizar_venta_desk.dart';
 import 'package:basefundi/modulos/ajustes_desk.dart';
 import 'package:basefundi/modulos/fundicion.dart';
 import 'package:basefundi/modulos/inventario_desk.dart';
-import 'package:basefundi/modulos/reportes_desk.dart';
 import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -291,6 +291,10 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             label: 'Insumos',
             onTap: () => _navigateToScreen(const InsumosDeskScreen()),
           ),
+          _buildSubItem(
+            label: 'Kardex',
+            onTap: () => _navigateToScreen(const KardexListScreen()),
+          ),
         ],
       ),
       _buildExpandableItem(
@@ -374,7 +378,7 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
           ),
           _buildSubItem(
             label: 'Inventario',
-            onTap: () => _navigateToScreen(const ReporteInventarioDeskScreen()),
+            onTap: () => _navigateToScreen(const InventarioProcesoDeskScreen()),
           ),
           _buildSubItem(
             label: 'Cotizaciones',
@@ -433,6 +437,10 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             label: 'Catálogo',
             onTap: () => _navigateToScreen(const VisualizarCatalogoScreen()),
           ),
+          _buildSubItem(
+            label: 'Kardex',
+            onTap: () => _navigateToScreen(const KardexListScreen()),
+          ),
         ],
       ),
       _buildExpandableItem(
@@ -481,7 +489,7 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
           ),
           _buildSubItem(
             label: 'Inventario',
-            onTap: () => _navigateToScreen(const ReporteInventarioDeskScreen()),
+            onTap: () => _navigateToScreen(const InventarioProcesoDeskScreen()),
           ),
           _buildSubItem(
             label: 'Cotizaciones',
@@ -517,10 +525,6 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             label: 'Realizar Venta',
             onTap: () => _navigateToScreen(const VentasDetalleDeskScreen()),
           ),
-          _buildSubItem(
-            label: 'Modificar Ventas',
-            onTap: () => _navigateToScreen(const ModificarVentaDeskScreen()),
-          ),
         ],
       ),
       _buildExpandableItem(
@@ -546,10 +550,6 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
           _buildSubItem(
             label: 'Proformas',
             onTap: () => _navigateToScreen(const OpcionesProformasDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Pedidos',
-            onTap: () => _navigateToScreen(const PedidosDeskScreen()),
           ),
           _buildSubItem(
             label: 'Contactos',
@@ -597,8 +597,8 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
       ),
       _buildMainItem(
         icon: Icons.bar_chart,
-        title: 'Reportes',
-        onTap: () => _navigateToScreen(const ReportesDeskScreen()),
+        title: 'Tareas',
+        onTap: () => _navigateToScreen(const TareasPendientesDeskScreen()),
       ),
     ];
   }

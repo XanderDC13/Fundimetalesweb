@@ -6,6 +6,9 @@ import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
 import 'package:basefundi/services/navbar_desk.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class OpcionesProformasDeskScreen extends StatefulWidget {
   const OpcionesProformasDeskScreen({super.key});
 
@@ -37,29 +40,28 @@ class _OpcionesProformasDeskScreenState
     super.dispose();
   }
 
-  Widget _getProformaFundicionScreen() {
-    return ProformaFundicionDeskScreen();
-  }
+  // ----------------------------
+  // OBTENER ROL DEL USUARIO
+  // ----------------------------
+  Future<String> _obtenerRolUsuario() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return '';
 
-  Widget _getProformaVentasScreen() {
-    return ProformaVentasDeskScreen();
-  }
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('usuarios_activos')
+            .doc(user.uid)
+            .get();
 
-  Widget _getProformaOrdenesScreen() {
-    return ProformaOrdenDespachoDeskScreen();
+    return doc.data()?['rol'] ?? '';
   }
-
-  Widget _getProformaAnticiposScreen() {
-    return AnticiposDeskScreen();
-  }
-
 
   @override
   Widget build(BuildContext context) {
     return MainDeskLayout(
       child: Column(
         children: [
-          // ✅ CABECERA
+          // 🔵 HEADER
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
@@ -75,9 +77,7 @@ class _OpcionesProformasDeskScreenState
                         Icons.arrow_back_ios,
                         color: Colors.white,
                       ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
+                      onPressed: () => Navigator.pop(context),
                     ),
                   ),
                   const Align(
@@ -96,46 +96,68 @@ class _OpcionesProformasDeskScreenState
             ),
           ),
 
-          // ✅ CONTENIDO PRINCIPAL
+          // 🔵 CONTENIDO CON ROL
           Expanded(
             child: Container(
               color: Colors.white,
               child: FadeTransition(
                 opacity: _fadeAnimation,
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: ListView(
-                    children: [
-                      _buildBoton(
-                        icono: Icons.add_circle_outline,
-                        titulo: 'Proforma / Ordenes',
-                        subtitulo: 'Genera proformas y ordenes de despacho',
-                        destino: _getProformaOrdenesScreen(),
+                child: FutureBuilder<String>(
+                  future: _obtenerRolUsuario(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final rol = snapshot.data ?? '';
+
+                    return Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: ListView(
+                        children: [
+                          // 👉 SIEMPRE SE MUESTRA
+                          _buildBoton(
+                            icono: Icons.add_circle_outline,
+                            titulo: 'Proforma / Ordenes',
+                            subtitulo: 'Genera proformas y ordenes de despacho',
+                            destino: ProformaOrdenDespachoDeskScreen(),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // 👉 SOLO SI NO ES VENDEDOR
+                          if (rol != 'Vendedor') ...[
+                            _buildBoton(
+                              icono: Icons.add_circle_outline,
+                              titulo: 'Proforma Cotización',
+                              subtitulo:
+                                  'Genera proformas de cotización de ventas',
+                              destino: ProformaVentasDeskScreen(),
+                            ),
+                            const SizedBox(height: 20),
+
+                            _buildBoton(
+                              icono: Icons.add_circle_outline,
+                              titulo: 'Proforma Materia Prima',
+                              subtitulo:
+                                  'Genera proforma compra de materia prima',
+                              destino: ProformaFundicionDeskScreen(),
+                            ),
+                            const SizedBox(height: 20),
+
+                            _buildBoton(
+                              icono: Icons.add_circle_outline,
+                              titulo: 'Proforma Anticipos',
+                              subtitulo:
+                                  'Genera proforma de anticipos a usuarios',
+                              destino: AnticiposDeskScreen(),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        ],
                       ),
-                      const SizedBox(height: 20),
-                      _buildBoton(
-                        icono: Icons.add_circle_outline,
-                        titulo: 'Proforma Cotización',
-                        subtitulo: 'Genera proformas de cotización de ventas',
-                        destino: _getProformaVentasScreen(),
-                      ),
-                      const SizedBox(height: 20),
-                      _buildBoton(
-                        icono: Icons.add_circle_outline,
-                        titulo: 'Proforma Materia Prima',
-                        subtitulo: 'Genera proforma compra de materia prima',
-                        destino: _getProformaFundicionScreen(),
-                      ),
-                      const SizedBox(height: 20),
-                      _buildBoton(
-                        icono: Icons.add_circle_outline,
-                        titulo: 'Proforma Anticipos',
-                        subtitulo: 'Genera proforma de anticipos a usuarios',
-                        destino: _getProformaAnticiposScreen(),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -145,6 +167,7 @@ class _OpcionesProformasDeskScreenState
     );
   }
 
+  // 🔵 BOTÓN REUTILIZABLE
   Widget _buildBoton({
     required IconData icono,
     required String titulo,

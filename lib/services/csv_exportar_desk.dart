@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:excel/excel.dart' hide Border;
 import 'dart:typed_data';
-import 'dart:html' as html;
+import 'package:universal_html/html.dart' as html;
 
 Future<void> exportarInventarioDesk(BuildContext context) async {
   try {

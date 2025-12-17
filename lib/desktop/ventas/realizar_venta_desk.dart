@@ -54,13 +54,13 @@ class _VentasDetalleDeskScreenState extends State<VentasDetalleDeskScreen> {
         }
 
         // Manejar precios de forma segura
+        // ✅ CORRECTO:
         List<double> precios = [];
-        if (data['precios'] != null && data['precios'] is List) {
-          precios =
-              (data['precios'] as List)
-                  .where((precio) => precio != null && precio is num)
-                  .map((precio) => (precio as num).toDouble())
-                  .toList();
+        if (data['pvp'] != null && data['pvp'] is num) {
+          precios.add((data['pvp'] as num).toDouble());
+        }
+        if (data['precio20'] != null && data['precio20'] is num) {
+          precios.add((data['precio20'] as num).toDouble());
         }
 
         productosDisponibles[referencia] = {
@@ -225,7 +225,9 @@ class _VentasDetalleDeskScreenState extends State<VentasDetalleDeskScreen> {
                           color: Color(0xFF4682B4),
                         ),
                         title: Text(
-                          "PVP $index: \$${precio.toStringAsFixed(2)}",
+                          index == 1
+                              ? "PVP: \$${precio.toStringAsFixed(2)}"
+                              : "20%: \$${precio.toStringAsFixed(2)}",
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 16,
