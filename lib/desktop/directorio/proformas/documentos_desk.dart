@@ -686,13 +686,24 @@ class _ProformaOrdenDespachoDeskScreenState
       color: Colors.grey[800]!,
       child: Column(
         children: [
-          // Campo REF con búsqueda
+          // Campo REF con búsqueda y conversión a mayúsculas
           _buildTextField(
             controller: _formRefController,
             label: 'REF',
             icon: Icons.qr_code,
-            onChanged:
-                (value) => _buscarProductoPorReferenciaFormulario(value.trim()),
+            textCapitalization: TextCapitalization.characters, // AGREGAR ESTO
+            onChanged: (value) {
+              // Convertir a mayúsculas automáticamente
+              String upperValue = value.toUpperCase();
+              if (_formRefController.text != upperValue) {
+                _formRefController.value = _formRefController.value.copyWith(
+                  text: upperValue,
+                  selection: TextSelection.collapsed(offset: upperValue.length),
+                );
+              }
+              // Buscar el producto
+              _buscarProductoPorReferenciaFormulario(upperValue.trim());
+            },
           ),
           SizedBox(height: 12),
 
@@ -930,6 +941,8 @@ class _ProformaOrdenDespachoDeskScreenState
   }
 
   Future<void> _buscarProductoPorReferenciaFormulario(String referencia) async {
+    referencia = referencia.toUpperCase();
+
     if (referencia.isEmpty) {
       setState(() {
         _formDescripcionController.clear();
@@ -952,7 +965,6 @@ class _ProformaOrdenDespachoDeskScreenState
         final Map<String, dynamic> producto =
             doc.data() as Map<String, dynamic>;
 
-        // Verificar precios disponibles
         List<double> preciosDisponibles = [];
         List<String> nombrePrecios = [];
 
@@ -989,7 +1001,6 @@ class _ProformaOrdenDespachoDeskScreenState
           if (precioSeleccionado != null) {
             _aplicarDatosProductoFormulario(producto, precioSeleccionado);
           } else {
-            // Si canceló el diálogo, mantener campos limpios
             setState(() {
               _formDescripcionController.clear();
               _formPrecioController.clear();
@@ -997,10 +1008,8 @@ class _ProformaOrdenDespachoDeskScreenState
             });
           }
         } else if (preciosDisponibles.isNotEmpty) {
-          // Si solo tiene un precio, usarlo directamente
           _aplicarDatosProductoFormulario(producto, preciosDisponibles[0]);
         } else {
-          // Si no tiene ningún precio
           setState(() {
             _formDescripcionController.text = producto['nombre'] ?? '';
             _formPrecioController.text = '0.00';
@@ -1392,10 +1401,11 @@ class _ProformaOrdenDespachoDeskScreenState
     String? hintText,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
+    TextCapitalization textCapitalization = TextCapitalization.none, // AGREGAR
     required void Function(dynamic value) onChanged,
   }) {
     return Container(
-      height: 48, // AGREGAR ALTURA FIJA (igual que ProformaVentasDeskScreen)
+      height: 48,
       decoration: BoxDecoration(
         color: enabled ? Colors.white : Colors.grey[100],
         borderRadius: BorderRadius.circular(8),
@@ -1409,10 +1419,10 @@ class _ProformaOrdenDespachoDeskScreenState
         enabled: enabled,
         keyboardType: keyboardType,
         maxLines: maxLines,
+        textCapitalization: textCapitalization, // AGREGAR
         onChanged: (value) {
           // Formatear texto según el tipo de campo
           if (label == 'Email') {
-            // Para email, mantener en minúsculas
             if (value != value.toLowerCase()) {
               controller.value = controller.value.copyWith(
                 text: value.toLowerCase(),
@@ -1421,8 +1431,8 @@ class _ProformaOrdenDespachoDeskScreenState
                 ),
               );
             }
-          } else if (label != 'Teléfono') {
-            // Para todos los campos excepto teléfono y email, convertir a mayúsculas
+          } else if (label != 'Teléfono' && label != 'REF') {
+            // MODIFICAR: excluir REF
             if (value != value.toUpperCase()) {
               controller.value = controller.value.copyWith(
                 text: value.toUpperCase(),
@@ -1432,8 +1442,6 @@ class _ProformaOrdenDespachoDeskScreenState
               );
             }
           }
-
-          // Llamar al callback proporcionado
           onChanged(value);
         },
         decoration: InputDecoration(

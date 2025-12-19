@@ -22,7 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   final FocusNode _nameFocus = FocusNode();
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
-
+  bool _cedulaValida = false;
   bool _obscurePassword = true;
   bool _isLoading = false;
   bool _isSearchingCedula = false;
@@ -209,6 +209,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     setState(() {
       _isSearchingCedula = true;
       _cedulaErrorMessage = null;
+      _cedulaValida = false;
     });
 
     try {
@@ -224,18 +225,21 @@ class _RegisterScreenState extends State<RegisterScreen>
         setState(() {
           _nameController.text = userData['nombre'] ?? '';
           _isSearchingCedula = false;
+          _cedulaValida = true; // ✅ Activar campos
         });
       } else {
         setState(() {
           _cedulaErrorMessage = 'Cédula no encontrada en el sistema';
           _nameController.clear();
           _isSearchingCedula = false;
+          _cedulaValida = false; // ❌ Ocultar campos
         });
       }
     } catch (e) {
       setState(() {
         _cedulaErrorMessage = 'Error al buscar la cédula';
         _isSearchingCedula = false;
+        _cedulaValida = false;
       });
     }
   }
@@ -248,7 +252,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       });
 
       try {
-        final cedula = _cedulaController.text.trim(); // ← AGREGAR ESTA LÍNEA
+        final cedula = _cedulaController.text.trim();
         final name = _nameController.text.trim();
         final email = _emailController.text.trim();
         final password = _passwordController.text;
@@ -264,7 +268,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             .collection('usuarios_pendientes')
             .doc(userCredential.user!.uid)
             .set({
-              'cedula': cedula, // ← AGREGAR ESTA LÍNEA
+              'cedula': cedula,
               'nombre': name,
               'email': email,
               'rol': _selectedRole,
@@ -275,19 +279,39 @@ class _RegisterScreenState extends State<RegisterScreen>
               'fechaRegistro': FieldValue.serverTimestamp(),
             });
 
-        // El resto del método permanece igual...
+        // 🔥 CRÍTICO: Cerrar sesión inmediatamente
         await _auth.signOut();
+
+        if (!mounted) return;
+
         setState(() {
           _isLoading = false;
         });
 
-        if (mounted) {
-          _showSuccessDialog();
+        _showSuccessDialog();
+      } on FirebaseAuthException catch (e) {
+        if (!mounted) return;
+
+        String errorMessage = 'Error al registrar';
+        if (e.code == 'email-already-in-use') {
+          errorMessage = 'Este correo electrónico ya está registrado';
+        } else if (e.code == 'weak-password') {
+          errorMessage = 'La contraseña es demasiado débil';
+        } else {
+          errorMessage = e.message ?? 'Error desconocido';
         }
-      } on FirebaseAuthException {
-        // Manejo de errores igual...
+
+        setState(() {
+          _errorMessage = errorMessage;
+          _isLoading = false;
+        });
       } catch (e) {
-        // Manejo de errores igual...
+        if (!mounted) return;
+
+        setState(() {
+          _errorMessage = 'Error inesperado: ${e.toString()}';
+          _isLoading = false;
+        });
       }
     }
   }
@@ -486,6 +510,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                                             setState(() {
                                               _cedulaErrorMessage = null;
                                               _nameController.clear();
+                                              _cedulaValida =
+                                                  false; // Ocultar campos
                                             });
                                           }
                                         },
@@ -562,286 +588,292 @@ class _RegisterScreenState extends State<RegisterScreen>
                                           ),
                                         ),
                                       // Campo de nombre
-                                      TextFormField(
-                                        controller: _nameController,
-                                        focusNode: _nameFocus,
-                                        textInputAction: TextInputAction.next,
-                                        readOnly:
-                                            _nameController
-                                                .text
-                                                .isNotEmpty, // ← AGREGAR ESTA LÍNEA
-                                        onFieldSubmitted:
-                                            (_) => _emailFocus.requestFocus(),
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter.allow(
-                                            RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'),
+                                      if (_cedulaValida) ...[
+                                        // Campo de nombre
+                                        TextFormField(
+                                          controller: _nameController,
+                                          focusNode: _nameFocus,
+                                          textInputAction: TextInputAction.next,
+                                          readOnly:
+                                              _nameController.text.isNotEmpty,
+                                          onFieldSubmitted:
+                                              (_) => _emailFocus.requestFocus(),
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter.allow(
+                                              RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'),
+                                            ),
+                                          ],
+                                          decoration: _inputDecoration(
+                                            icon: Icons.person_outline,
+                                            hint:
+                                                _nameController.text.isEmpty
+                                                    ? 'Nombre completo'
+                                                    : 'Nombre encontrado automáticamente',
+                                          ).copyWith(
+                                            fillColor:
+                                                _nameController.text.isNotEmpty
+                                                    ? Colors.grey.shade100
+                                                    : Colors.white,
                                           ),
-                                        ],
-                                        decoration: _inputDecoration(
-                                          icon: Icons.person_outline,
-                                          hint:
-                                              _nameController.text.isEmpty
-                                                  ? 'Nombre completo'
-                                                  : 'Nombre encontrado automáticamente',
-                                        ).copyWith(
-                                          fillColor:
-                                              _nameController.text.isNotEmpty
-                                                  ? Colors.grey.shade100
-                                                  : Colors
-                                                      .white, // ← AGREGAR ESTA LÍNEA
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.trim().isEmpty) {
+                                              return 'Por favor ingresa tu nombre';
+                                            }
+                                            if (value.trim().length < 2) {
+                                              return 'El nombre debe tener al menos 2 caracteres';
+                                            }
+                                            return null;
+                                          },
                                         ),
-                                        validator: (value) {
-                                          if (value == null ||
-                                              value.trim().isEmpty) {
-                                            return 'Por favor ingresa tu nombre';
-                                          }
-                                          if (value.trim().length < 2) {
-                                            return 'El nombre debe tener al menos 2 caracteres';
-                                          }
-                                          return null;
-                                        },
-                                      ),
-                                      const SizedBox(height: 12),
+                                        const SizedBox(height: 12),
 
-                                      // Campo de correo
-                                      TextFormField(
-                                        controller: _emailController,
-                                        focusNode: _emailFocus,
-                                        keyboardType:
-                                            TextInputType.emailAddress,
-                                        textInputAction: TextInputAction.next,
-                                        onFieldSubmitted:
-                                            (_) =>
-                                                _passwordFocus.requestFocus(),
-                                        decoration: _inputDecoration(
-                                          icon: Icons.email_outlined,
-                                          hint: 'Correo electrónico',
+                                        // Campo de correo
+                                        TextFormField(
+                                          controller: _emailController,
+                                          focusNode: _emailFocus,
+                                          keyboardType:
+                                              TextInputType.emailAddress,
+                                          textInputAction: TextInputAction.next,
+                                          onFieldSubmitted:
+                                              (_) =>
+                                                  _passwordFocus.requestFocus(),
+                                          decoration: _inputDecoration(
+                                            icon: Icons.email_outlined,
+                                            hint: 'Correo electrónico',
+                                          ),
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.trim().isEmpty) {
+                                              return 'Por favor ingresa tu correo';
+                                            }
+                                            if (!RegExp(
+                                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                            ).hasMatch(value)) {
+                                              return 'Ingresa un correo válido';
+                                            }
+                                            return null;
+                                          },
                                         ),
-                                        validator: (value) {
-                                          if (value == null ||
-                                              value.trim().isEmpty) {
-                                            return 'Por favor ingresa tu correo';
-                                          }
-                                          if (!RegExp(
-                                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                                          ).hasMatch(value)) {
-                                            return 'Ingresa un correo válido';
-                                          }
-                                          return null;
-                                        },
-                                      ),
-                                      const SizedBox(height: 12),
+                                        const SizedBox(height: 12),
 
-                                      // Campo de contraseña
-                                      TextFormField(
-                                        controller: _passwordController,
-                                        focusNode: _passwordFocus,
-                                        obscureText: _obscurePassword,
-                                        textInputAction: TextInputAction.done,
-                                        onFieldSubmitted:
-                                            (_) => _handleSubmit(),
-                                        decoration: _inputDecoration(
-                                          icon: Icons.lock_outline,
-                                          hint: 'Contraseña',
-                                          suffix: IconButton(
-                                            icon: Icon(
-                                              _obscurePassword
-                                                  ? Icons.visibility_outlined
-                                                  : Icons
-                                                      .visibility_off_outlined,
-                                              color: const Color(0xFF4682B4),
-                                            ),
-                                            onPressed: () {
-                                              setState(() {
-                                                _obscurePassword =
-                                                    !_obscurePassword;
-                                              });
-                                            },
-                                          ),
-                                        ),
-                                        validator: (value) {
-                                          if (value == null || value.isEmpty) {
-                                            return 'Por favor ingresa una contraseña';
-                                          }
-                                          if (value.length < 6) {
-                                            return 'La contraseña debe tener al menos 6 caracteres';
-                                          }
-                                          return null;
-                                        },
-                                      ),
-                                      const SizedBox(height: 12),
-
-                                      // Dropdown de rol
-                                      DropdownButtonFormField<String>(
-                                        value: _selectedRole,
-                                        decoration: _inputDecoration(
-                                          icon: Icons.badge_outlined,
-                                          hint: 'Selecciona tu rol',
-                                        ).copyWith(fillColor: Colors.white),
-                                        dropdownColor: Colors.white,
-                                        items: const [
-                                          DropdownMenuItem(
-                                            value: 'Gerente',
-                                            child: Text('Gerente'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'Administrador',
-                                            child: Text(
-                                              'Administrador General',
-                                            ),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'Vendedor',
-                                            child: Text('Vendedor'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'SupervisorFundicion',
-                                            child: Text('Supervisor Fundicion'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'OperadorFundicion',
-                                            child: Text('Operador Fundicion'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'SupervisorMecanizado',
-                                            child: Text(
-                                              'Supervisor Mecanizado',
-                                            ),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'OperadorMecanizado',
-                                            child: Text('Operador Mecanizado'),
-                                          ),
-                                        ],
-                                        onChanged:
-                                            (value) => setState(
-                                              () => _selectedRole = value!,
-                                            ),
-                                        validator: (value) {
-                                          if (value == null || value.isEmpty) {
-                                            return 'Por favor selecciona un rol';
-                                          }
-                                          return null;
-                                        },
-                                      ),
-                                      const SizedBox(height: 12),
-
-                                      // Dropdown de sede
-                                      DropdownButtonFormField<String>(
-                                        value: _selectedSede,
-                                        decoration: _inputDecoration(
-                                          icon: Icons.location_city_outlined,
-                                          hint: 'Selecciona tu sede',
-                                        ).copyWith(fillColor: Colors.white),
-                                        dropdownColor: Colors.white,
-                                        items: const [
-                                          DropdownMenuItem(
-                                            value: 'Tulcán',
-                                            child: Text('Tulcán'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'Quito',
-                                            child: Text('Quito'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'Guayaquil',
-                                            child: Text('Guayaquil'),
-                                          ),
-                                        ],
-                                        onChanged:
-                                            (value) => setState(
-                                              () => _selectedSede = value,
-                                            ),
-                                        validator: (value) {
-                                          if (value == null || value.isEmpty) {
-                                            return 'Por favor selecciona una sede';
-                                          }
-                                          return null;
-                                        },
-                                      ),
-
-                                      const SizedBox(height: 16),
-
-                                      // Mensajes de error (mantener solo los errores)
-                                      if (_errorMessage != null)
-                                        Container(
-                                          width: double.infinity,
-                                          padding: const EdgeInsets.all(12),
-                                          margin: const EdgeInsets.only(
-                                            bottom: 12,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.red.shade50,
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.red.shade200,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.error_outline,
-                                                color: Colors.red.shade600,
-                                                size: 18,
+                                        // Campo de contraseña
+                                        TextFormField(
+                                          controller: _passwordController,
+                                          focusNode: _passwordFocus,
+                                          obscureText: _obscurePassword,
+                                          textInputAction: TextInputAction.done,
+                                          onFieldSubmitted:
+                                              (_) => _handleSubmit(),
+                                          decoration: _inputDecoration(
+                                            icon: Icons.lock_outline,
+                                            hint: 'Contraseña',
+                                            suffix: IconButton(
+                                              icon: Icon(
+                                                _obscurePassword
+                                                    ? Icons.visibility_outlined
+                                                    : Icons
+                                                        .visibility_off_outlined,
+                                                color: const Color(0xFF4682B4),
                                               ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Text(
-                                                  _errorMessage!,
-                                                  style: TextStyle(
-                                                    color: Colors.red.shade800,
-                                                    fontWeight: FontWeight.w500,
-                                                    fontSize: 13,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-
-                                      // Botón de registro
-                                      SizedBox(
-                                        width: double.infinity,
-                                        height: 48,
-                                        child: ElevatedButton(
-                                          onPressed:
-                                              _isLoading ? null : _register,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(
-                                              0xFF4682B4,
+                                              onPressed: () {
+                                                setState(() {
+                                                  _obscurePassword =
+                                                      !_obscurePassword;
+                                                });
+                                              },
                                             ),
-                                            foregroundColor: Colors.white,
-                                            elevation: 0,
-                                            shape: RoundedRectangleBorder(
+                                          ),
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return 'Por favor ingresa una contraseña';
+                                            }
+                                            if (value.length < 6) {
+                                              return 'La contraseña debe tener al menos 6 caracteres';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+
+                                        // Dropdown de rol
+                                        DropdownButtonFormField<String>(
+                                          value: _selectedRole,
+                                          decoration: _inputDecoration(
+                                            icon: Icons.badge_outlined,
+                                            hint: 'Selecciona tu rol',
+                                          ).copyWith(fillColor: Colors.white),
+                                          dropdownColor: Colors.white,
+                                          items: const [
+                                            DropdownMenuItem(
+                                              value: 'Gerente',
+                                              child: Text('Gerente'),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'Administrador',
+                                              child: Text(
+                                                'Administrador General',
+                                              ),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'Vendedor',
+                                              child: Text('Vendedor'),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'SupervisorFundicion',
+                                              child: Text(
+                                                'Supervisor Fundicion',
+                                              ),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'OperadorFundicion',
+                                              child: Text('Operador Fundicion'),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'SupervisorMecanizado',
+                                              child: Text(
+                                                'Supervisor Mecanizado',
+                                              ),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'OperadorMecanizado',
+                                              child: Text(
+                                                'Operador Mecanizado',
+                                              ),
+                                            ),
+                                          ],
+                                          onChanged:
+                                              (value) => setState(
+                                                () => _selectedRole = value!,
+                                              ),
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return 'Por favor selecciona un rol';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+
+                                        // Dropdown de sede
+                                        DropdownButtonFormField<String>(
+                                          value: _selectedSede,
+                                          decoration: _inputDecoration(
+                                            icon: Icons.location_city_outlined,
+                                            hint: 'Selecciona tu sede',
+                                          ).copyWith(fillColor: Colors.white),
+                                          dropdownColor: Colors.white,
+                                          items: const [
+                                            DropdownMenuItem(
+                                              value: 'Tulcán',
+                                              child: Text('Tulcán'),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'Quito',
+                                              child: Text('Quito'),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'Guayaquil',
+                                              child: Text('Guayaquil'),
+                                            ),
+                                          ],
+                                          onChanged:
+                                              (value) => setState(
+                                                () => _selectedSede = value,
+                                              ),
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return 'Por favor selecciona una sede';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        const SizedBox(height: 16),
+
+                                        // Mensajes de error
+                                        if (_errorMessage != null)
+                                          Container(
+                                            width: double.infinity,
+                                            padding: const EdgeInsets.all(12),
+                                            margin: const EdgeInsets.only(
+                                              bottom: 12,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.red.shade50,
                                               borderRadius:
-                                                  BorderRadius.circular(12),
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: Colors.red.shade200,
+                                              ),
                                             ),
-                                          ),
-                                          child:
-                                              _isLoading
-                                                  ? const SizedBox(
-                                                    width: 20,
-                                                    height: 20,
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                          color: Colors.white,
-                                                          strokeWidth: 2,
-                                                        ),
-                                                  )
-                                                  : const Text(
-                                                    'Crear Cuenta',
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.error_outline,
+                                                  color: Colors.red.shade600,
+                                                  size: 18,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    _errorMessage!,
                                                     style: TextStyle(
-                                                      fontSize: 16,
+                                                      color:
+                                                          Colors.red.shade800,
                                                       fontWeight:
-                                                          FontWeight.w600,
+                                                          FontWeight.w500,
+                                                      fontSize: 13,
                                                     ),
                                                   ),
-                                        ),
-                                      ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
 
-                                      const SizedBox(height: 16),
+                                        // Botón de registro
+                                        SizedBox(
+                                          width: double.infinity,
+                                          height: 48,
+                                          child: ElevatedButton(
+                                            onPressed:
+                                                _isLoading ? null : _register,
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(
+                                                0xFF4682B4,
+                                              ),
+                                              foregroundColor: Colors.white,
+                                              elevation: 0,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                            child:
+                                                _isLoading
+                                                    ? const SizedBox(
+                                                      width: 20,
+                                                      height: 20,
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                            color: Colors.white,
+                                                            strokeWidth: 2,
+                                                          ),
+                                                    )
+                                                    : const Text(
+                                                      'Crear Cuenta',
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                    ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                      ],
 
                                       // Texto de login
                                       TextButton(

@@ -16,6 +16,31 @@ class AuditoriaDeskScreen extends StatefulWidget {
 class _AuditoriaDeskScreenState extends State<AuditoriaDeskScreen> {
   String _filtro = '';
   DateTime? _fechaSeleccionada;
+  // Agregar esta función helper en la clase _AuditoriaDeskScreenState
+  Map<String, List<QueryDocumentSnapshot>> _agruparRegistros(
+    List<QueryDocumentSnapshot> registros,
+  ) {
+    Map<String, List<QueryDocumentSnapshot>> grupos = {};
+
+    for (var doc in registros) {
+      final data = doc.data() as Map<String, dynamic>;
+      final fecha = (data['fecha'] as Timestamp?)?.toDate() ?? DateTime.now();
+      final usuario = data['usuario_nombre'] ?? '---';
+      final accion = data['accion'] ?? '---';
+      final detalle = data['detalle'] ?? '';
+
+      // Crear una clave única basada en: fecha (sin segundos), usuario, acción y detalle
+      final clave =
+          '${DateFormat('dd/MM/yyyy HH:mm').format(fecha)}_${usuario}_${accion}_$detalle';
+
+      if (!grupos.containsKey(clave)) {
+        grupos[clave] = [];
+      }
+      grupos[clave]!.add(doc);
+    }
+
+    return grupos;
+  }
 
   // Divide lista en chunks para el PDF
   List<List<T>> chunkList<T>(List<T> list, int chunkSize) {
@@ -31,30 +56,49 @@ class _AuditoriaDeskScreenState extends State<AuditoriaDeskScreen> {
     final pdf = pw.Document();
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
-    final chunks = chunkList(registros, 50);
+    // Agrupar registros antes de dividir en chunks
+    final registrosAgrupados = _agruparRegistros(registros);
+
+    // Convertir el mapa agrupado a una lista para poder dividir en chunks
+    final registrosParaPdf =
+        registrosAgrupados.entries.map((entry) {
+          final primerDoc = entry.value.first;
+          final data = primerDoc.data() as Map<String, dynamic>;
+          final fecha =
+              (data['fecha'] as Timestamp?)?.toDate() ?? DateTime.now();
+          final usuario = data['usuario_nombre'] ?? '---';
+          final accion = data['accion'] ?? '---';
+          final detalle = data['detalle'] ?? '';
+          final cantidad = entry.value.length;
+
+          return {
+            'fecha': fecha,
+            'usuario': usuario,
+            'accion': accion,
+            'detalle': detalle,
+            'cantidad': cantidad,
+          };
+        }).toList();
+
+    // Dividir en chunks de 50 filas por página
+    final chunks = chunkList(registrosParaPdf, 50);
 
     for (var i = 0; i < chunks.length; i++) {
       final dataRows =
-          chunks[i].map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final fecha =
-                (data['fecha'] as Timestamp?)?.toDate() ?? DateTime.now();
-            final usuario = data['usuario_nombre'] ?? '---';
-            final accion = data['accion'] ?? '---';
-            final detalle = data['detalle'] ?? '';
-
+          chunks[i].map((registro) {
             return [
-              dateFormat.format(fecha),
-              usuario.toString(),
-              accion.toString(),
-              detalle.toString(),
+              dateFormat.format(registro['fecha'] as DateTime),
+              registro['usuario'].toString(),
+              registro['accion'].toString(),
+              registro['detalle'].toString(),
+              registro['cantidad'].toString(),
             ];
           }).toList();
 
       pdf.addPage(
         buildReportePDF(
           titulo: 'Reporte de Auditoría - Página ${i + 1} de ${chunks.length}',
-          headers: ['Fecha', 'Usuario', 'Acción', 'Detalle'],
+          headers: ['Fecha', 'Usuario', 'Acción', 'Detalle', 'Cant'],
           dataRows: dataRows,
           footerText: 'Registros en esta página: ${dataRows.length}',
         ),
@@ -373,11 +417,17 @@ class _AuditoriaDeskScreenState extends State<AuditoriaDeskScreen> {
                                   cumpleFecha;
                             }).toList();
 
+                        // Reemplazar desde "if (registrosFiltrados.isEmpty)" hasta el final del DataTable
                         if (registrosFiltrados.isEmpty) {
                           return const Center(
                             child: Text('No hay registros aún.'),
                           );
                         }
+
+                        // Agrupar registros similares
+                        final registrosAgrupados = _agruparRegistros(
+                          registrosFiltrados,
+                        );
 
                         return LayoutBuilder(
                           builder: (context, constraints) {
@@ -423,11 +473,20 @@ class _AuditoriaDeskScreenState extends State<AuditoriaDeskScreen> {
                                           child: Text('Detalle'),
                                         ),
                                       ),
+                                      DataColumn(
+                                        label: SizedBox(
+                                          width: 80,
+                                          child: Center(
+                                            child: Text('Cantidad'),
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                     rows:
-                                        registrosFiltrados.map((doc) {
+                                        registrosAgrupados.entries.map((entry) {
+                                          final primerDoc = entry.value.first;
                                           final data =
-                                              doc.data()
+                                              primerDoc.data()
                                                   as Map<String, dynamic>;
                                           final fecha =
                                               (data['fecha'] as Timestamp?)
@@ -441,6 +500,7 @@ class _AuditoriaDeskScreenState extends State<AuditoriaDeskScreen> {
                                           final accion =
                                               data['accion'] ?? '---';
                                           final detalle = data['detalle'] ?? '';
+                                          final cantidad = entry.value.length;
 
                                           return DataRow(
                                             cells: [
@@ -486,6 +546,43 @@ class _AuditoriaDeskScreenState extends State<AuditoriaDeskScreen> {
                                                     maxLines: 8,
                                                     overflow:
                                                         TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ),
+                                              DataCell(
+                                                Center(
+                                                  child: Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 4,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          cantidad > 1
+                                                              ? const Color(
+                                                                0xFF4682B4,
+                                                              )
+                                                              : Colors
+                                                                  .grey[300],
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            12,
+                                                          ),
+                                                    ),
+                                                    child: Text(
+                                                      cantidad.toString(),
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color:
+                                                            cantidad > 1
+                                                                ? Colors.white
+                                                                : Colors
+                                                                    .black87,
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
                                               ),

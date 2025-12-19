@@ -443,7 +443,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
       ),
     );
 
-    // ✅ AGREGAR ESTA CONDICIÓN
+    // ✅ Bajo Stock - Accesible para todos
     if (isClickable && label == 'Bajo Stock') {
       return GestureDetector(
         onTap: () => navegarConFade(context, const BajoStockDeskScreen()),
@@ -451,16 +451,22 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
       );
     }
 
-    // ✅ AGREGAR ESTA NUEVA CONDICIÓN PARA USUARIOS ACTIVOS
+    // ✅ Usuarios Activos - SOLO para Gerente y Administrador General
     if (isClickable && label == 'Usuarios Activos') {
-      return GestureDetector(
-        onTap:
-            () => navegarConFade(
-              context,
-              const EmpleadosActivosDeskScreen(), // Asegúrate de importar esta pantalla
-            ),
-        child: card,
-      );
+      // Verificar si el rol tiene acceso
+      bool tieneAcceso =
+          rolUsuario == 'Gerente' || rolUsuario == 'Administrador General';
+
+      if (tieneAcceso) {
+        return GestureDetector(
+          onTap:
+              () => navegarConFade(context, const EmpleadosActivosDeskScreen()),
+          child: card,
+        );
+      } else {
+        // Si no tiene acceso, retornar la tarjeta sin funcionalidad de clic
+        return card;
+      }
     }
 
     return card;

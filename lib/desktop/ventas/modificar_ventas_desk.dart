@@ -59,7 +59,7 @@ class _ModificarVentaDeskScreenState extends State<ModificarVentaDeskScreen>
         final data = doc.data() as Map<String, dynamic>;
         final rol = data['rol'];
 
-        if (rol == 'Administrador General') {
+        if  (rol == 'Gerente' || rol == 'Administrador General') {
           setState(() {
             _esAdmin = true;
             _verificado = true;
