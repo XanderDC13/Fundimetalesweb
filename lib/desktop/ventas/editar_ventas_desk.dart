@@ -23,6 +23,7 @@ class _EditarVentaDeskScreenState extends State<EditarVentaDeskScreen> {
   DateTime _fecha = DateTime.now();
   List<Map<String, dynamic>> _productos = [];
   Map<String, int> _disponibles = {};
+  final Map<String, int> _cantidadesOriginalesVenta = {};
   bool _usarIva = false;
   String _codigoComprobante = '';
 
@@ -34,10 +35,35 @@ class _EditarVentaDeskScreenState extends State<EditarVentaDeskScreen> {
     );
     _fecha =
         (widget.datosVenta['fecha'] as Timestamp?)?.toDate() ?? DateTime.now();
+
+    // ✅ CRÍTICO: Guardar cantidades originales ANTES de cualquier otra cosa
+    // Hacer una copia PROFUNDA para que sean completamente independientes
+    final productosOriginalesRaw = widget.datosVenta['productos'] as List?;
+
+    if (productosOriginalesRaw != null) {
+      for (var prod in productosOriginalesRaw) {
+        if (prod is Map<String, dynamic>) {
+          final ref = prod['referencia'];
+          final categoria = prod['categoria']?.toString().toUpperCase() ?? '';
+
+          if (categoria != 'TRANSPORTE' && ref != null) {
+            // Crear una COPIA INDEPENDIENTE del valor, no una referencia
+            final cantidadOriginal = (prod['cantidad'] ?? 0) as int;
+            _cantidadesOriginalesVenta[ref] = cantidadOriginal;
+
+            print('🔒 Guardando cantidad original: $ref = $cantidadOriginal');
+          }
+        }
+      }
+    }
+
+    // ✅ AHORA SÍ cargar _productos (que será modificado en la UI)
     _productos = List<Map<String, dynamic>>.from(
       widget.datosVenta['productos'] ?? [],
     );
+
     _codigoComprobante = widget.datosVenta['codigo_comprobante'] ?? '';
+
     _cargarDisponibles();
   }
 
@@ -47,55 +73,47 @@ class _EditarVentaDeskScreenState extends State<EditarVentaDeskScreen> {
   }
 
   Future<void> _cargarDisponibles() async {
-  try {
-    // 1. Obtener inventario actual de bodega
-    final inventarioBodegaSnapshot = await FirebaseFirestore.instance
-        .collection('inventarios')
-        .doc('bodega')
-        .collection('productos')
-        .get();
+    try {
+      final disponibles = <String, int>{};
 
-    final disponibles = <String, int>{};
+      // ✅ Cargar inventario de TODAS las sucursales
+      final sucursales = ['Quito', 'Guayaquil', 'Tulcán'];
 
-    // 2. Procesar inventario de bodega
-    for (var doc in inventarioBodegaSnapshot.docs) {
-      final referencia = doc.id; // El ID del documento es la referencia
-      final cantidad = (doc.data()['cantidad'] ?? 0) as int;
-      
-      disponibles[referencia] = cantidad;
-    }
+      for (String sucursal in sucursales) {
+        final inventarioBodegaSnapshot =
+            await FirebaseFirestore.instance
+                .collection('inventarios')
+                .doc(sucursal)
+                .collection('procesos')
+                .doc('bodega')
+                .collection('productos')
+                .get();
 
- 
-if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalId'))) {
-  // Solo suma si los productos vienen de una venta existente
-  for (var producto in _productos) {
-    final referencia = producto['referencia'];
-    final cantidadEditando = producto['cantidad'] ?? 0;
-    
-    if (cantidadEditando > 0) {
-      disponibles[referencia] = 
-          ((disponibles[referencia] ?? 0) + cantidadEditando).toInt();
+        for (var doc in inventarioBodegaSnapshot.docs) {
+          final referencia = doc.id;
+          final cantidad = (doc.data()['cantidad'] ?? 0) as int;
+
+          // Sumar las cantidades de todas las sucursales
+          disponibles[referencia] = (disponibles[referencia] ?? 0) + cantidad;
+        }
+      }
+
+      // ✅ Sumar las cantidades ORIGINALES de la venta
+
+      for (var entry in _cantidadesOriginalesVenta.entries) {
+        disponibles[entry.key] = (disponibles[entry.key] ?? 0) + entry.value;
+      }
+
+      setState(() {
+        _disponibles = disponibles;
+      });
+    } catch (e) {
+      print('Error al cargar disponibles: $e');
+      setState(() {
+        _disponibles = <String, int>{};
+      });
     }
   }
-}
-
-    setState(() {
-      _disponibles = disponibles;
-    });
-    
-    // Debug: puedes comentar esta línea en producción
-    disponibles.forEach((ref, cant) {
-      print('Referencia: $ref, Cantidad disponible: $cant');
-    });
-
-  } catch (e) {
-    print('Error al cargar disponibles: $e');
-    setState(() {
-      _disponibles = <String, int>{};
-    });
-  }
-}
-
 
   /// ✅ Calcula total, con IVA solo para productos que NO son de transporte
   double _calcularTotal() {
@@ -135,12 +153,28 @@ if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalI
     final productosDisponibles =
         snapshot.docs.map((doc) {
           final data = doc.data();
+
+          // ✅ SOLUCIÓN: Leer precio20 y pvp en lugar de 'precios'
+          List<double> preciosLista = [];
+
+          // Agregar precio20 si existe
+          if (data['precio20'] != null && data['precio20'] is num) {
+            final precio = (data['precio20'] as num).toDouble();
+            if (precio > 0) preciosLista.add(precio);
+          }
+
+          // Agregar pvp si existe
+          if (data['pvp'] != null && data['pvp'] is num) {
+            final pvp = (data['pvp'] as num).toDouble();
+            if (pvp > 0) preciosLista.add(pvp);
+          }
+
           return {
             'id': doc.id,
-            'nombre': data['nombre'],
-            'precios': data['precios'],
-            'referencia': data['referencia'],
-            'categoria': data['categoria'], 
+            'nombre': data['nombre'] ?? 'Sin nombre',
+            'precios': preciosLista,
+            'referencia': data['referencia'] ?? '',
+            'categoria': data['categoria'] ?? '',
           };
         }).toList();
 
@@ -305,7 +339,6 @@ if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalI
                                           final disponibles =
                                               _disponibles[referencia] ?? 0;
 
-                                          // ✅ Los productos de transporte siempre se pueden agregar
                                           final esTransporte =
                                               _esProductoTransporte(categoria);
                                           final puedeAgregar =
@@ -505,14 +538,23 @@ if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalI
                                                           producto['precios'] ??
                                                               [],
                                                         );
+
                                                         if (precios.isEmpty) {
                                                           ScaffoldMessenger.of(
                                                             context,
                                                           ).showSnackBar(
-                                                            const SnackBar(
+                                                            SnackBar(
                                                               content: Text(
-                                                                'Este producto no tiene precios registrados',
+                                                                'Este producto no tiene precios registrados.\n'
+                                                                'Producto: ${producto['nombre']}\n'
+                                                                'Referencia: ${producto['referencia']}',
                                                               ),
+                                                              backgroundColor:
+                                                                  Colors.red,
+                                                              duration:
+                                                                  const Duration(
+                                                                    seconds: 4,
+                                                                  ),
                                                             ),
                                                           );
                                                           return;
@@ -525,10 +567,9 @@ if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalI
                                                           builder: (context) {
                                                             return AlertDialog(
                                                               backgroundColor:
-                                                                  Colors
-                                                                      .white, // 👉 Forzamos fondo blanco
+                                                                  Colors.white,
                                                               title: const Text(
-                                                                'Selecciona el PVP',
+                                                                'Selecciona el precio',
                                                               ),
                                                               content: StatefulBuilder(
                                                                 builder: (
@@ -545,6 +586,7 @@ if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalI
                                                                           MainAxisSize
                                                                               .min,
                                                                       children: [
+                                                                        // ✅ Mostrar precio20 y pvp con etiquetas claras
                                                                         ...List.generate(
                                                                           precios
                                                                               .length,
@@ -553,7 +595,6 @@ if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalI
                                                                           ) {
                                                                             final precioPvp =
                                                                                 precios[index];
-
                                                                             final precioFinal =
                                                                                 (esTransporte ||
                                                                                         !_usarIva)
@@ -561,12 +602,28 @@ if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalI
                                                                                     : precioPvp *
                                                                                         1.15;
 
+                                                                            // Determinar la etiqueta según el índice
+                                                                            String
+                                                                            etiqueta;
+                                                                            if (index ==
+                                                                                0) {
+                                                                              etiqueta =
+                                                                                  'Precio20';
+                                                                            } else if (index ==
+                                                                                1) {
+                                                                              etiqueta =
+                                                                                  'PVP';
+                                                                            } else {
+                                                                              etiqueta =
+                                                                                  'Precio ${index + 1}';
+                                                                            }
+
                                                                             return Card(
                                                                               color:
-                                                                                  Colors.white, // 👉 Fondo blanco en cada item
+                                                                                  Colors.white,
                                                                               child: ListTile(
                                                                                 title: Text(
-                                                                                  'PVP ${index + 1}',
+                                                                                  etiqueta,
                                                                                 ),
                                                                                 subtitle: Text(
                                                                                   '\$${precioFinal.toStringAsFixed(2)}'
@@ -588,7 +645,6 @@ if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalI
                                                                               32,
                                                                         ),
 
-                                                                        // 🔵 Campo para precio modificado
                                                                         TextField(
                                                                           controller:
                                                                               _precioPersonalizadoController,
@@ -607,7 +663,7 @@ if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalI
                                                                             filled:
                                                                                 true,
                                                                             fillColor:
-                                                                                Colors.white, // 👉 Fondo blanco dentro del campo
+                                                                                Colors.white,
                                                                           ),
                                                                         ),
 
@@ -686,11 +742,11 @@ if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalI
                                                         if (precioSeleccionado !=
                                                             null) {
                                                           final int cantidad =
-                                                              1; // cantidad inicial
+                                                              1;
                                                           final double
                                                           subtotal =
                                                               precioSeleccionado *
-                                                              cantidad; // CALCULAR SUBTOTAL
+                                                              cantidad;
 
                                                           setState(() {
                                                             _productos.add({
@@ -703,14 +759,14 @@ if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalI
                                                               'referencia':
                                                                   referencia,
                                                               'categoria':
-                                                                  categoria, // ✅ Guardamos la categoría
+                                                                  categoria,
                                                               'subtotal':
                                                                   subtotal,
                                                             });
                                                           });
                                                           Navigator.pop(
                                                             context,
-                                                          ); // cerrar modal principal
+                                                          );
                                                           _cargarDisponibles();
                                                         }
                                                       },
@@ -732,23 +788,27 @@ if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalI
       },
     );
   }
+  // FUNCIÓN 2: _guardarCambios()
 
   void _guardarCambios() async {
     for (var producto in _productos) {
       final referencia = producto['referencia'];
-      final cantidad = producto['cantidad'] ?? 0;
+      final cantidadNueva = producto['cantidad'] ?? 0;
+      final categoria = producto['categoria']?.toString().toUpperCase() ?? '';
 
-      // Toma categoría o referencia como posible indicador de transporte
-      final categoria = producto['categoria'] ?? producto['referencia'];
+      // ✅ NO validar stock para productos de TRANSPORTE
+      if (categoria != 'TRANSPORTE') {
+        final disponibleTotal = _disponibles[referencia] ?? 0;
+        final cantidadOriginal = _cantidadesOriginalesVenta[referencia] ?? 0;
 
-      if (!_esProductoTransporte(categoria)) {
-        final disponible = _disponibles[referencia] ?? 0;
-        if (cantidad > disponible) {
+        if (cantidadNueva > disponibleTotal) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Cantidad de "${producto['nombre']}" excede stock disponible.',
+                'Cantidad de "${producto['nombre']}" excede stock disponible.\n'
+                'Disponible: $disponibleTotal (incluye $cantidadOriginal de esta venta)',
               ),
+              duration: const Duration(seconds: 4),
             ),
           );
           return;
@@ -770,14 +830,177 @@ if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalI
               ? (usuarioDoc['nombre'] ?? 'Desconocido')
               : 'Desconocido';
 
-      // Tipo de venta
       final tipoVenta = widget.datosVenta['tipo'] ?? 'Venta';
-
-      // Totales
       final totalAnterior = widget.datosVenta['total'] ?? 0.0;
       final totalNuevo = _calcularTotal();
 
-      // Actualiza la venta
+      final sucursales = ['Quito', 'Guayaquil', 'Tulcán'];
+
+      // ✅ CREAR MAPAS USANDO _cantidadesOriginalesVenta (datos guardados al inicio)
+      Map<String, Map<String, dynamic>> productosOriginalesMap = {};
+
+      for (var entry in _cantidadesOriginalesVenta.entries) {
+        final referencia = entry.key;
+        final cantidad = entry.value;
+
+        // Buscar el nombre del producto
+        final productoActual = _productos.firstWhere(
+          (p) => p['referencia'] == referencia,
+          orElse:
+              () => {
+                'nombre':
+                    widget.datosVenta['productos'].firstWhere(
+                      (p) => p['referencia'] == referencia,
+                      orElse: () => {'nombre': 'Producto'},
+                    )['nombre'],
+              },
+        );
+
+        productosOriginalesMap[referencia] = {
+          'cantidad': cantidad,
+          'nombre': productoActual['nombre'] ?? 'Producto',
+        };
+      }
+      Map<String, Map<String, dynamic>> productosNuevosMap = {};
+      for (var prod in _productos) {
+        final ref = prod['referencia'];
+        final categoria = prod['categoria']?.toString().toUpperCase() ?? '';
+
+        // ✅ INCLUIR TODOS LOS PRODUCTOS (incluido TRANSPORTE) para el kardex
+        productosNuevosMap[ref] = {
+          'cantidad': (prod['cantidad'] ?? 0) as int,
+          'nombre': prod['nombre'] ?? 'Producto',
+          'categoria': categoria, // ✅ Guardamos la categoría también
+        };
+      }
+
+      // ✅ PROCESAR CAMBIOS EN EL INVENTARIO Y KARDEX
+      Set<String> todasLasReferencias = {
+        ...productosOriginalesMap.keys,
+        ...productosNuevosMap.keys,
+      };
+
+      print('🔍 DEBUG - Procesando cambios en inventario:');
+
+      for (String referencia in todasLasReferencias) {
+        final cantOriginal =
+            productosOriginalesMap[referencia]?['cantidad'] ?? 0;
+        final cantNueva = productosNuevosMap[referencia]?['cantidad'] ?? 0;
+        final nombreProducto =
+            productosNuevosMap[referencia]?['nombre'] ??
+            productosOriginalesMap[referencia]?['nombre'] ??
+            'Producto';
+
+        final diferencia = cantNueva - cantOriginal;
+        final categoria =
+            productosNuevosMap[referencia]?['categoria'] ?? ''; // ✅ AÑADE ESTO
+
+        print('📦 Producto: $nombreProducto (Ref: $referencia)');
+        print(
+          '   Original: $cantOriginal | Nueva: $cantNueva | Diferencia: $diferencia',
+        );
+
+        // ✅ SOLO actualizar INVENTARIO si NO es transporte
+        if (diferencia != 0 && categoria != 'TRANSPORTE') {
+          // ✅ MODIFICA ESTA LÍNEA
+          print('   ⚡ Actualizando inventario...');
+
+          // ✅ DETERMINAR TIPO DE MOVIMIENTO Y MOTIVO
+          String tipoMovimiento;
+          String motivo;
+          String detalle;
+
+          if (cantOriginal == 0 && cantNueva > 0) {
+            // ✅ CASO NUEVO: Producto agregado a la venta
+            tipoMovimiento = 'salida';
+            motivo = 'Producto agregado en edición de venta';
+            detalle =
+                'Venta editada - Cliente: ${_clienteController.text}. '
+                'Producto: $nombreProducto agregado a la venta. '
+                'Cantidad vendida: $cantNueva unidades';
+          } else if (diferencia > 0) {
+            // Se vendió MÁS producto (cantidad aumentó)
+            tipoMovimiento = 'salida';
+            motivo = 'Ajuste por edición de venta';
+            detalle =
+                'Venta editada - Cliente: ${_clienteController.text}. '
+                'Producto: $nombreProducto. '
+                'Cantidad original: $cantOriginal, Nueva: $cantNueva. '
+                'Diferencia: +$diferencia unidades vendidas adicionales';
+          } else if (cantNueva == 0) {
+            // Se ELIMINÓ el producto de la venta
+            tipoMovimiento = 'entrada';
+            motivo = 'Devolución por eliminación de producto en venta';
+            detalle =
+                'Venta editada - Cliente: ${_clienteController.text}. '
+                'Producto: $nombreProducto eliminado de la venta. '
+                'Se devuelven ${diferencia.abs()} unidades al inventario';
+          } else {
+            // Se vendió MENOS producto (cantidad disminuyó)
+            tipoMovimiento = 'entrada';
+            motivo = 'Devolución por ajuste de venta';
+            detalle =
+                'Venta editada - Cliente: ${_clienteController.text}. '
+                'Producto: $nombreProducto. '
+                'Cantidad original: $cantOriginal, Nueva: $cantNueva. '
+                'Se devuelven ${diferencia.abs()} unidades al inventario';
+          }
+
+          // Actualizar inventario en todas las sucursales
+          for (String sucursal in sucursales) {
+            final inventarioRef = FirebaseFirestore.instance
+                .collection('inventarios')
+                .doc(sucursal)
+                .collection('procesos')
+                .doc('bodega')
+                .collection('productos')
+                .doc(referencia);
+
+            final doc = await inventarioRef.get();
+
+            if (doc.exists) {
+              final cantidadActual = (doc.data()?['cantidad'] ?? 0) as int;
+              final nuevaCantidad = cantidadActual - diferencia;
+
+              print('   📍 $sucursal: $cantidadActual → $nuevaCantidad');
+
+              await inventarioRef.update({
+                'cantidad': nuevaCantidad,
+                'ultima_actualizacion': Timestamp.now(),
+              });
+
+              // ✅ REGISTRAR EN KARDEX
+              await FirebaseFirestore.instance
+                  .collection('kardex_movimientos')
+                  .add({
+                    'referencia': referencia,
+                    'producto_nombre': nombreProducto,
+                    'tipo': tipoMovimiento, // entrada | salida | ajuste
+                    'cantidad': diferencia.abs(),
+                    'motivo': motivo,
+                    'detalle': detalle,
+                    'sucursal': sucursal,
+                    'fecha': Timestamp.now(),
+                    'usuario': usuarioNombre,
+                    'saldo_anterior': cantidadActual,
+                    'saldo_actual': nuevaCantidad,
+                  });
+
+              print(
+                '   ✅ Kardex registrado: $tipoMovimiento de ${diferencia.abs()} unidades',
+              );
+            } else {
+              print('   ⚠️ Producto no encontrado en inventario de $sucursal');
+            }
+          }
+        } else {
+          print('   ⏭️ Sin cambios, omitiendo...');
+        }
+      }
+
+      print('✅ Actualizando documento de venta en Firestore...');
+
+      // ✅ ACTUALIZAR LA VENTA EN FIRESTORE
       await FirebaseFirestore.instance
           .collection('ventas')
           .doc(widget.ventaId)
@@ -787,9 +1010,13 @@ if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalI
             'productos': _productos,
             'total': totalNuevo,
             'conIva': _usarIva,
+            'fecha_modificacion': Timestamp.now(),
+            'modificado_por': usuarioNombre,
           });
 
-      // Guarda auditoría
+      print('✅ Guardando auditoría...');
+
+      // ✅ GUARDAR AUDITORÍA
       await FirebaseFirestore.instance.collection('auditoria_general').add({
         'accion': 'Edición de $tipoVenta',
         'detalle':
@@ -800,6 +1027,18 @@ if (_productos.isNotEmpty && _productos.any((p) => p.containsKey('ventaOriginalI
         'usuario_nombre': usuarioNombre,
         'usuario_uid': user?.uid ?? '',
       });
+
+      print('✅ ¡Proceso completado exitosamente!');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Venta actualizada correctamente'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
 
       Navigator.pop(context);
     }

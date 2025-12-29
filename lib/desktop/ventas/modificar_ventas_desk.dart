@@ -59,7 +59,7 @@ class _ModificarVentaDeskScreenState extends State<ModificarVentaDeskScreen>
         final data = doc.data() as Map<String, dynamic>;
         final rol = data['rol'];
 
-        if  (rol == 'Gerente' || rol == 'Administrador General') {
+        if (rol == 'Gerente' || rol == 'Administrador General') {
           setState(() {
             _esAdmin = true;
             _verificado = true;
@@ -417,41 +417,6 @@ class _ModificarVentaDeskScreenState extends State<ModificarVentaDeskScreen>
     );
   }
 
-  // Método para restaurar el inventario de bodega
-  Future<void> _restaurarInventarioBodega(
-    String referencia,
-    int cantidadRestaurar,
-  ) async {
-    {
-      final inventarioRef = FirebaseFirestore.instance
-          .collection('inventarios')
-          .doc('bodega')
-          .collection('productos')
-          .doc(referencia);
-
-      // Obtener cantidad actual
-      final doc = await inventarioRef.get();
-
-      if (doc.exists) {
-        final cantidadActual = (doc.data()?['cantidad'] ?? 0) as int;
-        final nuevaCantidad = cantidadActual + cantidadRestaurar;
-
-        // Actualizar cantidad
-        await inventarioRef.update({
-          'cantidad': nuevaCantidad,
-          'ultima_actualizacion': Timestamp.now(),
-        });
-      } else {
-        // Si no existe el documento, crearlo
-        await inventarioRef.set({
-          'referencia': referencia,
-          'cantidad': cantidadRestaurar,
-          'ultima_actualizacion': Timestamp.now(),
-        });
-      }
-    }
-  }
-
   void _confirmarEliminacion(String idVenta) {
     showDialog(
       context: context,
@@ -460,7 +425,7 @@ class _ModificarVentaDeskScreenState extends State<ModificarVentaDeskScreen>
           builder: (context, setState) {
             bool isDeleting = false;
 
-            Future<void> _eliminarVenta() async {
+            Future<void> eliminarVenta() async {
               setState(() {
                 isDeleting = true;
               });
@@ -503,19 +468,60 @@ class _ModificarVentaDeskScreenState extends State<ModificarVentaDeskScreen>
                     ventaData['productos'],
                   );
 
-                  // Restaurar inventario
+                  // ✅ Restaurar inventario en TODAS las sucursales
                   for (final producto in productos) {
-                    final referencia =
-                        producto['referencia']?.toString() ??
-                        producto['codigo']?.toString() ??
-                        '';
+                    final referencia = producto['referencia']?.toString() ?? '';
+                    final categoria =
+                        producto['categoria']?.toString().toUpperCase() ?? '';
                     final cantidadVendida = (producto['cantidad'] ?? 0) as num;
 
-                    if (referencia.isNotEmpty && cantidadVendida > 0) {
-                      await _restaurarInventarioBodega(
-                        referencia,
-                        cantidadVendida.toInt(),
-                      );
+                    // ✅ NO restaurar inventario para productos de TRANSPORTE
+                    if (referencia.isNotEmpty &&
+                        cantidadVendida > 0 &&
+                        categoria != 'TRANSPORTE') {
+                      // Restaurar en todas las sucursales
+                      final sucursales = ['Quito', 'Guayaquil', 'Tulcán'];
+
+                      for (String sucursal in sucursales) {
+                        final inventarioRef = FirebaseFirestore.instance
+                            .collection('inventarios')
+                            .doc(sucursal)
+                            .collection('procesos')
+                            .doc('bodega')
+                            .collection('productos')
+                            .doc(referencia);
+
+                        final doc = await inventarioRef.get();
+
+                        if (doc.exists) {
+                          final cantidadActual =
+                              (doc.data()?['cantidad'] ?? 0) as int;
+                          final nuevaCantidad =
+                              cantidadActual + cantidadVendida.toInt();
+
+                          await inventarioRef.update({
+                            'cantidad': nuevaCantidad,
+                            'ultima_actualizacion': Timestamp.now(),
+                          });
+
+                          // ✅ Registrar en el kardex
+                          await FirebaseFirestore.instance
+                              .collection('kardex_movimientos')
+                              .add({
+                                'referencia': referencia,
+                                'tipo': 'entrada', 
+                                'cantidad': cantidadVendida.toInt(),
+                                'motivo': 'Devolución por eliminación de venta',
+                                'detalle':
+                                    'Venta eliminada del cliente: ${ventaData['cliente'] ?? 'Sin nombre'}',
+                                'sucursal': sucursal,
+                                'fecha': Timestamp.now(),
+                                'usuario': usuarioNombre,
+                                'saldo_anterior': cantidadActual,
+                                'saldo_actual': nuevaCantidad,
+                              });
+                        }
+                      }
                     }
                   }
 
@@ -615,7 +621,7 @@ class _ModificarVentaDeskScreenState extends State<ModificarVentaDeskScreen>
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              onPressed: isDeleting ? null : _eliminarVenta,
+                              onPressed: isDeleting ? null : eliminarVenta,
                               child:
                                   isDeleting
                                       ? const SizedBox(

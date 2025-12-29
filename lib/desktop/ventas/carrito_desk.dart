@@ -845,6 +845,53 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
     }
   }
 
+  Future<void> _registrarVentaEnKardex(
+    List productos,
+    String codigoComprobante,
+    String sucursal,
+    String cliente,
+  ) async {
+    final firestore = FirebaseFirestore.instance;
+    final fechaVenta = Timestamp.now();
+
+    // Registrar cada producto vendido como una salida en el kardex
+    for (var producto in productos) {
+      final referencia = producto.referencia;
+      final cantidadVendida = producto.cantidad;
+      final nombreProducto = producto.nombre;
+
+      // ✅ Solo registrar en kardex si NO es producto exento (transporte)
+      if (!producto.exentoIva) {
+        try {
+          // Construir el motivo con información de la venta
+          String motivo = 'Venta $codigoComprobante';
+          if (cliente.isNotEmpty) {
+            motivo += ' - Cliente: $cliente';
+          }
+
+          // Crear el movimiento en kardex
+          await firestore.collection('kardex_movimientos').add({
+            'referencia': referencia,
+            'tipo': 'salida',
+            'cantidad': cantidadVendida,
+            'motivo': motivo,
+            'sucursal': sucursal,
+            'fecha': fechaVenta,
+            'codigo_comprobante': codigoComprobante,
+            'producto_nombre': nombreProducto,
+          });
+
+          print(
+            '✅ Movimiento kardex registrado: $referencia - $cantidadVendida unidades',
+          );
+        } catch (e) {
+          print('❌ Error registrando kardex para $referencia: $e');
+          // No lanzar error para no bloquear la venta, solo registrar el problema
+        }
+      }
+    }
+  }
+
   Future<void> _guardarVentaEnFirebase(
     List productos,
     CarritoController carrito,
@@ -865,6 +912,13 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
 
     final nombreUsuario =
         userDoc.data()?['nombre'] ?? currentUser.email ?? '---';
+
+    // ✅ Obtener la sucursal del usuario
+    final sucursalUsuario = userDoc.data()?['sede'] as String?;
+
+    if (sucursalUsuario == null) {
+      throw Exception('Usuario no tiene sucursal asignada');
+    }
 
     // Determinar tipo de comprobante basado en si hay IVA
     final conIva = carrito.ivaActivado && carrito.totalIva > 0;
@@ -940,6 +994,16 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
       'usuario_uid': currentUser.uid,
       'usuario_nombre': nombreUsuario,
     });
+
+    // ✅ PRIMERO: Actualizar inventario
     await _actualizarInventarioDespuesVenta(productos, carrito);
+
+    // ✅ NUEVO: Registrar movimientos en kardex
+    await _registrarVentaEnKardex(
+      productos,
+      codigoComprobante,
+      sucursalUsuario,
+      cliente,
+    );
   }
 }
