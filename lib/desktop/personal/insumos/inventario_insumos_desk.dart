@@ -54,7 +54,7 @@ class _InventarioInsumosDeskScreenState
                 stream:
                     FirebaseFirestore.instance
                         .collection('inventario_insumos')
-                        .orderBy('fecha', descending: true)
+                        .orderBy('nombre', descending: true)
                         .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -80,93 +80,88 @@ class _InventarioInsumosDeskScreenState
                   }
 
                   return SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      columnSpacing: 32,
-                      columns: const [
-                        DataColumn(
-                          label: Text(
-                            'Nombre',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                    scrollDirection: Axis.vertical,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        columnSpacing: 32,
+                        columns: const [
+                          DataColumn(
+                            label: Text(
+                              'Nombre',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'Cantidad',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                          DataColumn(
+                            label: Text(
+                              'Cantidad',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            numeric: true,
                           ),
-                          numeric: true,
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'Acciones',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                          DataColumn(
+                            label: Text(
+                              'Acciones',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
-                      ],
-                      rows:
-                          insumos.map((doc) {
-                            final insumo = doc.data() as Map<String, dynamic>;
-                            final cantidad = (insumo['cantidad'] ?? 0) as int;
+                        ],
+                        rows:
+                            insumos.map((doc) {
+                              final insumo = doc.data() as Map<String, dynamic>;
+                              final cantidad = (insumo['cantidad'] ?? 0) as int;
 
-                            return DataRow(
-                              cells: [
-                                DataCell(Text(insumo['nombre'] ?? '')),
-                                DataCell(
-                                  Center(
-                                    child: Text(
-                                      cantidad.toString(),
-                                      textAlign: TextAlign.center,
+                              return DataRow(
+                                cells: [
+                                  DataCell(Text(insumo['nombre'] ?? '')),
+                                  DataCell(
+                                    Center(child: Text(cantidad.toString())),
+                                  ),
+                                  DataCell(
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.edit_outlined,
+                                            color: Color(0xFF4682B4),
+                                          ),
+                                          onPressed:
+                                              () => _mostrarFormularioEditar(
+                                                doc.id,
+                                                insumo,
+                                              ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.add_circle_outline,
+                                            color: Colors.blue,
+                                          ),
+                                          onPressed:
+                                              () => _mostrarDialogoAgregarStock(
+                                                doc.id,
+                                                cantidad,
+                                                insumo['nombre'] ?? '',
+                                              ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            color: Colors.redAccent,
+                                          ),
+                                          onPressed:
+                                              () => _mostrarDialogoEliminar(
+                                                doc.id,
+                                                insumo['nombre'] ?? '',
+                                              ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ),
-                                DataCell(
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.edit_outlined,
-                                          color: Color(0xFF4682B4),
-                                        ),
-                                        tooltip: 'Editar Insumo',
-                                        onPressed:
-                                            () => _mostrarFormularioEditar(
-                                              doc.id,
-                                              insumo,
-                                            ),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.add_circle_outline,
-                                          color: Colors.blue,
-                                        ),
-                                        tooltip: 'Agregar Stock',
-                                        onPressed:
-                                            () => _mostrarDialogoAgregarStock(
-                                              doc.id,
-                                              cantidad,
-                                              insumo['nombre'] ?? '',
-                                            ),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.delete_outline,
-                                          color: Colors.redAccent,
-                                        ),
-                                        tooltip: 'Eliminar Insumo',
-                                        onPressed:
-                                            () => _mostrarDialogoEliminar(
-                                              doc.id,
-                                              insumo['nombre'] ?? '',
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            );
-                          }).toList(),
+                                ],
+                              );
+                            }).toList(),
+                      ),
                     ),
                   );
                 },
@@ -483,6 +478,7 @@ class _InventarioInsumosDeskScreenState
 
                                     transaction.update(docRef, {
                                       'cantidad': stock + cantidadAgregar,
+                                      'fecha': FieldValue.serverTimestamp(),
                                     });
                                   },
                                 );
@@ -698,14 +694,63 @@ class _AgregarInsumoFormState extends State<_AgregarInsumoForm> {
 
     setState(() => guardando = true);
 
-    final nombre = _nombreController.text.trim();
-    await FirebaseFirestore.instance.collection('inventario_insumos').add({
-      'nombre': nombre,
-      'cantidad': int.tryParse(_cantidadController.text.trim()) ?? 0,
-      'fecha': FieldValue.serverTimestamp(),
-    });
+    final nombreInsumo = _nombreController.text.trim();
+    final cantidadInicial = int.tryParse(_cantidadController.text.trim()) ?? 0;
 
-    widget.onGuardado(nombre);
+    // NUEVO: Primero buscar si ya existe en el catálogo
+    final catalogoQuery =
+        await FirebaseFirestore.instance
+            .collection('catalogo_insumos')
+            .where('nombre', isEqualTo: nombreInsumo)
+            .limit(1)
+            .get();
+
+    String catalogoId;
+
+    if (catalogoQuery.docs.isEmpty) {
+      // Si no existe, crear en el catálogo
+      final catalogoDoc = await FirebaseFirestore.instance
+          .collection('catalogo_insumos')
+          .add({
+            'nombre': nombreInsumo,
+            'activo': true,
+            'fecha_creacion': FieldValue.serverTimestamp(),
+          });
+      catalogoId = catalogoDoc.id;
+    } else {
+      // Si ya existe, usar ese ID
+      catalogoId = catalogoQuery.docs.first.id;
+    }
+
+    // Buscar si ya existe en inventario
+    final inventarioQuery =
+        await FirebaseFirestore.instance
+            .collection('inventario_insumos')
+            .where('catalogo_id', isEqualTo: catalogoId)
+            .limit(1)
+            .get();
+
+    if (inventarioQuery.docs.isEmpty) {
+      // Crear nuevo en inventario
+      await FirebaseFirestore.instance.collection('inventario_insumos').add({
+        'catalogo_id': catalogoId,
+        'nombre': nombreInsumo,
+        'cantidad': cantidadInicial,
+        'fecha': FieldValue.serverTimestamp(),
+      });
+    } else {
+      // Si ya existe, solo sumar la cantidad
+      final docId = inventarioQuery.docs.first.id;
+      final cantidadActual =
+          (inventarioQuery.docs.first['cantidad'] ?? 0) as int;
+
+      await FirebaseFirestore.instance
+          .collection('inventario_insumos')
+          .doc(docId)
+          .update({'cantidad': cantidadActual + cantidadInicial});
+    }
+
+    widget.onGuardado(nombreInsumo);
 
     setState(() => guardando = false);
     Navigator.of(context).pop();

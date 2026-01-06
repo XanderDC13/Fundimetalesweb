@@ -32,12 +32,28 @@ class _HistorialInsumosDeskWidgetState
         : 'Insumo eliminado';
   }
 
-  Future<String> _obtenerNombreEmpleado(String empleadoId) async {
+  Future<String> _obtenerNombreEmpleado(
+    String empleadoId,
+    DocumentSnapshot solicitud,
+  ) async {
+    // ✅ Primero verificar si existe el campo 'empleado_nombre' directamente en la solicitud
+    if (solicitud.data() != null &&
+        (solicitud.data() as Map<String, dynamic>).containsKey(
+          'empleado_nombre',
+        )) {
+      final nombreGuardado = solicitud['empleado_nombre'];
+      if (nombreGuardado != null && nombreGuardado.toString().isNotEmpty) {
+        return nombreGuardado;
+      }
+    }
+
+    // Si no hay nombre guardado, buscar en la colección usuarios (como fallback)
     final doc =
         await FirebaseFirestore.instance
-            .collection('usuarios_activos')
+            .collection('usuarios')
             .doc(empleadoId)
             .get();
+
     return doc.exists
         ? (doc['nombre'] ?? 'Empleado desconocido')
         : 'Empleado eliminado';
@@ -68,7 +84,7 @@ class _HistorialInsumosDeskWidgetState
         final empleadoId = doc['empleado_id'] ?? '';
         final fecha = (doc['fecha'] as Timestamp?)?.toDate();
         final nombreInsumo = await _obtenerNombreInsumo(insumoId);
-        final nombreEmpleado = await _obtenerNombreEmpleado(empleadoId);
+        final nombreEmpleado = await _obtenerNombreEmpleado(empleadoId, doc);
         final fechaTexto =
             fecha != null
                 ? DateFormat('dd/MM/yyyy HH:mm').format(fecha)
@@ -352,7 +368,7 @@ class _HistorialInsumosDeskWidgetState
                             DataCell(Text(cantidad.toString())),
                             DataCell(
                               FutureBuilder(
-                                future: _obtenerNombreEmpleado(empleadoId),
+                                future: _obtenerNombreEmpleado(empleadoId, doc),
                                 builder:
                                     (context, snapshot) =>
                                         Text(snapshot.data ?? 'Cargando...'),

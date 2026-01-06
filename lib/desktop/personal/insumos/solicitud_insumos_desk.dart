@@ -14,7 +14,7 @@ class _SolicitudInsumosDeskWidgetState
     extends State<SolicitudInsumosDeskWidget> {
   String? empleadoSeleccionado;
   String? insumoSeleccionado;
-  int cantidad = 0; 
+  int cantidad = 0;
   bool guardando = false;
   int maxCantidad = 0;
   bool esEmpleadoManual = false;
@@ -75,15 +75,24 @@ class _SolicitudInsumosDeskWidgetState
                   child: SizedBox(
                     width: 240,
                     child: ElevatedButton.icon(
-                      onPressed: guardando ? null : _guardarSolicitud,
+                      onPressed:
+                          guardando || maxCantidad == 0
+                              ? null
+                              : _guardarSolicitud, // CAMBIO AQUÍ
                       icon: const Icon(Icons.save),
                       label:
                           guardando
                               ? const Text('Guardando...')
+                              : maxCantidad == 0
+                              ? const Text('Sin stock disponible')
                               : const Text('Guardar Solicitud'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF4682B4),
                         foregroundColor: Colors.white,
+                        disabledBackgroundColor:
+                            Colors.grey.shade300, // Añadir esta línea
+                        disabledForegroundColor:
+                            Colors.grey.shade600, // Añadir esta línea
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
@@ -123,112 +132,157 @@ class _SolicitudInsumosDeskWidgetState
   }
 
   Widget _buildSelectorEmpleado() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        StreamBuilder<QuerySnapshot>(
-          stream:
-              FirebaseFirestore.instance
-                  .collection('usuarios_activos')
-                  .snapshots(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) return const CircularProgressIndicator();
-            final empleados = snapshot.data!.docs;
+    return StreamBuilder<QuerySnapshot>(
+      stream:
+          FirebaseFirestore.instance.collection('usuarios').snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Padding(
+            padding: EdgeInsets.all(12),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final empleados = snapshot.data!.docs;
 
-            List<DropdownMenuItem<String>> items =
-                empleados.map((doc) {
-                  return DropdownMenuItem(
-                    value: doc.id,
-                    child: Text(
-                      doc['nombre'],
-                      style: const TextStyle(color: Colors.black),
-                    ),
-                  );
-                }).toList();
+        return Autocomplete<Map<String, String>>(
+          optionsBuilder: (TextEditingValue textEditingValue) {
+            if (textEditingValue.text.isEmpty) {
+              // Mostrar todos los empleados + opción manual
+              final allOptions =
+                  empleados.map((doc) {
+                    return {'id': doc.id, 'nombre': doc['nombre'].toString()};
+                  }).toList();
 
-            // Agregar opción para empleado manual
-            items.add(
-              const DropdownMenuItem(
-                value: 'MANUAL',
-                child: Row(
-                  children: [
-                    Icon(Icons.person_add, color: Color(0xFF4682B4), size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Agregar nuevo usuario',
-                      style: TextStyle(
-                        color: Color(0xFF4682B4),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+              allOptions.add({
+                'id': 'MANUAL',
+                'nombre': 'Agregar nuevo usuario',
+              });
+              return allOptions;
+            }
+
+            // Filtrar por búsqueda
+            final filtered =
+                empleados
+                    .where((doc) {
+                      return doc['nombre'].toString().toLowerCase().contains(
+                        textEditingValue.text.toLowerCase(),
+                      );
+                    })
+                    .map((doc) {
+                      return {'id': doc.id, 'nombre': doc['nombre'].toString()};
+                    })
+                    .toList();
+
+            filtered.add({'id': 'MANUAL', 'nombre': 'Agregar nuevo usuario'});
+            return filtered;
+          },
+          displayStringForOption:
+              (Map<String, String> option) => option['nombre']!,
+          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+            return TextFormField(
+              controller: controller,
+              focusNode: focusNode,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white,
+                hintText: 'Buscar usuario...',
+                prefixIcon: const Icon(Icons.person, color: Color(0xFF4682B4)),
+                suffixIcon:
+                    empleadoSeleccionado != null
+                        ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            controller.clear();
+                            setState(() {
+                              empleadoSeleccionado = null;
+                              esEmpleadoManual = false;
+                              nombreEmpleadoManual = '';
+                              _nombreEmpleadoController.clear();
+                            });
+                          },
+                        )
+                        : null,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
                 ),
-              ),
-            );
-
-            return Theme(
-              data: Theme.of(context).copyWith(canvasColor: Colors.white),
-              child: DropdownButtonFormField<String>(
-                value: empleadoSeleccionado,
-                decoration: _dropdownDecoration('Selecciona un usuario'),
-                items: items,
-                onChanged: (value) {
-                  setState(() {
-                    empleadoSeleccionado = value;
-                    esEmpleadoManual = value == 'MANUAL';
-                    if (!esEmpleadoManual) {
-                      nombreEmpleadoManual = '';
-                      _nombreEmpleadoController.clear();
-                    }
-                  });
-                },
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF4682B4),
+                    width: 2,
+                  ),
+                ),
               ),
             );
           },
-        ),
+          onSelected: (Map<String, String> selection) {
+            setState(() {
+              empleadoSeleccionado = selection['id'];
+              esEmpleadoManual = selection['id'] == 'MANUAL';
+              if (!esEmpleadoManual) {
+                nombreEmpleadoManual = '';
+                _nombreEmpleadoController.clear();
+              }
+            });
+          },
+          optionsViewBuilder: (context, onSelected, options) {
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    itemBuilder: (context, index) {
+                      final option = options.elementAt(index);
+                      final isManual = option['id'] == 'MANUAL';
 
-        // Campo de texto para nombre manual
-        if (esEmpleadoManual) ...[
-          const SizedBox(height: 16),
-          TextField(
-            controller: _nombreEmpleadoController,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: Colors.white,
-              hintText: 'Ingresa el nombre del usuario',
-              prefixIcon: const Icon(Icons.person, color: Color(0xFF4682B4)),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: Colors.transparent,
+                      return ListTile(
+                        leading: Icon(
+                          isManual ? Icons.person_add : Icons.person,
+                          color: const Color(0xFF4682B4),
+                          size: 20,
+                        ),
+                        title: Text(
+                          option['nombre']!,
+                          style: TextStyle(
+                            color:
+                                isManual
+                                    ? const Color(0xFF4682B4)
+                                    : Colors.black,
+                            fontWeight:
+                                isManual ? FontWeight.w500 : FontWeight.normal,
+                          ),
+                        ),
+                        onTap: () => onSelected(option),
+                      );
+                    },
+                  ),
                 ),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: Color(0xFF4682B4),
-                  width: 2,
-                ),
-              ),
-            ),
-            onChanged: (value) {
-              setState(() {
-                nombreEmpleadoManual = value.trim();
-              });
-            },
-          ),
-        ],
-      ],
+            );
+          },
+        );
+      },
     );
   }
 
   Widget _buildCantidadSelector() {
     return Container(
-      height: 50, 
+      height: 50,
       decoration: BoxDecoration(
         border: Border.all(color: const Color(0xFFD6EAF8)),
         borderRadius: BorderRadius.circular(12),
@@ -328,72 +382,183 @@ class _SolicitudInsumosDeskWidgetState
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
-              child: Theme(
-                data: Theme.of(context).copyWith(canvasColor: Colors.white),
-                child: DropdownButtonFormField<String>(
-                  value: insumoSeleccionado,
-                  decoration: _dropdownDecoration('Selecciona un insumo'),
-                  items:
-                      insumos.map((doc) {
-                        return DropdownMenuItem(
-                          value: doc.id,
-                          child: Text(
-                            doc['nombre'],
-                            style: const TextStyle(color: Colors.black),
-                          ),
-                        );
-                      }).toList(),
-                  onChanged: (value) async {
-                    setState(() {
-                      insumoSeleccionado = value;
-                      cantidad = 0;
-                      _cantidadController.text = '0';
-                      maxCantidad = 0;
-                    });
+              child: Autocomplete<Map<String, dynamic>>(
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  if (textEditingValue.text.isEmpty) {
+                    return insumos.map((doc) {
+                      return {
+                        'id': doc.id,
+                        'nombre': doc['nombre'].toString(),
+                        'cantidad': doc['cantidad'] ?? 0,
+                      };
+                    }).toList();
+                  }
 
-                    if (value != null) {
-                      final doc =
-                          await FirebaseFirestore.instance
-                              .collection('inventario_insumos')
-                              .doc(value)
-                              .get();
-                      if (doc.exists) {
-                        setState(() {
-                          maxCantidad = doc['cantidad'] ?? 0;
-                        });
-                      }
-                    }
-                  },
-                ),
+                  return insumos
+                      .where((doc) {
+                        return doc['nombre'].toString().toLowerCase().contains(
+                          textEditingValue.text.toLowerCase(),
+                        );
+                      })
+                      .map((doc) {
+                        return {
+                          'id': doc.id,
+                          'nombre': doc['nombre'].toString(),
+                          'cantidad': doc['cantidad'] ?? 0,
+                        };
+                      })
+                      .toList();
+                },
+                displayStringForOption:
+                    (Map<String, dynamic> option) => option['nombre']!,
+                fieldViewBuilder: (
+                  context,
+                  controller,
+                  focusNode,
+                  onFieldSubmitted,
+                ) {
+                  return TextFormField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white,
+                      hintText: 'Buscar insumo...',
+                      prefixIcon: const Icon(
+                        Icons.inventory_2,
+                        color: Color(0xFF4682B4),
+                      ),
+                      suffixIcon:
+                          insumoSeleccionado != null
+                              ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  controller.clear();
+                                  setState(() {
+                                    insumoSeleccionado = null;
+                                    cantidad = 0;
+                                    maxCantidad = 0;
+                                    _cantidadController.text = '0';
+                                  });
+                                },
+                              )
+                              : null,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF4682B4),
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                onSelected: (Map<String, dynamic> selection) {
+                  setState(() {
+                    insumoSeleccionado = selection['id'];
+                    maxCantidad = selection['cantidad'] as int;
+                    cantidad = 0;
+                    _cantidadController.text = '0';
+                  });
+                },
+                optionsViewBuilder: (context, onSelected, options) {
+                  return Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      elevation: 4,
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        constraints: const BoxConstraints(maxHeight: 200),
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: options.length,
+                          itemBuilder: (context, index) {
+                            final option = options.elementAt(index);
+
+                            return ListTile(
+                              leading: const Icon(
+                                Icons.inventory_2,
+                                color: Color(0xFF4682B4),
+                                size: 20,
+                              ),
+                              title: Text(option['nombre']!),
+                              trailing: Text(
+                                'Stock: ${option['cantidad']}',
+                                style: TextStyle(
+                                  color:
+                                      option['cantidad'] == 0
+                                          ? Colors.red
+                                          : Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              onTap: () => onSelected(option),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
-
             const SizedBox(width: 12),
             if (insumoSeleccionado != null)
-              Text(
-                "Disponible: $maxCantidad",
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color:
+                      maxCantidad == 0
+                          ? Colors.red.shade50
+                          : Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color:
+                        maxCantidad == 0
+                            ? Colors.red.shade200
+                            : Colors.green.shade200,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      maxCantidad == 0 ? Icons.warning : Icons.inventory,
+                      size: 14,
+                      color: maxCantidad == 0 ? Colors.red : Colors.green,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      maxCantidad == 0
+                          ? "Sin stock"
+                          : "Disponible: $maxCantidad",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: maxCantidad == 0 ? Colors.red : Colors.green,
+                      ),
+                    ),
+                  ],
                 ),
               ),
           ],
         );
       },
-    );
-  }
-
-  InputDecoration _dropdownDecoration(String hint) {
-    return InputDecoration(
-      filled: true,
-      fillColor: Colors.white,
-      hintText: hint,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
     );
   }
 
@@ -439,7 +604,7 @@ class _SolicitudInsumosDeskWidgetState
     } else {
       final empleadoDoc =
           await FirebaseFirestore.instance
-              .collection('usuarios_activos')
+              .collection('usuarios')
               .doc(empleadoSeleccionado)
               .get();
       nombreEmpleado = empleadoDoc.data()?['nombre'] ?? empleadoSeleccionado!;

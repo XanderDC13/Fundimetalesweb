@@ -518,9 +518,9 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Flujo de Dinero 2025',
-                style: TextStyle(
+              Text(
+                'Flujo de Dinero ${DateTime.now().year}', 
+                style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF1A202C),
