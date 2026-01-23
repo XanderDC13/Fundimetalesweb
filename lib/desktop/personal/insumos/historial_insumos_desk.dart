@@ -167,6 +167,55 @@ class _HistorialInsumosDeskWidgetState
     await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }
 
+  void _editarCantidadSolicitud(
+    String docId,
+    String insumoId,
+    int cantidadActual,
+  ) {
+    final TextEditingController _cantidadEditController = TextEditingController(
+      text: cantidadActual.toString(),
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Editar cantidad'),
+          content: TextField(
+            controller: _cantidadEditController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Nueva cantidad'),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () => Navigator.pop(context),
+            ),
+            ElevatedButton(
+              child: const Text('Guardar'),
+              onPressed: () async {
+                final nuevaCantidad =
+                    int.tryParse(_cantidadEditController.text) ??
+                    cantidadActual;
+
+                await FirebaseFirestore.instance
+                    .collection('solicitudes_insumos')
+                    .doc(docId)
+                    .update({'cantidad': nuevaCantidad});
+
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Cantidad actualizada')),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _eliminarSolicitud(
     String docId,
     String insumoId,
@@ -334,65 +383,92 @@ class _HistorialInsumosDeskWidgetState
             ),
             Expanded(
               child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  columns: const [
-                    DataColumn(label: Text('Insumo')),
-                    DataColumn(label: Text('Cantidad')),
-                    DataColumn(label: Text('Empleado')),
-                    DataColumn(label: Text('Fecha')),
-                    DataColumn(label: Text('Acción')),
-                  ],
-                  rows:
-                      movimientos.map((doc) {
-                        final cantidad = doc['cantidad'] ?? 0;
-                        final insumoId = doc['insumo_id'] ?? '';
-                        final empleadoId = doc['empleado_id'] ?? '';
-                        final fechaTimestamp = doc['fecha'] as Timestamp?;
-                        final fechaTexto =
-                            fechaTimestamp != null
-                                ? _formatearFecha(fechaTimestamp)
-                                : 'Desconocida';
-                        final docId = doc.id;
+                scrollDirection: Axis.vertical, // ✅ Scroll vertical
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal, // ✅ Scroll horizontal
+                  child: DataTable(
+                    columns: const [
+                      DataColumn(label: Text('Insumo')),
+                      DataColumn(label: Text('Cantidad')),
+                      DataColumn(label: Text('Empleado')),
+                      DataColumn(label: Text('Fecha')),
+                      DataColumn(label: Text('Acción')),
+                    ],
+                    rows:
+                        movimientos.map((doc) {
+                          final cantidad = doc['cantidad'] ?? 0;
+                          final insumoId = doc['insumo_id'] ?? '';
+                          final empleadoId = doc['empleado_id'] ?? '';
+                          final fechaTimestamp = doc['fecha'] as Timestamp?;
+                          final fechaTexto =
+                              fechaTimestamp != null
+                                  ? _formatearFecha(fechaTimestamp)
+                                  : 'Desconocida';
+                          final docId = doc.id;
 
-                        return DataRow(
-                          cells: [
-                            DataCell(
-                              FutureBuilder(
-                                future: _obtenerNombreInsumo(insumoId),
-                                builder:
-                                    (context, snapshot) =>
-                                        Text(snapshot.data ?? 'Cargando...'),
-                              ),
-                            ),
-                            DataCell(Text(cantidad.toString())),
-                            DataCell(
-                              FutureBuilder(
-                                future: _obtenerNombreEmpleado(empleadoId, doc),
-                                builder:
-                                    (context, snapshot) =>
-                                        Text(snapshot.data ?? 'Cargando...'),
-                              ),
-                            ),
-                            DataCell(Text(fechaTexto)),
-                            DataCell(
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.redAccent,
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                FutureBuilder(
+                                  future: _obtenerNombreInsumo(insumoId),
+                                  builder:
+                                      (context, snapshot) =>
+                                          Text(snapshot.data ?? 'Cargando...'),
                                 ),
-                                tooltip: 'Eliminar',
-                                onPressed:
-                                    () => _eliminarSolicitud(
-                                      docId,
-                                      insumoId,
-                                      cantidad,
-                                    ),
                               ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
+                              DataCell(Text(cantidad.toString())),
+                              DataCell(
+                                FutureBuilder(
+                                  future: _obtenerNombreEmpleado(
+                                    empleadoId,
+                                    doc,
+                                  ),
+                                  builder:
+                                      (context, snapshot) =>
+                                          Text(snapshot.data ?? 'Cargando...'),
+                                ),
+                              ),
+                              DataCell(Text(fechaTexto)),
+                              DataCell(
+                                Row(
+                                  children: [
+                                    // ✏️ Botón Editar
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        color: Color(0xFF4682B4),
+                                      ),
+                                      tooltip: 'Editar cantidad',
+                                      onPressed: () {
+                                        _editarCantidadSolicitud(
+                                          docId,
+                                          insumoId,
+                                          cantidad,
+                                        );
+                                      },
+                                    ),
+
+                                    // 🗑️ Botón Eliminar
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        color: Colors.redAccent,
+                                      ),
+                                      tooltip: 'Eliminar',
+                                      onPressed:
+                                          () => _eliminarSolicitud(
+                                            docId,
+                                            insumoId,
+                                            cantidad,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                  ),
                 ),
               ),
             ),

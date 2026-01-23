@@ -697,66 +697,78 @@ class _AgregarInsumoFormState extends State<_AgregarInsumoForm> {
     final nombreInsumo = _nombreController.text.trim();
     final cantidadInicial = int.tryParse(_cantidadController.text.trim()) ?? 0;
 
-    // NUEVO: Primero buscar si ya existe en el catálogo
-    final catalogoQuery =
-        await FirebaseFirestore.instance
+    try {
+      // Buscar si ya existe en el catálogo
+      final catalogoQuery =
+          await FirebaseFirestore.instance
+              .collection('catalogo_insumos')
+              .where('nombre', isEqualTo: nombreInsumo)
+              .limit(1)
+              .get();
+
+      String catalogoId;
+
+      if (catalogoQuery.docs.isEmpty) {
+        // Si no existe, crear en el catálogo
+        final catalogoDoc = await FirebaseFirestore.instance
             .collection('catalogo_insumos')
-            .where('nombre', isEqualTo: nombreInsumo)
-            .limit(1)
-            .get();
+            .add({
+              'nombre': nombreInsumo,
+              'activo': true,
+              'fecha_creacion': FieldValue.serverTimestamp(),
+              'updated_at': FieldValue.serverTimestamp(), // ✅ AGREGAR ESTO
+            });
+        catalogoId = catalogoDoc.id;
+      } else {
+        // Si ya existe, usar ese ID
+        catalogoId = catalogoQuery.docs.first.id;
+      }
 
-    String catalogoId;
+      // Buscar si ya existe en inventario
+      final inventarioQuery =
+          await FirebaseFirestore.instance
+              .collection('inventario_insumos')
+              .where('catalogo_id', isEqualTo: catalogoId)
+              .limit(1)
+              .get();
 
-    if (catalogoQuery.docs.isEmpty) {
-      // Si no existe, crear en el catálogo
-      final catalogoDoc = await FirebaseFirestore.instance
-          .collection('catalogo_insumos')
-          .add({
-            'nombre': nombreInsumo,
-            'activo': true,
-            'fecha_creacion': FieldValue.serverTimestamp(),
-          });
-      catalogoId = catalogoDoc.id;
-    } else {
-      // Si ya existe, usar ese ID
-      catalogoId = catalogoQuery.docs.first.id;
-    }
+      if (inventarioQuery.docs.isEmpty) {
+        // Crear nuevo en inventario
+        await FirebaseFirestore.instance.collection('inventario_insumos').add({
+          'catalogo_id': catalogoId,
+          'nombre': nombreInsumo,
+          'cantidad': cantidadInicial,
+          'fecha': FieldValue.serverTimestamp(),
+          'updated_at': FieldValue.serverTimestamp(), // ✅ AGREGAR ESTO
+        });
+      } else {
+        // Si ya existe, solo sumar la cantidad
+        final docId = inventarioQuery.docs.first.id;
+        final cantidadActual =
+            (inventarioQuery.docs.first['cantidad'] ?? 0) as int;
 
-    // Buscar si ya existe en inventario
-    final inventarioQuery =
         await FirebaseFirestore.instance
             .collection('inventario_insumos')
-            .where('catalogo_id', isEqualTo: catalogoId)
-            .limit(1)
-            .get();
+            .doc(docId)
+            .update({
+              'cantidad': cantidadActual + cantidadInicial,
+              'updated_at': FieldValue.serverTimestamp(), // ✅ AGREGAR ESTO
+            });
+      }
 
-    if (inventarioQuery.docs.isEmpty) {
-      // Crear nuevo en inventario
-      await FirebaseFirestore.instance.collection('inventario_insumos').add({
-        'catalogo_id': catalogoId,
-        'nombre': nombreInsumo,
-        'cantidad': cantidadInicial,
-        'fecha': FieldValue.serverTimestamp(),
-      });
-    } else {
-      // Si ya existe, solo sumar la cantidad
-      final docId = inventarioQuery.docs.first.id;
-      final cantidadActual =
-          (inventarioQuery.docs.first['cantidad'] ?? 0) as int;
+      widget.onGuardado(nombreInsumo);
 
-      await FirebaseFirestore.instance
-          .collection('inventario_insumos')
-          .doc(docId)
-          .update({'cantidad': cantidadActual + cantidadInicial});
+      setState(() => guardando = false);
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Insumo agregado correctamente')),
+      );
+    } catch (e) {
+      setState(() => guardando = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
     }
-
-    widget.onGuardado(nombreInsumo);
-
-    setState(() => guardando = false);
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Insumo agregado correctamente')),
-    );
   }
 }
 

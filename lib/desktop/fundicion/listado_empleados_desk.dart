@@ -75,14 +75,7 @@ class _OperadoresListDeskScreenState extends State<OperadoresListDeskScreen> {
                           child: StreamBuilder<QuerySnapshot>(
                             stream:
                                 FirebaseFirestore.instance
-                                    .collection('usuarios_activos')
-                                    .where(
-                                      'rol',
-                                      whereIn: [
-                                        'Supervisor Fundición',
-                                        'Operador Fundición',
-                                      ],
-                                    )
+                                    .collection('usuarios')
                                     .snapshots(),
 
                             builder: (context, snapshot) {

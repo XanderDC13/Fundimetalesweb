@@ -1,19 +1,17 @@
-import 'package:basefundi/desktop/directorio/contactos_desk.dart';
-import 'package:basefundi/desktop/directorio/proformas_desk.dart';
+import 'package:basefundi/desktop/administracion/cxc.dart';
+import 'package:flutter/material.dart';
 import 'package:basefundi/services/navbar_desk.dart';
 import 'package:basefundi/services/transition.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 
-class DirectorioDeskScreen extends StatefulWidget {
-  const DirectorioDeskScreen({super.key});
+class AdministracionDeskScreen extends StatefulWidget {
+  const AdministracionDeskScreen({super.key});
 
   @override
-  State<DirectorioDeskScreen> createState() => _DirectorioDeskScreenState();
+  State<AdministracionDeskScreen> createState() =>
+      _AdministracionDeskScreenState();
 }
 
-class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
+class _AdministracionDeskScreenState extends State<AdministracionDeskScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
@@ -40,6 +38,7 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
     return MainDeskLayout(
       child: Column(
         children: [
+          // ================= HEADER =================
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
@@ -63,7 +62,7 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
                   const Align(
                     alignment: Alignment.center,
                     child: Text(
-                      'Directorio',
+                      'Administración',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -76,6 +75,7 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
             ),
           ),
 
+          // ================= CONTENIDO =================
           Expanded(
             child: Container(
               color: Colors.white,
@@ -83,36 +83,19 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
                 opacity: _fadeAnimation,
                 child: Padding(
                   padding: const EdgeInsets.all(32),
-                  child: FutureBuilder<String>(
-                    future:
-                        _obtenerRolUsuario(), // ✅ AGREGAR ESTE FUTUREBUILDER
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+                  child: ListView(
+                    children: [
+                      _buildBoton(
+                        icon: Icons.account_balance_wallet,
+                        titulo: 'CxC',
+                        subtitulo: 'Cuentas por cobrar',
+                        onTap: () {
+                          navegarConFade(context, const CxcScreen());
+                        },
+                      ),
 
-                      return ListView(
-                        children: [
-                          _buildCard(
-                            context: context,
-                            title: 'Proformas',
-                            subtitle: 'Control de proformas e inventario',
-                            icon: Icons.receipt_long,
-                            destination: OpcionesProformasDeskScreen(),
-                          ),
-                          const SizedBox(height: 20),
-                          _buildCard(
-                            context: context,
-                            title: 'Contactos',
-                            subtitle:
-                                'Gestión y contactos de clientes y proveedores',
-                            icon: Icons.people_outline,
-                            destination: const ContactosDeskScreen(),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                      );
-                    },
+                      const SizedBox(height: 32),
+                    ],
                   ),
                 ),
               ),
@@ -123,34 +106,15 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
     );
   }
 
-  // ✅ AGREGAR ESTE MÉTODO AL FINAL DE LA CLASE
-  Future<String> _obtenerRolUsuario() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return '';
-
-    final doc =
-        await FirebaseFirestore.instance
-            .collection('usuarios_activos')
-            .doc(user.uid)
-            .get();
-
-    if (doc.exists) {
-      return doc.data()?['rol'] ?? '';
-    }
-    return '';
-  }
-
-  Widget _buildCard({
-    required BuildContext context,
-    required String title,
-    required String subtitle,
+  // ================= BOTÓN =================
+  Widget _buildBoton({
     required IconData icon,
-    required Widget destination,
+    required String titulo,
+    required String subtitulo,
+    required VoidCallback onTap,
   }) {
     return InkWell(
-      onTap: () {
-        navegarConFade(context, destination);
-      },
+      onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Card(
         color: Colors.white,
@@ -163,7 +127,7 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
           ),
           leading: Icon(icon, color: const Color(0xFF2C3E50)),
           title: Text(
-            title,
+            titulo,
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               color: Color(0xFF2C3E50),
@@ -171,10 +135,32 @@ class _DirectorioDeskScreenState extends State<DirectorioDeskScreen>
             ),
           ),
           subtitle: Text(
-            subtitle,
+            subtitulo,
             style: const TextStyle(color: Color(0xFFB0BEC5)),
           ),
           trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey),
+        ),
+      ),
+    );
+  }
+}
+
+// ================= SECTION TITLE =================
+class SectionTitle extends StatelessWidget {
+  final String title;
+
+  const SectionTitle({super.key, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0, top: 16),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF2C3E50),
         ),
       ),
     );

@@ -133,8 +133,7 @@ class _SolicitudInsumosDeskWidgetState
 
   Widget _buildSelectorEmpleado() {
     return StreamBuilder<QuerySnapshot>(
-      stream:
-          FirebaseFirestore.instance.collection('usuarios').snapshots(),
+      stream: FirebaseFirestore.instance.collection('usuarios').snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Padding(
@@ -327,7 +326,7 @@ class _SolicitudInsumosDeskWidgetState
                 if (_cantidadController.text.isEmpty) {
                   setState(() {
                     cantidad = 0;
-                    _cantidadController.text = '0';
+                    _cantidadController.clear();
                   });
                 }
               },
@@ -438,7 +437,7 @@ class _SolicitudInsumosDeskWidgetState
                                     insumoSeleccionado = null;
                                     cantidad = 0;
                                     maxCantidad = 0;
-                                    _cantidadController.text = '0';
+                                    _cantidadController.clear();
                                   });
                                 },
                               )
@@ -470,7 +469,7 @@ class _SolicitudInsumosDeskWidgetState
                     insumoSeleccionado = selection['id'];
                     maxCantidad = selection['cantidad'] as int;
                     cantidad = 0;
-                    _cantidadController.text = '0';
+                    _cantidadController.clear();
                   });
                 },
                 optionsViewBuilder: (context, onSelected, options) {
@@ -661,13 +660,8 @@ class _SolicitudInsumosDeskWidgetState
 
       setState(() {
         guardando = false;
-        empleadoSeleccionado = null;
-        insumoSeleccionado = null;
         cantidad = 0;
-        esEmpleadoManual = false;
-        nombreEmpleadoManual = '';
-        _cantidadController.text = '0';
-        _nombreEmpleadoController.clear();
+        _cantidadController.clear();
       });
 
       ScaffoldMessenger.of(context).showSnackBar(

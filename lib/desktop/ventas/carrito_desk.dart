@@ -2,6 +2,7 @@ import 'package:basefundi/desktop/ventas/carrito_controller_desk.dart';
 import 'package:basefundi/services/navbar_desk.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -343,6 +344,7 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
                           children: [
                             TextField(
                               controller: _clienteController,
+                              inputFormatters: [UpperCaseTextFormatter()],
                               style: const TextStyle(
                                 color: Color(0xFF2C3E50),
                                 fontWeight: FontWeight.w500,
@@ -1004,6 +1006,19 @@ class _VerCarritoScreenState extends State<VerCarritoDeskScreen> {
       codigoComprobante,
       sucursalUsuario,
       cliente,
+    );
+  }
+}
+
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
     );
   }
 }

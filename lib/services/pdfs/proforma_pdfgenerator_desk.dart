@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 
 class ProformaPDFGenerator {
   static Future<pw.Document> generatePDF({
-    required String numeroOrden,
+    required String numeroProforma,
     required String cliente,
     required String ciRuc,
     required String direccion,
@@ -43,7 +43,7 @@ class ProformaPDFGenerator {
                   margin: pw.EdgeInsets.only(right: 5),
                   child: pw.Column(
                     children: [
-                      _buildHeader(logoProvider, numeroOrden),
+                      _buildHeader(logoProvider, numeroProforma),
                       pw.SizedBox(height: 12),
                       _buildClienteInfo(cliente, ciRuc, direccion, telefono),
                       pw.SizedBox(height: 12),
@@ -76,7 +76,7 @@ class ProformaPDFGenerator {
                   margin: pw.EdgeInsets.only(left: 5),
                   child: pw.Column(
                     children: [
-                      _buildHeader(logoProvider, numeroOrden),
+                      _buildHeader(logoProvider, numeroProforma),
                       pw.SizedBox(height: 12),
                       _buildClienteInfo(cliente, ciRuc, direccion, telefono),
                       pw.SizedBox(height: 12),
@@ -106,7 +106,7 @@ class ProformaPDFGenerator {
 
   static pw.Widget _buildHeader(
     pw.ImageProvider? logoProvider,
-    String numeroOrden,
+    String numeroProforma,
   ) {
     return pw.Container(
       width: double.infinity,
@@ -218,7 +218,7 @@ class ProformaPDFGenerator {
                   ),
                   pw.SizedBox(height: 2),
                   pw.Text(
-                    numeroOrden,
+                    numeroProforma,
                     style: pw.TextStyle(
                       fontSize: 10,
                       fontWeight: pw.FontWeight.bold,
@@ -916,7 +916,7 @@ class ProformaPDFGenerator {
   }
 
   static Future<void> showPreview({
-    required String numeroOrden,
+    required String numeroProforma,
     required String cliente,
     required String ciRuc,
     required String direccion,
@@ -931,7 +931,7 @@ class ProformaPDFGenerator {
     required bool otros,
   }) async {
     final pdf = await generatePDF(
-      numeroOrden: numeroOrden,
+      numeroProforma: numeroProforma,
       cliente: cliente,
       ciRuc: ciRuc,
       direccion: direccion,

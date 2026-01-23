@@ -5,17 +5,18 @@ import 'package:flutter/services.dart';
 
 class OrdenDespachoPDFGenerator {
   static Future<pw.Document> generatePDF({
-    required String numeroOrden,
+    required String numeroOrdenDespacho,
     required String cliente,
     required String ciRuc,
     required String email,
+    required String telefono,
     required String direccion,
     required String ciudad,
     required List<Map<String, String>> items,
   }) async {
     final pdf = pw.Document();
 
-    // Cargar logo
+    // Cargar logo del header
     pw.ImageProvider? logoProvider;
     try {
       final logoBytes = await rootBundle.load('lib/assets/logoletters.png');
@@ -24,11 +25,21 @@ class OrdenDespachoPDFGenerator {
       print('Error al cargar logo: $e');
     }
 
+    // Cargar logo de fondo AQUÍ
+    pw.ImageProvider? backgroundLogoProvider;
+    try {
+      final logoBytes = await rootBundle.load('lib/assets/LOGOREDESFTN.png');
+      backgroundLogoProvider = pw.MemoryImage(logoBytes.buffer.asUint8List());
+    } catch (e) {
+      print('Error al cargar logo de fondo: $e');
+    }
+
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4.landscape,
         margin: const pw.EdgeInsets.all(10),
         build: (pw.Context context) {
+          // ← SIN async
           return pw.Row(
             children: [
               // Primera orden (izquierda)
@@ -37,19 +48,23 @@ class OrdenDespachoPDFGenerator {
                   margin: pw.EdgeInsets.only(right: 5),
                   child: pw.Column(
                     children: [
-                      _buildHeader(logoProvider, numeroOrden),
+                      _buildHeader(logoProvider, numeroOrdenDespacho),
                       pw.SizedBox(height: 12),
                       _buildClienteInfo(
                         cliente,
                         ciRuc,
                         email,
+                        telefono, // ← AGREGAR
+                        ciudad, // ← Cambiar orden
                         direccion,
-                        ciudad,
                       ),
                       pw.SizedBox(height: 12),
                       _buildLeyenda(),
                       pw.SizedBox(height: 8),
-                      _buildItemsTable(items),
+                      _buildItemsTable(
+                        items,
+                        backgroundLogoProvider,
+                      ), // ← Pasar el logo
                       pw.Spacer(),
                     ],
                   ),
@@ -69,19 +84,23 @@ class OrdenDespachoPDFGenerator {
                   margin: pw.EdgeInsets.only(left: 5),
                   child: pw.Column(
                     children: [
-                      _buildHeader(logoProvider, numeroOrden),
+                      _buildHeader(logoProvider, numeroOrdenDespacho),
                       pw.SizedBox(height: 12),
                       _buildClienteInfo(
                         cliente,
                         ciRuc,
                         email,
-                        direccion,
+                        telefono,
                         ciudad,
+                        direccion,
                       ),
                       pw.SizedBox(height: 12),
                       _buildLeyenda(),
                       pw.SizedBox(height: 8),
-                      _buildItemsTable(items),
+                      _buildItemsTable(
+                        items,
+                        backgroundLogoProvider,
+                      ), // ← Pasar el logo
                       pw.Spacer(),
                     ],
                   ),
@@ -98,7 +117,7 @@ class OrdenDespachoPDFGenerator {
 
   static pw.Widget _buildHeader(
     pw.ImageProvider? logoProvider,
-    String numeroOrden,
+    String numeroOrdenDespacho,
   ) {
     return pw.Container(
       width: double.infinity,
@@ -209,7 +228,7 @@ class OrdenDespachoPDFGenerator {
                   ),
                   pw.SizedBox(height: 2),
                   pw.Text(
-                    numeroOrden,
+                    numeroOrdenDespacho,
                     style: pw.TextStyle(
                       fontSize: 10,
                       fontWeight: pw.FontWeight.bold,
@@ -266,8 +285,9 @@ class OrdenDespachoPDFGenerator {
     String cliente,
     String ciRuc,
     String email,
-    String direccion,
+    String telefono,
     String ciudad,
+    String direccion,
   ) {
     return pw.Container(
       width: double.infinity,
@@ -329,7 +349,7 @@ class OrdenDespachoPDFGenerator {
               ),
             ],
           ),
-          // Segunda fila: EMAIL y DIRECCION
+          // Segunda fila: EMAIL y TELEFONO
           pw.Container(
             decoration: pw.BoxDecoration(
               border: pw.Border(
@@ -373,6 +393,69 @@ class OrdenDespachoPDFGenerator {
                     child: pw.Row(
                       children: [
                         pw.Text(
+                          'TELEFONO: ',
+                          style: pw.TextStyle(
+                            fontSize: 9,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.Expanded(
+                          child: pw.Text(
+                            telefono,
+                            style: pw.TextStyle(fontSize: 9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Tercera fila: CIUDAD y DIRECCION
+          pw.Container(
+            decoration: pw.BoxDecoration(
+              border: pw.Border(
+                top: pw.BorderSide(color: PdfColors.grey, width: 0.3),
+              ),
+            ),
+            child: pw.Row(
+              children: [
+                pw.Expanded(
+                  flex: 2,
+                  child: pw.Container(
+                    padding: pw.EdgeInsets.all(6),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border(
+                        right: pw.BorderSide(color: PdfColors.grey, width: 0.3),
+                      ),
+                    ),
+                    child: pw.Row(
+                      children: [
+                        pw.Text(
+                          'CIUDAD: ',
+                          style: pw.TextStyle(
+                            fontSize: 9,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.Expanded(
+                          child: pw.Text(
+                            ciudad,
+                            style: pw.TextStyle(fontSize: 9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                pw.Expanded(
+                  flex: 3,
+                  child: pw.Container(
+                    padding: pw.EdgeInsets.all(6),
+                    child: pw.Row(
+                      children: [
+                        pw.Text(
                           'DIRECCION: ',
                           style: pw.TextStyle(
                             fontSize: 9,
@@ -394,30 +477,6 @@ class OrdenDespachoPDFGenerator {
               ],
             ),
           ),
-          // Tercera fila: CIUDAD
-          pw.Container(
-            decoration: pw.BoxDecoration(
-              border: pw.Border(
-                top: pw.BorderSide(color: PdfColors.grey, width: 0.3),
-              ),
-            ),
-            child: pw.Container(
-              width: double.infinity,
-              padding: pw.EdgeInsets.all(6),
-              child: pw.Row(
-                children: [
-                  pw.Text(
-                    'CIUDAD: ',
-                    style: pw.TextStyle(
-                      fontSize: 9,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                  pw.Text(ciudad, style: pw.TextStyle(fontSize: 9)),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -436,205 +495,239 @@ class OrdenDespachoPDFGenerator {
     );
   }
 
-  static pw.Widget _buildItemsTable(List<Map<String, String>> items) {
+  static pw.Widget _buildItemsTable(
+    List<Map<String, String>> items,
+    pw.ImageProvider? backgroundLogoProvider,
+  ) {
     return pw.Container(
       width: double.infinity,
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.grey, width: 0.3),
       ),
-      child: pw.Column(
+      child: pw.Stack(
         children: [
-          // Header
-          pw.Container(
-            decoration: pw.BoxDecoration(color: PdfColor.fromHex('#1f4e79')),
-            child: pw.Row(
-              children: [
-                pw.Expanded(
-                  flex: 1,
+          // Logo de fondo desvanecido
+          if (backgroundLogoProvider != null)
+            pw.Positioned.fill(
+              child: pw.Opacity(
+                opacity: 0.20,
+                child: pw.Center(
                   child: pw.Container(
-                    padding: pw.EdgeInsets.all(4),
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border(
-                        right: pw.BorderSide(color: PdfColors.grey, width: 0.3),
-                      ),
-                    ),
-                    child: pw.Center(
-                      child: pw.Text(
-                        'REF.',
-                        style: pw.TextStyle(
-                          fontSize: 10,
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.white,
-                        ),
-                      ),
+                    width: 200, // ← Agregar ancho limitado
+                    height: 200, // ← Agregar alto limitado
+                    child: pw.Image(
+                      backgroundLogoProvider,
+                      fit: pw.BoxFit.contain,
                     ),
                   ),
                 ),
-                pw.Expanded(
-                  flex: 1,
-                  child: pw.Container(
-                    padding: pw.EdgeInsets.all(4),
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border(
-                        right: pw.BorderSide(color: PdfColors.grey, width: 0.3),
-                      ),
-                    ),
-                    child: pw.Center(
-                      child: pw.Text(
-                        'CANT.',
-                        style: pw.TextStyle(
-                          fontSize: 10,
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 4,
-                  child: pw.Container(
-                    padding: pw.EdgeInsets.all(4),
-                    child: pw.Center(
-                      child: pw.Text(
-                        'DESCRIPCION DEL ARTICULO',
-                        style: pw.TextStyle(
-                          fontSize: 10,
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
+          pw.Column(
+            children: [
+              // Header
+              pw.Container(
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#1f4e79'),
+                ),
+                child: pw.Row(
+                  children: [
+                    pw.Expanded(
+                      flex: 1,
+                      child: pw.Container(
+                        padding: pw.EdgeInsets.all(4),
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border(
+                            right: pw.BorderSide(
+                              color: PdfColors.grey,
+                              width: 0.3,
+                            ),
+                          ),
+                        ),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'REF.',
+                            style: pw.TextStyle(
+                              fontSize: 10,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    pw.Expanded(
+                      flex: 1,
+                      child: pw.Container(
+                        padding: pw.EdgeInsets.all(4),
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border(
+                            right: pw.BorderSide(
+                              color: PdfColors.grey,
+                              width: 0.3,
+                            ),
+                          ),
+                        ),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'CANT.',
+                            style: pw.TextStyle(
+                              fontSize: 10,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    pw.Expanded(
+                      flex: 4,
+                      child: pw.Container(
+                        padding: pw.EdgeInsets.all(4),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'DESCRIPCION DEL ARTICULO',
+                            style: pw.TextStyle(
+                              fontSize: 10,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Items
+              ...items.map(
+                (item) => pw.Container(
+                  height: 20,
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border(
+                      top: pw.BorderSide(color: PdfColors.grey, width: 0.3),
+                    ),
+                  ),
+                  child: pw.Row(
+                    children: [
+                      pw.Expanded(
+                        flex: 1,
+                        child: pw.Container(
+                          padding: pw.EdgeInsets.all(2),
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border(
+                              right: pw.BorderSide(
+                                color: PdfColors.grey,
+                                width: 0.3,
+                              ),
+                            ),
+                          ),
+                          child: pw.Center(
+                            child: pw.Text(
+                              item['ref'] ?? '',
+                              style: pw.TextStyle(fontSize: 8),
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.Expanded(
+                        flex: 1,
+                        child: pw.Container(
+                          padding: pw.EdgeInsets.all(2),
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border(
+                              right: pw.BorderSide(
+                                color: PdfColors.grey,
+                                width: 0.3,
+                              ),
+                            ),
+                          ),
+                          child: pw.Center(
+                            child: pw.Text(
+                              item['cantidad'] ?? '',
+                              style: pw.TextStyle(fontSize: 8),
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.Expanded(
+                        flex: 4,
+                        child: pw.Container(
+                          padding: pw.EdgeInsets.all(2),
+                          child: pw.Text(
+                            item['descripcion'] ?? '',
+                            style: pw.TextStyle(fontSize: 8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Filas vacías para completar la tabla
+              for (int i = items.length; i < 16; i++)
+                pw.Container(
+                  height: 20,
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border(
+                      top: pw.BorderSide(color: PdfColors.grey, width: 0.3),
+                    ),
+                  ),
+                  child: pw.Row(
+                    children: [
+                      pw.Expanded(
+                        flex: 1,
+                        child: pw.Container(
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border(
+                              right: pw.BorderSide(
+                                color: PdfColors.grey,
+                                width: 0.3,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.Expanded(
+                        flex: 1,
+                        child: pw.Container(
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border(
+                              right: pw.BorderSide(
+                                color: PdfColors.grey,
+                                width: 0.3,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.Expanded(flex: 4, child: pw.Container()),
+                    ],
+                  ),
+                ),
+            ],
           ),
-          // Items
-          ...items.map(
-            (item) => pw.Container(
-              height: 20,
-              decoration: pw.BoxDecoration(
-                border: pw.Border(
-                  top: pw.BorderSide(color: PdfColors.grey, width: 0.3),
-                ),
-              ),
-              child: pw.Row(
-                children: [
-                  pw.Expanded(
-                    flex: 1,
-                    child: pw.Container(
-                      padding: pw.EdgeInsets.all(2),
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border(
-                          right: pw.BorderSide(
-                            color: PdfColors.grey,
-                            width: 0.3,
-                          ),
-                        ),
-                      ),
-                      child: pw.Center(
-                        child: pw.Text(
-                          item['ref'] ?? '',
-                          style: pw.TextStyle(fontSize: 8),
-                        ),
-                      ),
-                    ),
-                  ),
-                  pw.Expanded(
-                    flex: 1,
-                    child: pw.Container(
-                      padding: pw.EdgeInsets.all(2),
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border(
-                          right: pw.BorderSide(
-                            color: PdfColors.grey,
-                            width: 0.3,
-                          ),
-                        ),
-                      ),
-                      child: pw.Center(
-                        child: pw.Text(
-                          item['cantidad'] ?? '',
-                          style: pw.TextStyle(fontSize: 8),
-                        ),
-                      ),
-                    ),
-                  ),
-                  pw.Expanded(
-                    flex: 4,
-                    child: pw.Container(
-                      padding: pw.EdgeInsets.all(2),
-                      child: pw.Text(
-                        item['descripcion'] ?? '',
-                        style: pw.TextStyle(fontSize: 8),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Filas vacías para completar la tabla
-          for (int i = items.length; i < 16; i++)
-            pw.Container(
-              height: 20,
-              decoration: pw.BoxDecoration(
-                border: pw.Border(
-                  top: pw.BorderSide(color: PdfColors.grey, width: 0.3),
-                ),
-              ),
-              child: pw.Row(
-                children: [
-                  pw.Expanded(
-                    flex: 1,
-                    child: pw.Container(
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border(
-                          right: pw.BorderSide(
-                            color: PdfColors.grey,
-                            width: 0.3,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  pw.Expanded(
-                    flex: 1,
-                    child: pw.Container(
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border(
-                          right: pw.BorderSide(
-                            color: PdfColors.grey,
-                            width: 0.3,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  pw.Expanded(flex: 4, child: pw.Container()),
-                ],
-              ),
-            ),
         ],
       ),
     );
   }
 
   static Future<void> showPreview({
-    required String numeroOrden,
+    required String numeroOrdenDespacho,
     required String cliente,
     required String ciRuc,
     required String email,
+    required String telefono,
     required String direccion,
     required String ciudad,
-    required List<Map<String, String>> items,
+    required List<Map<String, String>> items, 
   }) async {
     final pdf = await generatePDF(
-      numeroOrden: numeroOrden,
+      numeroOrdenDespacho: numeroOrdenDespacho,
       cliente: cliente,
       ciRuc: ciRuc,
       email: email,
+      telefono: telefono,
       direccion: direccion,
       ciudad: ciudad,
       items: items,

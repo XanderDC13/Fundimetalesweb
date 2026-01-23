@@ -54,7 +54,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '726525590326',
     projectId: 'fundimetwork',
     storageBucket: 'fundimetwork.firebasestorage.app',
-    iosBundleId: 'com.example.basefundi',
+    iosBundleId: 'com.fundimetalesdelnorte',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
@@ -72,7 +72,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '726525590326',
     projectId: 'fundimetwork',
     storageBucket: 'fundimetwork.firebasestorage.app',
-    iosBundleId: 'com.example.basefundi',
+    iosBundleId: 'com.fundimetalesdelnorte',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

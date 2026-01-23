@@ -6,6 +6,7 @@ import 'package:basefundi/desktop/fundicion/tareasextras_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_realizar_desk.dart';
 import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
+import 'package:basefundi/modulos/administracion.dart';
 import 'package:basefundi/modulos/ajustes_desk.dart';
 import 'package:basefundi/modulos/directorio_desk.dart';
 import 'package:basefundi/modulos/fundicion.dart';
@@ -519,7 +520,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Flujo de Dinero ${DateTime.now().year}', 
+                'Flujo de Dinero ${DateTime.now().year}',
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -810,6 +811,11 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             () => navegarConFade(context, const DirectorioDeskScreen()),
           ),
           _gridButton(
+            Icons.account_balance_wallet,
+            'Administración',
+            () => navegarConFade(context, const AdministracionDeskScreen()),
+          ),
+          _gridButton(
             Icons.local_fire_department,
             'Fundición',
             () => navegarConFade(context, const FundicionDeskScreen()),
@@ -850,6 +856,11 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             () => navegarConFade(context, const DirectorioDeskScreen()),
           ),
           _gridButton(
+            Icons.account_balance_wallet,
+            'Administración',
+            () => navegarConFade(context, const AdministracionDeskScreen()),
+          ),
+          _gridButton(
             Icons.bar_chart,
             'Reportes',
             () => navegarConFade(context, const ReportesDeskScreen()),
@@ -878,6 +889,11 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             Icons.calculate,
             'Directorio',
             () => navegarConFade(context, const DirectorioDeskScreen()),
+          ),
+          _gridButton(
+            Icons.bar_chart,
+            'Reportes',
+            () => navegarConFade(context, const ReportesDeskScreen()),
           ),
           _gridButton(
             Icons.settings,

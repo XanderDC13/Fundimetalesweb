@@ -1,4 +1,4 @@
-package com.fundimetalesdelnorte
+package com.basefundi
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -31,7 +31,9 @@ class _ProformaOrdenDespachoDeskScreenState
   final TextEditingController _formPrecioController = TextEditingController();
   final TextEditingController _formTotalController = TextEditingController();
 
-  String _numeroOrden = '';
+  String _numeroProforma = '';
+  String _numeroOrdenDespacho = '';
+
   Timer? _debounce;
 
   // Estados para la búsqueda
@@ -305,27 +307,49 @@ class _ProformaOrdenDespachoDeskScreenState
   @override
   void initState() {
     super.initState();
-    _previsualizarNumeroOrden();
+    _previsualizarNumeroProforma();
+    _previsualizarNumeroOrdenDespacho();
   }
 
-  Future<void> _previsualizarNumeroOrden() async {
-    // Usar un documento único para el contador global
-    final counterRef = FirebaseFirestore.instance
-        .collection('proforma_counter')
-        .doc('global'); // Cambio aquí: usar 'global' en lugar de fecha
+  Future<void> _previsualizarNumeroOrdenDespacho() async {
+    final ref = FirebaseFirestore.instance
+        .collection('orden_proforma_counter')
+        .doc('orden');
 
-    final counterDoc = await counterRef.get();
+    final doc = await ref.get();
 
-    int numero = 1;
+    int numero;
 
-    if (counterDoc.exists) {
-      numero = counterDoc['contador'] + 1;
+    if (doc.exists) {
+      numero = (doc['contador'] ?? 0) + 1;
     } else {
-      await counterRef.set({'contador': 0});
+      await ref.set({'contador': 0});
+      numero = 1;
     }
 
     setState(() {
-      _numeroOrden = numero.toString().padLeft(7, '0');
+      _numeroOrdenDespacho = numero.toString();
+    });
+  }
+
+  Future<void> _previsualizarNumeroProforma() async {
+    final ref = FirebaseFirestore.instance
+        .collection('orden_proforma_counter')
+        .doc('proforma');
+
+    final doc = await ref.get();
+
+    int numero;
+
+    if (doc.exists) {
+      numero = (doc['contador'] ?? 7400) + 1;
+    } else {
+      await ref.set({'contador': 7400});
+      numero = 7401;
+    }
+
+    setState(() {
+      _numeroProforma = numero.toString();
     });
   }
 
@@ -358,7 +382,7 @@ class _ProformaOrdenDespachoDeskScreenState
                   Align(
                     alignment: Alignment.center,
                     child: Text(
-                      'DOCUMENTO Nº $_numeroOrden',
+                      'ORDEN Nº $_numeroOrdenDespacho / PROFORMA Nº $_numeroProforma',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -1612,7 +1636,7 @@ class _ProformaOrdenDespachoDeskScreenState
       await _guardarProformaInterno();
 
       // Guardar Orden de Despacho
-      await _guardarOrdenDespachoInterno();
+      await _guardarOrdenDespacho();
 
       final user = FirebaseAuth.instance.currentUser;
 
@@ -1636,7 +1660,8 @@ class _ProformaOrdenDespachoDeskScreenState
         'usuario_nombre': usuarioNombre,
         'usuario_uid': user?.uid ?? 'uid_desconocido',
         'accion': 'Nueva proforma y orden de despacho',
-        'detalle': 'Número de documento: $_numeroOrden',
+        'detalle':
+            'Proforma N° $_numeroProforma | Orden N° $_numeroOrdenDespacho',
       });
 
       // Cerrar diálogo de carga
@@ -1668,29 +1693,32 @@ class _ProformaOrdenDespachoDeskScreenState
 
   // FUNCIÓN INTERNA PARA GUARDAR PROFORMA
   Future<void> _guardarProformaInterno() async {
-    // Usar el mismo documento global para el contador
-    final counterRef = FirebaseFirestore.instance
-        .collection('proforma_counter')
-        .doc('global'); // Cambio aquí: usar 'global' en lugar de fecha
+    final ref = FirebaseFirestore.instance
+        .collection('orden_proforma_counter')
+        .doc('proforma');
 
-    final counterDoc = await counterRef.get();
+    final doc = await ref.get();
 
-    int numero = 1;
-    if (counterDoc.exists) {
-      numero = counterDoc['contador'] + 1;
-      await counterRef.update({'contador': numero});
+    int numero;
+
+    if (doc.exists) {
+      numero = (doc['contador'] ?? 7400) + 1;
+      await ref.update({'contador': numero});
     } else {
-      await counterRef.set({'contador': numero});
+      numero = 7401;
+      await ref.set({'contador': numero});
     }
 
-    final numeroFinal = numero.toString().padLeft(7, '0');
-
     final proformaData = {
-      'numero': numeroFinal,
+      // 🔑 NUMERO PROFORMA
+      'numero': numero, // ← 7401, 7402, etc
+      // CLIENTE
       'cliente': _clienteController.text,
       'ci_ruc': _ciRucController.text,
       'direccion': _direccionController.text,
       'telefono': _telefonoController.text,
+
+      // ITEMS
       'items':
           items
               .map(
@@ -1703,59 +1731,44 @@ class _ProformaOrdenDespachoDeskScreenState
                 },
               )
               .toList(),
-      'fecha': Timestamp.now(),
-      'efectivo': _efectivo,
-      'dinero_electronico': _dineroElectronico,
-      'tarjeta_credito': _tarjetaCredito,
-      'otros': _otros,
+
+      // VALORES
       'subtotal': _calcularSubtotal(),
       'iva': _calcularIVA(),
       'total': _calcularTotalFinal(),
+
+      // CONTROL
+      'fecha': Timestamp.now(),
+      'estado': 'Pendiente',
     };
 
     await FirebaseFirestore.instance.collection('proformas').add(proformaData);
   }
 
   // FUNCIÓN INTERNA PARA GUARDAR ORDEN DE DESPACHO (sin UI)
-  Future<void> _guardarOrdenDespachoInterno() async {
-    final fechaHoy = DateTime.now();
-    final fechaFormateada =
-        "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
+  Future<void> _guardarOrdenDespacho() async {
+    final ref = FirebaseFirestore.instance
+        .collection('orden_proforma_counter')
+        .doc('orden');
 
-    final counterRef = FirebaseFirestore.instance
-        .collection('orden_despacho_counter')
-        .doc(fechaFormateada);
+    final doc = await ref.get();
 
-    final counterDoc = await counterRef.get();
+    int numero;
 
-    int numero = 1;
-    if (counterDoc.exists) {
-      numero = counterDoc['contador'] + 1;
-      await counterRef.update({'contador': numero});
+    if (doc.exists) {
+      numero = (doc['contador'] ?? 0) + 1;
+      await ref.update({'contador': numero});
     } else {
-      await counterRef.set({'contador': numero});
+      numero = 1;
+      await ref.set({'contador': 1});
     }
 
-    final numeroFinal = numero.toString().padLeft(7, '0');
-
     final ordenData = {
-      'numero': numeroFinal,
+      'numero': numero,
+      'fecha': Timestamp.now(),
       'cliente': _clienteController.text,
       'ci_ruc': _ciRucController.text,
-      'correo': _emailController.text,
-      'direccion': _direccionController.text,
-      'ciudad': _ciudadController.text,
-      'items':
-          items
-              .map(
-                (item) => {
-                  'ref': item.refController.text,
-                  'descripcion': item.descripcionController.text,
-                  'cantidad': item.cantidadController.text,
-                },
-              )
-              .toList(),
-      'fecha': Timestamp.now(),
+      'estado': 'Pendiente',
     };
 
     await FirebaseFirestore.instance
@@ -1913,7 +1926,7 @@ class _ProformaOrdenDespachoDeskScreenState
     try {
       // Llamar al ProformaPDFGenerator
       await ProformaPDFGenerator.showPreview(
-        numeroOrden: _numeroOrden,
+        numeroProforma: _numeroProforma,
         cliente: _clienteController.text,
         ciRuc: _ciRucController.text,
         direccion: _direccionController.text,
@@ -1956,10 +1969,11 @@ class _ProformaOrdenDespachoDeskScreenState
     try {
       // Llamar al OrdenDespachoPDFGenerator
       await OrdenDespachoPDFGenerator.showPreview(
-        numeroOrden: _numeroOrden,
+        numeroOrdenDespacho: _numeroOrdenDespacho, 
         cliente: _clienteController.text,
         ciRuc: _ciRucController.text,
         email: _emailController.text,
+        telefono: _telefonoController.text,
         direccion: _direccionController.text,
         ciudad: _ciudadController.text,
         items:
@@ -2028,7 +2042,7 @@ class _ProformaOrdenDespachoDeskScreenState
   void _compartirProforma() async {
     try {
       await ProformaPDFCompartir.shareDocument(
-        numeroOrden: _numeroOrden,
+        numeroOrden: _numeroProforma,  
         cliente: _clienteController.text,
         ciRuc: _ciRucController.text,
         direccion: _direccionController.text,
@@ -2069,7 +2083,7 @@ class _ProformaOrdenDespachoDeskScreenState
   void _compartirOrdenDespacho() async {
     try {
       await OrdenPDFCompartir.shareDocument(
-        numeroOrden: _numeroOrden,
+        numeroOrden: _numeroOrdenDespacho,
         cliente: _clienteController.text,
         ciRuc: _ciRucController.text,
         email: _emailController.text,
@@ -2117,7 +2131,8 @@ class _ProformaOrdenDespachoDeskScreenState
       items.clear();
       items.add(ItemOrdenDespacho());
     });
-    _previsualizarNumeroOrden();
+    _previsualizarNumeroProforma();
+    _previsualizarNumeroOrdenDespacho();
   }
 
   @override

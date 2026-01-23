@@ -47,10 +47,11 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('usuarios_activos')
-            .doc(user.uid)
-            .get();
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('usuarios_activos')
+                .doc(user.uid)
+                .get();
 
         if (userDoc.exists) {
           final data = userDoc.data();
@@ -86,6 +87,12 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
     if (_rol == "Administrador General" &&
         (_sede == "Quito" || _sede == "Guayaquil")) {
       return nombreReporte == "Reporte Ventas";
+    }
+
+    // Vendedor puede ver Reporte Ventas y Reporte Proformas
+    if (_rol == "Vendedor") {
+      return nombreReporte == "Reporte Ventas" ||
+          nombreReporte == "Reporte Proformas";
     }
 
     return false;
@@ -143,123 +150,131 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
           Expanded(
             child: Container(
               color: Colors.white,
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: ListView(
-                          children: [
-                            // Reporte Ventas (todos los roles permitidos)
-                            if (_puedeVerReporte("Reporte Ventas")) ...[
-                              _buildBoton(
-                                icon: LucideIcons.clipboardList,
-                                titulo: 'Reporte Ventas',
-                                subtitulo: 'Historial de ventas',
-                                onTap: () {
-                                  navegarConFade(
-                                    context,
-                                    const ReporteVentasDeskScreen(),
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 20),
-                            ],
+              child:
+                  _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: ListView(
+                            children: [
+                              // Reporte Ventas (todos los roles permitidos)
+                              if (_puedeVerReporte("Reporte Ventas")) ...[
+                                _buildBoton(
+                                  icon: LucideIcons.clipboardList,
+                                  titulo: 'Reporte Ventas',
+                                  subtitulo: 'Historial de ventas',
+                                  onTap: () {
+                                    navegarConFade(
+                                      context,
+                                      const ReporteVentasDeskScreen(),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+                              ],
 
-                            // Reporte Inventario (solo Gerente y Admin Tulcán)
-                            if (_puedeVerReporte("Reporte Inventario")) ...[
-                              _buildBoton(
-                                icon: LucideIcons.clipboardList,
-                                titulo: 'Reporte Inventario',
-                                subtitulo: 'Detalle de productos',
-                                onTap: () {
-                                  navegarConFade(
-                                    context,
-                                    const InventarioProcesoDeskScreen(),
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 20),
-                            ],
+                              // Reporte Inventario (solo Gerente y Admin Tulcán)
+                              if (_puedeVerReporte("Reporte Inventario")) ...[
+                                _buildBoton(
+                                  icon: LucideIcons.clipboardList,
+                                  titulo: 'Reporte Inventario',
+                                  subtitulo: 'Detalle de productos',
+                                  onTap: () {
+                                    navegarConFade(
+                                      context,
+                                      const InventarioProcesoDeskScreen(),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+                              ],
 
-                            // Reporte Cotizaciones (solo Gerente y Admin Tulcán)
-                            if (_puedeVerReporte("Reporte Cotizaciones")) ...[
-                              _buildBoton(
-                                icon: LucideIcons.clipboardList,
-                                titulo: 'Reporte Cotizaciones',
-                                subtitulo: 'Historial de proformas de cotización',
-                                onTap: () {
-                                  navegarConFade(
-                                    context,
-                                    const ReporteProformasVentasDeskScreen(),
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 20),
-                            ],
+                              // Reporte Cotizaciones (solo Gerente y Admin Tulcán)
+                              if (_puedeVerReporte("Reporte Cotizaciones")) ...[
+                                _buildBoton(
+                                  icon: LucideIcons.clipboardList,
+                                  titulo: 'Reporte Cotizaciones',
+                                  subtitulo:
+                                      'Historial de proformas de cotización',
+                                  onTap: () {
+                                    navegarConFade(
+                                      context,
+                                      const ReporteProformasVentasDeskScreen(),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+                              ],
 
-                            // Reporte Proformas/Ordenes (solo Gerente y Admin Tulcán)
-                            if (_puedeVerReporte("Reporte Proformas")) ...[
-                              _buildBoton(
-                                icon: LucideIcons.clipboardList,
-                                titulo: 'Reporte Proformas / Ordenes',
-                                subtitulo: 'Proformas y Ordenes de despacho',
-                                onTap: () {
-                                  navegarConFade(
-                                    context,
-                                    const ReporteDocumentosDeskScreen(),
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 20),
-                            ],
+                              // Reporte Proformas/Ordenes (solo Gerente y Admin Tulcán)
+                              if (_puedeVerReporte("Reporte Proformas")) ...[
+                                _buildBoton(
+                                  icon: LucideIcons.clipboardList,
+                                  titulo: 'Reporte Proformas / Ordenes',
+                                  subtitulo: 'Proformas y Ordenes de despacho',
+                                  onTap: () {
+                                    navegarConFade(
+                                      context,
+                                      const ReporteDocumentosDeskScreen(),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+                              ],
 
-                            // Reporte Materia Prima (solo Gerente y Admin Tulcán)
-                            if (_puedeVerReporte("Reporte Materia Prima")) ...[
-                              _buildBoton(
-                                icon: LucideIcons.clipboardList,
-                                titulo: 'Reporte Materia Prima',
-                                subtitulo: 'Compra de materia prima',
-                                onTap: () {
-                                  navegarConFade(
-                                    context,
-                                    const ReporteComprasDeskScreen(),
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 20),
-                            ],
+                              // Reporte Materia Prima (solo Gerente y Admin Tulcán)
+                              if (_puedeVerReporte(
+                                "Reporte Materia Prima",
+                              )) ...[
+                                _buildBoton(
+                                  icon: LucideIcons.clipboardList,
+                                  titulo: 'Reporte Materia Prima',
+                                  subtitulo: 'Compra de materia prima',
+                                  onTap: () {
+                                    navegarConFade(
+                                      context,
+                                      const ReporteComprasDeskScreen(),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+                              ],
 
-                             if (_puedeVerReporte("Reporte Fundición")) ...[
-                              _buildBoton(
-                                icon: LucideIcons.clipboardList,
-                                titulo: 'Reporte Fundición',
-                                subtitulo: 'Tareas asignadas y completadas',
-                                onTap: () {
-                                  navegarConFade(
-                                    context,
-                                    const ReportePedidosDeskScreen(),
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 20),
-                            ],
+                              if (_puedeVerReporte("Reporte Fundición")) ...[
+                                _buildBoton(
+                                  icon: LucideIcons.clipboardList,
+                                  titulo: 'Reporte Fundición',
+                                  subtitulo: 'Tareas asignadas y completadas',
+                                  onTap: () {
+                                    navegarConFade(
+                                      context,
+                                      const ReportePedidosDeskScreen(),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+                              ],
 
-                            // Auditoría (solo Gerente y Admin Tulcán)
-                            if (_puedeVerReporte("Auditoría"))
-                              _buildBoton(
-                                icon: LucideIcons.clipboardList,
-                                titulo: 'Auditoría',
-                                subtitulo: 'Ediciones y cambios en el sistema',
-                                onTap: () {
-                                  navegarConFade(context, const AuditoriaDeskScreen());
-                                },
-                              ),
-                          ],
+                              // Auditoría (solo Gerente y Admin Tulcán)
+                              if (_puedeVerReporte("Auditoría"))
+                                _buildBoton(
+                                  icon: LucideIcons.clipboardList,
+                                  titulo: 'Auditoría',
+                                  subtitulo:
+                                      'Ediciones y cambios en el sistema',
+                                  onTap: () {
+                                    navegarConFade(
+                                      context,
+                                      const AuditoriaDeskScreen(),
+                                    );
+                                  },
+                                ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
             ),
           ),
         ],

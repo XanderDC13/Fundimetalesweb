@@ -18,7 +18,11 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
   bool cargando = true;
   String sucursalUsuario = '';
   String sucursalSeleccionada = '';
-
+  Map<String, List<String>> procesosPorSucursal = {
+    'Tulcán': ['bruto', 'pintura', 'mecanizado', 'bodega'],
+    'Quito': ['bodega'],
+    'Guayaquil': ['bodega'],
+  };
   final _auth = FirebaseAuth.instance;
   final List<String> sucursales = ['Quito', 'Guayaquil', 'Tulcán'];
 
@@ -1574,17 +1578,23 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
   }
 
   Widget _buildFilaProceso(Proceso proceso) {
+    // Validación al inicio para filtrar procesos según sucursal
+    final procesosPermitidos = procesosPorSucursal[sucursalSeleccionada] ?? [];
+    if (!procesosPermitidos.contains(proceso.id.toLowerCase())) {
+      return const SizedBox.shrink(); // No mostrar este proceso
+    }
+
     final cantidad = cantidadesPorProceso[proceso.id] ?? 0;
 
     return Container(
-      width: 420,
+      width: 420, // AUMENTAR el ancho si es necesario
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       margin: const EdgeInsets.only(bottom: 3),
       child: Row(
         children: [
-          // Nombre del proceso
-          SizedBox(
-            width: 120,
+          // Nombre del proceso - USAR Expanded para que se ajuste
+          Expanded(
+            flex: 3,
             child: Text(
               '${proceso.nombre.toUpperCase()} ($sucursalSeleccionada)',
               style: const TextStyle(
@@ -1593,17 +1603,17 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                 color: Color(0xFF2C3E50),
               ),
               overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
 
-          const SizedBox(width: 8),
-
+          const SizedBox(width: 4), // Reducir espacio
           // Solo mostrar botones si es la sucursal del usuario actual
           if (sucursalSeleccionada == sucursalUsuario) ...[
             // Botón ENTRADA
             SizedBox(
-              width: 27,
-              height: 28,
+              width: 24, // Reducir tamaño
+              height: 24,
               child: ElevatedButton(
                 onPressed:
                     () => _mostrarFormularioEntradaDirecta(context, proceso),
@@ -1618,16 +1628,16 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                 ),
                 child: const Text(
                   '+',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
 
-            const SizedBox(width: 6),
+            const SizedBox(width: 4),
             // Botón SALIDA
             SizedBox(
-              width: 27,
-              height: 28,
+              width: 24,
+              height: 24,
               child: ElevatedButton(
                 onPressed:
                     cantidad > 0
@@ -1645,16 +1655,16 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                 ),
                 child: const Text(
                   '-',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
 
-            const SizedBox(width: 6),
+            const SizedBox(width: 4),
             // Botón MOVER
             SizedBox(
-              width: 45,
-              height: 28,
+              width: 40, // Reducir tamaño
+              height: 24,
               child: ElevatedButton(
                 onPressed:
                     cantidad > 0
@@ -1671,17 +1681,17 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                 ),
                 child: const Text(
                   'MOVER',
-                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
 
-            const SizedBox(width: 6),
+            const SizedBox(width: 4),
 
             // Botón RECHAZO
             SizedBox(
-              width: 45,
-              height: 28,
+              width: 40,
+              height: 24,
               child: ElevatedButton(
                 onPressed:
                     cantidad > 0
@@ -1698,52 +1708,57 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                 ),
                 child: const Text(
                   'RECHAZO',
-                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
 
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
           ] else ...[
             // Espacio vacío para mantener alineación cuando solo se visualiza
-            const SizedBox(width: 197),
+            const SizedBox(
+              width: 176,
+            ), // Ajustar según el nuevo tamaño de botones
           ],
 
-          // CANTIDAD
-          Container(
-            width: 50,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color:
-                  cantidad <= 0
-                      ? Colors.red.shade50
-                      : cantidad < 5
-                      ? Colors.orange.shade50
-                      : Colors.green.shade50,
-              borderRadius: BorderRadius.circular(3),
-              border: Border.all(
+          // CANTIDAD - USAR Expanded para que se ajuste
+          Expanded(
+            flex: 1,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+              decoration: BoxDecoration(
                 color:
                     cantidad <= 0
-                        ? Colors.red.shade200
+                        ? Colors.red.shade50
                         : cantidad < 5
-                        ? Colors.orange.shade200
-                        : Colors.green.shade200,
-                width: 0.5,
+                        ? Colors.orange.shade50
+                        : Colors.green.shade50,
+                borderRadius: BorderRadius.circular(3),
+                border: Border.all(
+                  color:
+                      cantidad <= 0
+                          ? Colors.red.shade200
+                          : cantidad < 5
+                          ? Colors.orange.shade200
+                          : Colors.green.shade200,
+                  width: 0.5,
+                ),
               ),
-            ),
-            child: Text(
-              'CANT: $cantidad',
-              style: TextStyle(
-                fontSize: 8,
-                fontWeight: FontWeight.bold,
-                color:
-                    cantidad <= 0
-                        ? Colors.red.shade700
-                        : cantidad < 5
-                        ? Colors.orange.shade700
-                        : Colors.green.shade700,
+              child: Text(
+                'CANT: $cantidad',
+                style: TextStyle(
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                  color:
+                      cantidad <= 0
+                          ? Colors.red.shade700
+                          : cantidad < 5
+                          ? Colors.orange.shade700
+                          : Colors.green.shade700,
+                ),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
             ),
           ),
         ],
