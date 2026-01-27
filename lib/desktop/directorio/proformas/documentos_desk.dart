@@ -51,6 +51,12 @@ class _ProformaOrdenDespachoDeskScreenState
   bool _tarjetaCredito = false;
   bool _otros = false;
 
+  // NUEVAS VARIABLES
+  final TextEditingController _numeroFacturaController =
+      TextEditingController();
+  final TextEditingController _valorDeclaradoController =
+      TextEditingController();
+
   void _calcularTotalFormulario() {
     setState(() {
       double cantidad = double.tryParse(_formCantidadController.text) ?? 0;
@@ -425,7 +431,13 @@ class _ProformaOrdenDespachoDeskScreenState
                                     // PRODUCTOS (lado derecho, más pequeño)
                                     Expanded(
                                       flex: 1,
-                                      child: _buildProductosSection(),
+                                      child: Column(
+                                        children: [
+                                          _buildProductosSection(),
+                                          const SizedBox(height: 16),
+                                          _buildFacturaSection(),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -791,6 +803,38 @@ class _ProformaOrdenDespachoDeskScreenState
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFacturaSection() {
+    return _buildSection(
+      title: 'Factura',
+      icon: Icons.receipt_long,
+      color: Colors.grey[800]!,
+      child: Row(
+        children: [
+          // N° Factura (IZQUIERDA)
+          Expanded(
+            child: _buildTextField(
+              controller: _numeroFacturaController,
+              label: 'N° Factura',
+              icon: Icons.numbers,
+              onChanged: (value) {},
+            ),
+          ),
+          SizedBox(width: 12),
+          // Valor Declarado (DERECHA)
+          Expanded(
+            child: _buildTextField(
+              controller: _valorDeclaradoController,
+              label: 'Valor Declarado',
+              icon: Icons.attach_money,
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              onChanged: (value) {},
             ),
           ),
         ],
@@ -1574,7 +1618,7 @@ class _ProformaOrdenDespachoDeskScreenState
               ),
             ),
             const SizedBox(width: 8),
-            // Botón Guardar (guarda ambos)
+            // Botón Guardar (ahora con opciones)
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -1589,7 +1633,7 @@ class _ProformaOrdenDespachoDeskScreenState
                   ],
                 ),
                 child: ElevatedButton(
-                  onPressed: _guardarAmbosDocumentos,
+                  onPressed: _mostrarOpcionesGuardar, // 👈 CAMBIAR AQUÍ
                   child: const Text('Guardar'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
@@ -1608,6 +1652,213 @@ class _ProformaOrdenDespachoDeskScreenState
         ),
       ),
     );
+  }
+
+  void _mostrarOpcionesGuardar() async {
+    if (!_validarDatos()) return;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Seleccione qué guardar',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+
+              // Guardar solo Proforma
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _guardarSoloProforma();
+                  },
+                  icon: const Icon(Icons.receipt_long),
+                  label: const Text('Guardar solo Proforma'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4682B4),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Guardar solo Orden
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _guardarSoloOrden();
+                  },
+                  icon: const Icon(Icons.local_shipping),
+                  label: const Text('Guardar solo Orden de Despacho'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4682B4),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Guardar ambas
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _guardarAmbosDocumentos();
+                  },
+                  icon: const Icon(Icons.save_alt),
+                  label: const Text('Guardar Ambas'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[600],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _guardarSoloProforma() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: const Color(0xFF4682B4)),
+              SizedBox(height: 16),
+              Text('Guardando proforma...'),
+            ],
+          ),
+        );
+      },
+    );
+
+    try {
+      await _guardarProformaInterno();
+
+      final user = FirebaseAuth.instance.currentUser;
+      final usuarioDoc =
+          await FirebaseFirestore.instance
+              .collection('usuarios_activos')
+              .doc(user?.uid)
+              .get();
+
+      final usuarioNombre =
+          usuarioDoc.exists
+              ? (usuarioDoc['nombre'] ?? 'Desconocido')
+              : 'Desconocido';
+
+      await FirebaseFirestore.instance.collection('auditoria_general').add({
+        'fecha': FieldValue.serverTimestamp(),
+        'usuario_nombre': usuarioNombre,
+        'usuario_uid': user?.uid ?? 'uid_desconocido',
+        'accion': 'Nueva proforma',
+        'detalle': 'Proforma N° $_numeroProforma',
+      });
+
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Proforma guardada correctamente'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+
+      _limpiarFormularioCompleto();
+    } catch (e) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al guardar proforma: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  void _guardarSoloOrden() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: const Color(0xFF4682B4)),
+              SizedBox(height: 16),
+              Text('Guardando orden de despacho...'),
+            ],
+          ),
+        );
+      },
+    );
+
+    try {
+      await _guardarOrdenDespacho();
+
+      final user = FirebaseAuth.instance.currentUser;
+      final usuarioDoc =
+          await FirebaseFirestore.instance
+              .collection('usuarios_activos')
+              .doc(user?.uid)
+              .get();
+
+      final usuarioNombre =
+          usuarioDoc.exists
+              ? (usuarioDoc['nombre'] ?? 'Desconocido')
+              : 'Desconocido';
+
+      await FirebaseFirestore.instance.collection('auditoria_general').add({
+        'fecha': FieldValue.serverTimestamp(),
+        'usuario_nombre': usuarioNombre,
+        'usuario_uid': user?.uid ?? 'uid_desconocido',
+        'accion': 'Nueva orden de despacho',
+        'detalle': 'Orden N° $_numeroOrdenDespacho',
+      });
+
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Orden de Despacho guardada correctamente'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+
+      _limpiarFormularioCompleto();
+    } catch (e) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al guardar orden: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   void _guardarAmbosDocumentos() async {
@@ -1710,15 +1961,12 @@ class _ProformaOrdenDespachoDeskScreenState
     }
 
     final proformaData = {
-      // 🔑 NUMERO PROFORMA
-      'numero': numero, // ← 7401, 7402, etc
-      // CLIENTE
+      'numero': numero,
       'cliente': _clienteController.text,
       'ci_ruc': _ciRucController.text,
       'direccion': _direccionController.text,
       'telefono': _telefonoController.text,
 
-      // ITEMS
       'items':
           items
               .map(
@@ -1732,14 +1980,15 @@ class _ProformaOrdenDespachoDeskScreenState
               )
               .toList(),
 
-      // VALORES
       'subtotal': _calcularSubtotal(),
       'iva': _calcularIVA(),
       'total': _calcularTotalFinal(),
 
-      // CONTROL
+      'numero_factura': _numeroFacturaController.text.trim(),
+      'valor_declarado': _valorDeclaradoController.text.trim(),
+
       'fecha': Timestamp.now(),
-      'estado': 'Pendiente',
+      'estado': '',
     };
 
     await FirebaseFirestore.instance.collection('proformas').add(proformaData);
@@ -1764,10 +2013,31 @@ class _ProformaOrdenDespachoDeskScreenState
     }
 
     final ordenData = {
+      // 🔑 NUMERO ORDEN
       'numero': numero,
-      'fecha': Timestamp.now(),
+
+      // CLIENTE
       'cliente': _clienteController.text,
       'ci_ruc': _ciRucController.text,
+      'email': _emailController.text,
+      'direccion': _direccionController.text,
+      'ciudad': _ciudadController.text,
+      'telefono': _telefonoController.text,
+
+      // ITEMS (COPIA DE LA PROFORMA)
+      'items':
+          items
+              .map(
+                (item) => {
+                  'ref': item.refController.text,
+                  'descripcion': item.descripcionController.text,
+                  'cantidad': item.cantidadController.text,
+                },
+              )
+              .toList(),
+
+      // CONTROL
+      'fecha': Timestamp.now(),
       'estado': 'Pendiente',
     };
 
@@ -1969,7 +2239,7 @@ class _ProformaOrdenDespachoDeskScreenState
     try {
       // Llamar al OrdenDespachoPDFGenerator
       await OrdenDespachoPDFGenerator.showPreview(
-        numeroOrdenDespacho: _numeroOrdenDespacho, 
+        numeroOrdenDespacho: _numeroOrdenDespacho,
         cliente: _clienteController.text,
         ciRuc: _ciRucController.text,
         email: _emailController.text,
@@ -2042,7 +2312,7 @@ class _ProformaOrdenDespachoDeskScreenState
   void _compartirProforma() async {
     try {
       await ProformaPDFCompartir.shareDocument(
-        numeroOrden: _numeroProforma,  
+        numeroOrden: _numeroProforma,
         cliente: _clienteController.text,
         ciRuc: _ciRucController.text,
         direccion: _direccionController.text,
@@ -2125,6 +2395,8 @@ class _ProformaOrdenDespachoDeskScreenState
       _dineroElectronico = false;
       _tarjetaCredito = false;
       _otros = false;
+      _numeroFacturaController.clear(); // 👈 AGREGAR
+      _valorDeclaradoController.clear(); // 👈 AGREGAR
       _clienteEncontrado = false;
       _mensajeBusqueda = '';
       _entradaManualHabilitada = true; // CAMBIAR: de false a true
@@ -2144,6 +2416,8 @@ class _ProformaOrdenDespachoDeskScreenState
     _telefonoController.dispose();
     _emailController.dispose();
     _ciudadController.dispose();
+    _numeroFacturaController.dispose();
+    _valorDeclaradoController.dispose();
     for (var item in items) {
       item.dispose();
     }

@@ -115,13 +115,20 @@ class _ReporteDocumentosDeskScreenState
         final ciRuc = data['ci_ruc']?.toString() ?? '';
 
         if (numero.isNotEmpty) {
-          if (documentosPorNumero.containsKey(numero)) {
-            // Ya existe proforma, agregar orden
-            documentosPorNumero[numero]!['orden'] = data;
-            documentosPorNumero[numero]!['fechaOrden'] =
+          // Buscar si ya existe un documento con el mismo cliente/cédula
+          final documentoExistente = documentosPorNumero.values.firstWhere(
+            (doc) => doc['ci_ruc'] == ciRuc && ciRuc.isNotEmpty,
+            orElse: () => {},
+          );
+
+          if (documentoExistente.isNotEmpty) {
+            // Encontró un documento del mismo cliente, agregar la orden ahí
+            final key = documentoExistente['numero'];
+            documentosPorNumero[key]!['orden'] = data;
+            documentosPorNumero[key]!['fechaOrden'] =
                 (data['fecha'] as Timestamp?)?.toDate();
           } else {
-            // Solo existe orden
+            // No existe documento previo de este cliente, crear nueva entrada
             documentosPorNumero[numero] = {
               'numero': numero,
               'cliente': cliente,
@@ -203,6 +210,23 @@ class _ReporteDocumentosDeskScreenState
       _filtroCedula = _cedulaController.text;
     });
     _obtenerDatos();
+  }
+
+  String _construirTextoNumeros(Map<String, dynamic> documento) {
+    final numeroProforma = documento['proforma']?['numero']?.toString();
+    final numeroOrden = documento['orden']?['numero']?.toString();
+
+    final List<String> partes = [];
+
+    if (numeroProforma != null) {
+      partes.add('PROFORMA: $numeroProforma');
+    }
+
+    if (numeroOrden != null) {
+      partes.add('ORDEN: $numeroOrden');
+    }
+
+    return partes.isEmpty ? '—' : partes.join(' | ');
   }
 
   Future<void> _seleccionarFechaInicio() async {
@@ -621,7 +645,7 @@ class _ReporteDocumentosDeskScreenState
                                     ),
                                     children: [
                                       _TablaCellMain(
-                                        documento['numero']?.toString() ?? '—',
+                                        _construirTextoNumeros(documento),
                                         false,
                                       ),
                                       _TablaCellMain(
@@ -636,6 +660,7 @@ class _ReporteDocumentosDeskScreenState
                                             onPressed:
                                                 () => generarProformaPDF(
                                                   documento['numero'],
+                                                  documento['ci_ruc'],
                                                 ),
                                             icon: const Icon(
                                               Icons.picture_as_pdf,
@@ -673,6 +698,7 @@ class _ReporteDocumentosDeskScreenState
                                             onPressed:
                                                 () => generarOrdenPDF(
                                                   documento['numero'],
+                                                  documento['ci_ruc'],
                                                 ),
                                             icon: const Icon(
                                               Icons.picture_as_pdf,

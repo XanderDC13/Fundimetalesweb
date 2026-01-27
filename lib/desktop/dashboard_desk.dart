@@ -483,8 +483,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             ? allYValues.reduce((a, b) => a > b ? a : b)
             : 100;
 
-    final double maxY =
-        maxYValue > 0 ? ((maxYValue + 99) / 100).ceil() * 100 : 100;
+    final double maxY = maxYValue > 0 ? ((maxYValue + 0.9) / 1).ceil() * 1 : 1;
 
     return Container(
       height: 350,

@@ -4,17 +4,31 @@ import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'package:flutter/services.dart';
 
-Future<void> generarProformaPDF(String numero) async {
-  final query =
+Future<void> generarProformaPDF(String numero, String? ciRuc) async {
+  QuerySnapshot query;
+
+  query =
       await FirebaseFirestore.instance
           .collection('proformas')
           .where('numero', isEqualTo: numero)
           .limit(1)
           .get();
 
-  if (query.docs.isEmpty) return;
+  if (query.docs.isEmpty && ciRuc != null && ciRuc.isNotEmpty) {
+    query =
+        await FirebaseFirestore.instance
+            .collection('proformas')
+            .where('ci_ruc', isEqualTo: ciRuc)
+            .limit(1)
+            .get();
+  }
 
-  final data = query.docs.first.data();
+  if (query.docs.isEmpty) {
+    print('No se encontró la proforma');
+    return;
+  }
+
+  final data = query.docs.first.data() as Map<String, dynamic>;
 
   // Cargar logo
   pw.ImageProvider? logoProvider;
@@ -36,25 +50,25 @@ Future<void> generarProformaPDF(String numero) async {
           width: double.infinity,
           child: pw.Column(
             children: [
-              _buildHeader(logoProvider, data['numero']),
+              _buildHeader(logoProvider, data['numero']?.toString() ?? ''),
               pw.SizedBox(height: 12),
               _buildClienteInfo(
-                data['cliente'],
-                data['ci_ruc'],
-                data['direccion'],
-                data['telefono'],
+                data['cliente']?.toString() ?? '',
+                data['ci_ruc']?.toString() ?? '',
+                data['direccion']?.toString() ?? '',
+                data['telefono']?.toString() ?? '',
               ),
               pw.SizedBox(height: 12),
-              _buildItemsTable(data['items']),
+              _buildItemsTable(data['items'] ?? []),
               pw.SizedBox(height: 12),
               _buildTotalesYFormaPago(
-                data['subtotal'],
-                data['iva'],
-                data['total'],
-                data['efectivo'],
-                data['dinero_electronico'],
-                data['tarjeta_credito'],
-                data['otros'],
+                data['subtotal']?.toString() ?? '0.00',
+                data['iva']?.toString() ?? '0.00',
+                data['total']?.toString() ?? '0.00',
+                data['efectivo'] ?? false,
+                data['dinero_electronico'] ?? false,
+                data['tarjeta_credito'] ?? false,
+                data['otros'] ?? false,
               ),
             ],
           ),
@@ -63,11 +77,11 @@ Future<void> generarProformaPDF(String numero) async {
     ),
   );
 
-  // Mostrar / imprimir PDF
   await Printing.layoutPdf(onLayout: (format) async => pdf.save());
 }
 
 pw.Widget _buildHeader(pw.ImageProvider? logoProvider, String numeroOrden) {
+  final numeroStr = numeroOrden.toString();
   return pw.Container(
     width: double.infinity,
     height: 90, // Alto fijo
@@ -191,7 +205,7 @@ pw.Widget _buildHeader(pw.ImageProvider? logoProvider, String numeroOrden) {
 
                 // NÚMERO
                 pw.Text(
-                  numeroOrden,
+                  numeroStr, // 👈 Usar la variable convertida
                   style: pw.TextStyle(
                     fontSize: 14,
                     fontWeight: pw.FontWeight.bold,

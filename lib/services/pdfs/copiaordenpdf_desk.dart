@@ -4,17 +4,31 @@ import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'package:flutter/services.dart';
 
-Future<void> generarOrdenPDF(String numero) async {
-  final query =
+Future<void> generarOrdenPDF(String numero, String? ciRuc) async {
+  QuerySnapshot query;
+
+  query =
       await FirebaseFirestore.instance
           .collection('ordenes_despacho')
           .where('numero', isEqualTo: numero)
           .limit(1)
           .get();
 
-  if (query.docs.isEmpty) return;
+  if (query.docs.isEmpty && ciRuc != null && ciRuc.isNotEmpty) {
+    query =
+        await FirebaseFirestore.instance
+            .collection('ordenes_despacho')
+            .where('ci_ruc', isEqualTo: ciRuc)
+            .limit(1)
+            .get();
+  }
 
-  final data = query.docs.first.data();
+  if (query.docs.isEmpty) {
+    print('No se encontró la orden de despacho');
+    return;
+  }
+
+  final data = query.docs.first.data() as Map<String, dynamic>;
 
   // Cargar logo
   pw.ImageProvider? logoProvider;
@@ -36,19 +50,20 @@ Future<void> generarOrdenPDF(String numero) async {
           width: double.infinity,
           child: pw.Column(
             children: [
-              _buildHeader(logoProvider, data['numero']),
+              _buildHeader(logoProvider, data['numero']?.toString() ?? ''),
               pw.SizedBox(height: 12),
               _buildClienteInfo(
-                data['cliente'],
-                data['ci_ruc'],
-                data['correo'],
-                data['direccion'],
-                data['ciudad'],
+                data['cliente']?.toString() ?? '',
+                data['ci_ruc']?.toString() ?? '',
+                data['correo']?.toString() ?? '',
+                data['telefono']?.toString() ?? '',
+                data['direccion']?.toString() ?? '',
+                data['ciudad']?.toString() ?? '',
               ),
               pw.SizedBox(height: 12),
               _buildLeyenda(),
               pw.SizedBox(height: 8),
-              _buildItemsTable(data['items']),
+              _buildItemsTable(data['items'] ?? []),
               pw.Spacer(),
             ],
           ),
@@ -241,6 +256,7 @@ pw.Widget _buildClienteInfo(
   String cliente,
   String ciRuc,
   String email,
+  String telefono,
   String direccion,
   String ciudad,
 ) {
@@ -301,7 +317,7 @@ pw.Widget _buildClienteInfo(
             ),
           ],
         ),
-        // Segunda fila: EMAIL y DIRECCION
+        // Segunda fila: EMAIL y TELEFONO
         pw.Container(
           decoration: pw.BoxDecoration(
             border: pw.Border(
@@ -342,6 +358,69 @@ pw.Widget _buildClienteInfo(
                   child: pw.Row(
                     children: [
                       pw.Text(
+                        'TELEFONO: ', // 👈 CAMBIAR DE DIRECCION A TELEFONO
+                        style: pw.TextStyle(
+                          fontSize: 9,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                      pw.Expanded(
+                        child: pw.Text(
+                          telefono, // 👈 CAMBIAR DE direccion A telefono
+                          style: pw.TextStyle(fontSize: 9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Tercera fila: CIUDAD y DIRECCION
+        pw.Container(
+          decoration: pw.BoxDecoration(
+            border: pw.Border(
+              top: pw.BorderSide(color: PdfColors.grey, width: 0.3),
+            ),
+          ),
+          child: pw.Row(
+            children: [
+              pw.Expanded(
+                flex: 2,
+                child: pw.Container(
+                  padding: pw.EdgeInsets.all(6),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border(
+                      right: pw.BorderSide(color: PdfColors.grey, width: 0.3),
+                    ),
+                  ),
+                  child: pw.Row(
+                    children: [
+                      pw.Text(
+                        'CIUDAD: ',
+                        style: pw.TextStyle(
+                          fontSize: 9,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                      pw.Expanded(
+                        child: pw.Text(
+                          ciudad,
+                          style: pw.TextStyle(fontSize: 9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              pw.Expanded(
+                flex: 3,
+                child: pw.Container(
+                  padding: pw.EdgeInsets.all(6),
+                  child: pw.Row(
+                    children: [
+                      pw.Text(
                         'DIRECCION: ',
                         style: pw.TextStyle(
                           fontSize: 9,
@@ -361,30 +440,6 @@ pw.Widget _buildClienteInfo(
                 ),
               ),
             ],
-          ),
-        ),
-        // Tercera fila: CIUDAD
-        pw.Container(
-          decoration: pw.BoxDecoration(
-            border: pw.Border(
-              top: pw.BorderSide(color: PdfColors.grey, width: 0.3),
-            ),
-          ),
-          child: pw.Container(
-            width: double.infinity,
-            padding: pw.EdgeInsets.all(6),
-            child: pw.Row(
-              children: [
-                pw.Text(
-                  'CIUDAD: ',
-                  style: pw.TextStyle(
-                    fontSize: 9,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-                pw.Text(ciudad, style: pw.TextStyle(fontSize: 9)),
-              ],
-            ),
           ),
         ),
       ],
