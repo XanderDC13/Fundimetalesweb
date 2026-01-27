@@ -5,30 +5,23 @@ import 'package:printing/printing.dart';
 import 'package:flutter/services.dart';
 
 Future<void> generarProformaPDF(String numero, String? ciRuc) async {
-  QuerySnapshot query;
+  // Convertir número a int si es posible
+  final numeroInt = int.tryParse(numero);
 
-  query =
+  // Una sola consulta optimizada
+  final query =
       await FirebaseFirestore.instance
           .collection('proformas')
-          .where('numero', isEqualTo: numero)
+          .where('numero', isEqualTo: numeroInt ?? numero)
           .limit(1)
           .get();
 
-  if (query.docs.isEmpty && ciRuc != null && ciRuc.isNotEmpty) {
-    query =
-        await FirebaseFirestore.instance
-            .collection('proformas')
-            .where('ci_ruc', isEqualTo: ciRuc)
-            .limit(1)
-            .get();
-  }
-
   if (query.docs.isEmpty) {
-    print('No se encontró la proforma');
+    print('No se encontró la proforma con número: $numero');
     return;
   }
 
-  final data = query.docs.first.data() as Map<String, dynamic>;
+  final data = query.docs.first.data();
 
   // Cargar logo
   pw.ImageProvider? logoProvider;

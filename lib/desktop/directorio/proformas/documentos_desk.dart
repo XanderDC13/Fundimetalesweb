@@ -33,7 +33,6 @@ class _ProformaOrdenDespachoDeskScreenState
 
   String _numeroProforma = '';
   String _numeroOrdenDespacho = '';
-
   Timer? _debounce;
 
   // Estados para la búsqueda
@@ -42,6 +41,7 @@ class _ProformaOrdenDespachoDeskScreenState
   String _mensajeBusqueda = '';
   bool _entradaManualHabilitada = false;
   bool _aplicarIVA = true;
+
   // Lista de items
   List<ItemOrdenDespacho> items = [];
 
@@ -1962,6 +1962,7 @@ class _ProformaOrdenDespachoDeskScreenState
 
     final proformaData = {
       'numero': numero,
+      'numero_orden': _numeroOrdenDespacho,
       'cliente': _clienteController.text,
       'ci_ruc': _ciRucController.text,
       'direccion': _direccionController.text,
@@ -1985,7 +1986,10 @@ class _ProformaOrdenDespachoDeskScreenState
       'total': _calcularTotalFinal(),
 
       'numero_factura': _numeroFacturaController.text.trim(),
-      'valor_declarado': _valorDeclaradoController.text.trim(),
+      'valor_declarado':
+          _valorDeclaradoController.text.trim().isEmpty
+              ? '0'
+              : _valorDeclaradoController.text.trim(),
 
       'fecha': Timestamp.now(),
       'estado': '',
@@ -2015,7 +2019,7 @@ class _ProformaOrdenDespachoDeskScreenState
     final ordenData = {
       // 🔑 NUMERO ORDEN
       'numero': numero,
-
+      'numero_proforma': _numeroProforma,
       // CLIENTE
       'cliente': _clienteController.text,
       'ci_ruc': _ciRucController.text,

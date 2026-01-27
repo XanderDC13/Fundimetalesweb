@@ -283,6 +283,7 @@ class _ClienteDetalleDeskScreenState extends State<ClienteDetalleDeskScreen>
                 child: Row(
                   children: [
                     const SizedBox(width: 40), // Espacio para checkbox
+                    _HeaderCell(text: 'Orden', flex: 2),
                     _HeaderCell(text: 'Prof', flex: 2),
                     _HeaderCell(text: 'Fact', flex: 2),
                     _HeaderCell(text: 'Tipo', flex: 1),
@@ -318,6 +319,7 @@ class _ClienteDetalleDeskScreenState extends State<ClienteDetalleDeskScreen>
                     return _tableRow(
                       proformaId: proformaId,
                       data: {
+                        'numero_orden': data['numero_orden'] ?? '-', 
                         'factura': data['numero'].toString(),
                         'tipo': 'FAC',
                         'valor': valorMostrar,
@@ -395,6 +397,10 @@ class _ClienteDetalleDeskScreenState extends State<ClienteDetalleDeskScreen>
                         activeColor: const Color(0xFF2C3E50),
                       ),
             ),
+            _Cell(
+              text: data['numero_orden'] ?? '-',
+              flex: 2,
+            ), // 👈 MODIFICAR ESTA LÍNEA
             _Cell(text: data['factura'], flex: 2), // PROFORMA
             _Cell(
               text:

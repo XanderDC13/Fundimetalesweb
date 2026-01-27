@@ -5,30 +5,23 @@ import 'package:printing/printing.dart';
 import 'package:flutter/services.dart';
 
 Future<void> generarOrdenPDF(String numero, String? ciRuc) async {
-  QuerySnapshot query;
+  // Convertir número a int si es posible
+  final numeroInt = int.tryParse(numero);
 
-  query =
+  // Una sola consulta optimizada
+  final query =
       await FirebaseFirestore.instance
           .collection('ordenes_despacho')
-          .where('numero', isEqualTo: numero)
+          .where('numero', isEqualTo: numeroInt ?? numero)
           .limit(1)
           .get();
 
-  if (query.docs.isEmpty && ciRuc != null && ciRuc.isNotEmpty) {
-    query =
-        await FirebaseFirestore.instance
-            .collection('ordenes_despacho')
-            .where('ci_ruc', isEqualTo: ciRuc)
-            .limit(1)
-            .get();
-  }
-
   if (query.docs.isEmpty) {
-    print('No se encontró la orden de despacho');
+    print('No se encontró la orden de despacho con número: $numero');
     return;
   }
 
-  final data = query.docs.first.data() as Map<String, dynamic>;
+  final data = query.docs.first.data();
 
   // Cargar logo
   pw.ImageProvider? logoProvider;
@@ -55,7 +48,7 @@ Future<void> generarOrdenPDF(String numero, String? ciRuc) async {
               _buildClienteInfo(
                 data['cliente']?.toString() ?? '',
                 data['ci_ruc']?.toString() ?? '',
-                data['correo']?.toString() ?? '',
+                data['email']?.toString() ?? '',
                 data['telefono']?.toString() ?? '',
                 data['direccion']?.toString() ?? '',
                 data['ciudad']?.toString() ?? '',

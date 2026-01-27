@@ -84,67 +84,72 @@ class _ReporteDocumentosDeskScreenState
 
       final snapshotOrdenes = await queryOrdenes.get();
 
-      // Crear mapa para organizar documentos por número
-      Map<String, Map<String, dynamic>> documentosPorNumero = {};
+      // Crear mapa para organizar documentos por cédula + número
+      Map<String, Map<String, dynamic>> documentosPorClave = {};
 
       // Procesar proformas
       for (var doc in snapshotProformas.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        final numero = data['numero']?.toString() ?? '';
+        final numeroProforma = data['numero']?.toString() ?? '';
+        final numeroOrden = data['numero_orden']?.toString() ?? '';
         final cliente = data['cliente']?.toString() ?? '';
         final ciRuc = data['ci_ruc']?.toString() ?? '';
 
-        if (numero.isNotEmpty) {
-          documentosPorNumero[numero] = {
-            'numero': numero,
-            'cliente': cliente,
-            'ci_ruc': ciRuc,
-            'proforma': data,
-            'orden': null,
-            'fechaProforma': (data['fecha'] as Timestamp?)?.toDate(),
-            'fechaOrden': null,
-          };
-        }
+        // Crear clave única: cedula + numero_proforma
+        final clave = '$ciRuc-P$numeroProforma';
+
+        documentosPorClave[clave] = {
+          'numero_proforma': numeroProforma,
+          'numero_orden': numeroOrden,
+          'cliente': cliente,
+          'ci_ruc': ciRuc,
+          'proforma': data,
+          'orden': null,
+          'fechaProforma': (data['fecha'] as Timestamp?)?.toDate(),
+          'fechaOrden': null,
+        };
       }
 
       // Procesar órdenes de despacho
       for (var doc in snapshotOrdenes.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        final numero = data['numero']?.toString() ?? '';
+        final numeroOrden = data['numero']?.toString() ?? '';
+        final numeroProforma = data['numero_proforma']?.toString() ?? '';
         final cliente = data['cliente']?.toString() ?? '';
         final ciRuc = data['ci_ruc']?.toString() ?? '';
 
-        if (numero.isNotEmpty) {
-          // Buscar si ya existe un documento con el mismo cliente/cédula
-          final documentoExistente = documentosPorNumero.values.firstWhere(
-            (doc) => doc['ci_ruc'] == ciRuc && ciRuc.isNotEmpty,
-            orElse: () => {},
-          );
+        // Buscar si existe una proforma con el mismo cliente y número de proforma
+        String? claveExistente;
+        if (numeroProforma.isNotEmpty) {
+          claveExistente = '$ciRuc-P$numeroProforma';
+        }
 
-          if (documentoExistente.isNotEmpty) {
-            // Encontró un documento del mismo cliente, agregar la orden ahí
-            final key = documentoExistente['numero'];
-            documentosPorNumero[key]!['orden'] = data;
-            documentosPorNumero[key]!['fechaOrden'] =
-                (data['fecha'] as Timestamp?)?.toDate();
-          } else {
-            // No existe documento previo de este cliente, crear nueva entrada
-            documentosPorNumero[numero] = {
-              'numero': numero,
-              'cliente': cliente,
-              'ci_ruc': ciRuc,
-              'proforma': null,
-              'orden': data,
-              'fechaProforma': null,
-              'fechaOrden': (data['fecha'] as Timestamp?)?.toDate(),
-            };
-          }
+        if (claveExistente != null &&
+            documentosPorClave.containsKey(claveExistente)) {
+          // Ya existe la proforma, agregar la orden
+          documentosPorClave[claveExistente]!['orden'] = data;
+          documentosPorClave[claveExistente]!['numero_orden'] = numeroOrden;
+          documentosPorClave[claveExistente]!['fechaOrden'] =
+              (data['fecha'] as Timestamp?)?.toDate();
+        } else {
+          // No existe proforma asociada, crear nueva entrada solo con orden
+          final clave = '$ciRuc-O$numeroOrden';
+          documentosPorClave[clave] = {
+            'numero_proforma': numeroProforma,
+            'numero_orden': numeroOrden,
+            'cliente': cliente,
+            'ci_ruc': ciRuc,
+            'proforma': null,
+            'orden': data,
+            'fechaProforma': null,
+            'fechaOrden': (data['fecha'] as Timestamp?)?.toDate(),
+          };
         }
       }
 
       // Convertir a lista y aplicar filtros adicionales
       List<Map<String, dynamic>> documentos =
-          documentosPorNumero.values.toList();
+          documentosPorClave.values.toList();
 
       // Filtrar por cliente
       if (_filtroCliente.isNotEmpty) {
@@ -213,17 +218,19 @@ class _ReporteDocumentosDeskScreenState
   }
 
   String _construirTextoNumeros(Map<String, dynamic> documento) {
-    final numeroProforma = documento['proforma']?['numero']?.toString();
-    final numeroOrden = documento['orden']?['numero']?.toString();
+    final numeroProforma = documento['numero_proforma']?.toString();
+    final numeroOrden = documento['numero_orden']?.toString();
 
     final List<String> partes = [];
 
-    if (numeroProforma != null) {
-      partes.add('PROFORMA: $numeroProforma');
+    if (numeroOrden != null && numeroOrden.isNotEmpty && numeroOrden != '') {
+      partes.add('ORDEN: $numeroOrden');
     }
 
-    if (numeroOrden != null) {
-      partes.add('ORDEN: $numeroOrden');
+    if (numeroProforma != null &&
+        numeroProforma.isNotEmpty &&
+        numeroProforma != '') {
+      partes.add('PROFORMA: $numeroProforma');
     }
 
     return partes.isEmpty ? '—' : partes.join(' | ');
@@ -658,10 +665,15 @@ class _ReporteDocumentosDeskScreenState
                                         child: Center(
                                           child: ElevatedButton.icon(
                                             onPressed:
-                                                () => generarProformaPDF(
-                                                  documento['numero'],
-                                                  documento['ci_ruc'],
-                                                ),
+                                                documento['proforma'] != null
+                                                    ? () => generarProformaPDF(
+                                                      documento['numero_proforma']
+                                                              ?.toString() ??
+                                                          '',
+                                                      documento['ci_ruc']
+                                                          ?.toString(),
+                                                    )
+                                                    : null,
                                             icon: const Icon(
                                               Icons.picture_as_pdf,
                                               size: 16,
@@ -696,10 +708,15 @@ class _ReporteDocumentosDeskScreenState
                                         child: Center(
                                           child: ElevatedButton.icon(
                                             onPressed:
-                                                () => generarOrdenPDF(
-                                                  documento['numero'],
-                                                  documento['ci_ruc'],
-                                                ),
+                                                documento['orden'] != null
+                                                    ? () => generarOrdenPDF(
+                                                      documento['numero_orden']
+                                                              ?.toString() ??
+                                                          '',
+                                                      documento['ci_ruc']
+                                                          ?.toString(),
+                                                    )
+                                                    : null,
                                             icon: const Icon(
                                               Icons.picture_as_pdf,
                                               size: 16,
