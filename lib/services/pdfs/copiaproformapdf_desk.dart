@@ -36,35 +36,87 @@ Future<void> generarProformaPDF(String numero, String? ciRuc) async {
 
   pdf.addPage(
     pw.Page(
-      pageFormat: PdfPageFormat.a4,
+      pageFormat: PdfPageFormat.a4.landscape, // 👈 LANDSCAPE
       margin: const pw.EdgeInsets.all(10),
       build: (context) {
-        return pw.Container(
-          width: double.infinity,
-          child: pw.Column(
-            children: [
-              _buildHeader(logoProvider, data['numero']?.toString() ?? ''),
-              pw.SizedBox(height: 12),
-              _buildClienteInfo(
-                data['cliente']?.toString() ?? '',
-                data['ci_ruc']?.toString() ?? '',
-                data['direccion']?.toString() ?? '',
-                data['telefono']?.toString() ?? '',
+        return pw.Row(
+          // 👈 ROW para dos columnas
+          children: [
+            // 👈 PRIMERA COPIA (IZQUIERDA)
+            pw.Expanded(
+              child: pw.Container(
+                margin: pw.EdgeInsets.only(right: 5),
+                child: pw.Column(
+                  children: [
+                    _buildHeader(
+                      logoProvider,
+                      data['numero']?.toString() ?? '',
+                    ),
+                    pw.SizedBox(height: 12),
+                    _buildClienteInfo(
+                      data['cliente']?.toString() ?? '',
+                      data['ci_ruc']?.toString() ?? '',
+                      data['direccion']?.toString() ?? '',
+                      data['telefono']?.toString() ?? '',
+                    ),
+                    pw.SizedBox(height: 12),
+                    _buildItemsTable(data['items'] ?? []),
+                    pw.SizedBox(height: 12),
+                    _buildTotalesYFormaPago(
+                      data['subtotal']?.toString() ?? '0.00',
+                      data['iva']?.toString() ?? '0.00',
+                      data['total']?.toString() ?? '0.00',
+                      data['efectivo'] ?? false,
+                      data['dinero_electronico'] ?? false,
+                      data['tarjeta_credito'] ?? false,
+                      data['otros'] ?? false,
+                    ),
+                  ],
+                ),
               ),
-              pw.SizedBox(height: 12),
-              _buildItemsTable(data['items'] ?? []),
-              pw.SizedBox(height: 12),
-              _buildTotalesYFormaPago(
-                data['subtotal']?.toString() ?? '0.00',
-                data['iva']?.toString() ?? '0.00',
-                data['total']?.toString() ?? '0.00',
-                data['efectivo'] ?? false,
-                data['dinero_electronico'] ?? false,
-                data['tarjeta_credito'] ?? false,
-                data['otros'] ?? false,
+            ),
+
+            // 👈 LÍNEA DIVISORIA
+            pw.Container(
+              width: 1,
+              color: PdfColors.grey,
+              margin: pw.EdgeInsets.symmetric(horizontal: 5),
+            ),
+
+            // 👈 SEGUNDA COPIA (DERECHA) - IDÉNTICA
+            pw.Expanded(
+              child: pw.Container(
+                margin: pw.EdgeInsets.only(left: 5),
+                child: pw.Column(
+                  children: [
+                    _buildHeader(
+                      logoProvider,
+                      data['numero']?.toString() ?? '',
+                    ),
+                    pw.SizedBox(height: 12),
+                    _buildClienteInfo(
+                      data['cliente']?.toString() ?? '',
+                      data['ci_ruc']?.toString() ?? '',
+                      data['direccion']?.toString() ?? '',
+                      data['telefono']?.toString() ?? '',
+                    ),
+                    pw.SizedBox(height: 12),
+                    _buildItemsTable(data['items'] ?? []),
+                    pw.SizedBox(height: 12),
+                    _buildTotalesYFormaPago(
+                      data['subtotal']?.toString() ?? '0.00',
+                      data['iva']?.toString() ?? '0.00',
+                      data['total']?.toString() ?? '0.00',
+                      data['efectivo'] ?? false,
+                      data['dinero_electronico'] ?? false,
+                      data['tarjeta_credito'] ?? false,
+                      data['otros'] ?? false,
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     ),
@@ -73,15 +125,19 @@ Future<void> generarProformaPDF(String numero, String? ciRuc) async {
   await Printing.layoutPdf(onLayout: (format) async => pdf.save());
 }
 
+// 👇 AHORA ACTUALIZA EL _buildHeader CON TAMAÑOS REDUCIDOS
 pw.Widget _buildHeader(pw.ImageProvider? logoProvider, String numeroOrden) {
   final numeroStr = numeroOrden.toString();
   return pw.Container(
     width: double.infinity,
-    height: 90, // Alto fijo
-    padding: pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    height: 70, // 👈 Reducido de 90
+    padding: pw.EdgeInsets.symmetric(
+      horizontal: 10,
+      vertical: 4,
+    ), // 👈 Reducido
     child: pw.Row(
       children: [
-        // IZQUIERDA: LOGO (25% del ancho)
+        // LOGO
         pw.Expanded(
           flex: 2,
           child: pw.Container(
@@ -90,14 +146,14 @@ pw.Widget _buildHeader(pw.ImageProvider? logoProvider, String numeroOrden) {
                 logoProvider != null
                     ? pw.Image(logoProvider, fit: pw.BoxFit.contain)
                     : pw.Container(
-                      width: 80,
-                      height: 50,
+                      width: 60, // 👈 Reducido
+                      height: 40, // 👈 Reducido
                       color: PdfColor.fromHex('#1f4e79'),
                       alignment: pw.Alignment.center,
                       child: pw.Text(
                         'FN',
                         style: pw.TextStyle(
-                          fontSize: 24,
+                          fontSize: 18, // 👈 Reducido
                           fontWeight: pw.FontWeight.bold,
                           color: PdfColors.white,
                         ),
@@ -106,48 +162,48 @@ pw.Widget _buildHeader(pw.ImageProvider? logoProvider, String numeroOrden) {
           ),
         ),
 
-        // CENTRO: INFORMACIÓN DE LA EMPRESA (50% del ancho)
+        // CENTRO
         pw.Expanded(
-          flex: 4,
+          flex: 6, // 👈 Aumentado de 4 a 6
           child: pw.Container(
             alignment: pw.Alignment.center,
             child: pw.Column(
               mainAxisAlignment: pw.MainAxisAlignment.center,
-              crossAxisAlignment: pw.CrossAxisAlignment.center, // TODO CENTRADO
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
               mainAxisSize: pw.MainAxisSize.min,
               children: [
                 pw.Text(
                   'FUNDIMETALES DEL NORTE',
                   style: pw.TextStyle(
-                    fontSize: 16,
+                    fontSize: 11, // 👈 Reducido
                     fontWeight: pw.FontWeight.bold,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 2),
+                pw.SizedBox(height: 1),
                 pw.Text(
                   'JOSE ALIRIO LOPEZ MARTINEZ',
                   style: pw.TextStyle(
-                    fontSize: 12,
+                    fontSize: 9, // 👈 Reducido
                     fontWeight: pw.FontWeight.bold,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 3),
+                pw.SizedBox(height: 1),
                 pw.Text(
-                  'Fábrica de Campanas o Tambores para frenos de Automotores en todas las marcas y modelos',
-                  style: pw.TextStyle(fontSize: 6.5),
+                  'Fábrica de Campanas o Tambores para frenos de Automotores',
+                  style: pw.TextStyle(fontSize: 6),
                   textAlign: pw.TextAlign.center,
                 ),
                 pw.Text(
-                  'Fabricamos toda clase de adaptaciones',
-                  style: pw.TextStyle(fontSize: 6.5),
+                  'en todas las marcas y modelos - Fabricamos toda clase de adaptaciones',
+                  style: pw.TextStyle(fontSize: 6),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 2),
+                pw.SizedBox(height: 1),
                 pw.Text(
-                  'Direc.: Brasil y Panamá Telf.: 2962017 - Tulcán - Ecuador',
-                  style: pw.TextStyle(fontSize: 9),
+                  'Direc.: Brasil y Panamá - Telf.: 0979230282 - Tulcán - Ecuador',
+                  style: pw.TextStyle(fontSize: 7), // 👈 Reducido
                   textAlign: pw.TextAlign.center,
                 ),
               ],
@@ -155,7 +211,7 @@ pw.Widget _buildHeader(pw.ImageProvider? logoProvider, String numeroOrden) {
           ),
         ),
 
-        // DERECHA: RUC, PROFORMA, NÚMERO Y FECHA (25% del ancho)
+        // DERECHA
         pw.Expanded(
           flex: 2,
           child: pw.Container(
@@ -165,60 +221,56 @@ pw.Widget _buildHeader(pw.ImageProvider? logoProvider, String numeroOrden) {
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               mainAxisSize: pw.MainAxisSize.min,
               children: [
-                // RUC
-                pw.Container(
-                  padding: pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  child: pw.Text(
-                    'RUC. 0401563812001',
-                    style: pw.TextStyle(
-                      fontSize: 9,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-
-                pw.SizedBox(height: 3),
-
-                // PROFORMA
-                pw.Container(
-                  padding: pw.EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  child: pw.Text(
-                    'P R O F O R M A',
-                    style: pw.TextStyle(
-                      fontSize: 11,
-                      fontWeight: pw.FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-
-                pw.SizedBox(height: 2),
-
-                // NÚMERO
                 pw.Text(
-                  numeroStr, // 👈 Usar la variable convertida
+                  'RUC. 0401563812001',
                   style: pw.TextStyle(
-                    fontSize: 14,
+                    fontSize: 7, // 👈 Reducido
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  'P R O F O R M A',
+                  style: pw.TextStyle(
+                    fontSize: 7, // 👈 Reducido
+                    fontWeight: pw.FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  numeroStr,
+                  style: pw.TextStyle(
+                    fontSize: 10, // 👈 Reducido
                     fontWeight: pw.FontWeight.bold,
                     color: PdfColors.red,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-
-                pw.SizedBox(height: 3),
-
-                // FECHA
+                pw.SizedBox(height: 2),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.center,
                   mainAxisSize: pw.MainAxisSize.min,
                   children: [
-                    _buildFechaBox('D', '${DateTime.now().day}', 18),
+                    _buildFechaBox(
+                      'D',
+                      '${DateTime.now().day}',
+                      14,
+                    ), // 👈 Reducido
                     pw.SizedBox(width: 2),
-                    _buildFechaBox('M', '${DateTime.now().month}', 18),
+                    _buildFechaBox(
+                      'M',
+                      '${DateTime.now().month}',
+                      14,
+                    ), // 👈 Reducido
                     pw.SizedBox(width: 2),
-                    _buildFechaBox('A', '${DateTime.now().year}', 22),
+                    _buildFechaBox(
+                      'A',
+                      '${DateTime.now().year}',
+                      18,
+                    ), // 👈 Reducido
                   ],
                 ),
               ],
@@ -236,18 +288,18 @@ pw.Widget _buildFechaBox(String label, String value, double width) {
     children: [
       pw.Text(
         label,
-        style: pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold),
+        style: pw.TextStyle(fontSize: 5, fontWeight: pw.FontWeight.bold),
       ),
       pw.Container(
         width: width,
-        height: 10,
+        height: 9,
         alignment: pw.Alignment.center,
         decoration: pw.BoxDecoration(
-          border: pw.Border.all(color: PdfColors.grey, width: 0.1),
+          border: pw.Border.all(color: PdfColors.grey, width: 0.3),
         ),
         child: pw.Text(
           value,
-          style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+          style: pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold),
         ),
       ),
     ],
@@ -598,7 +650,7 @@ pw.Widget _buildItemsTable(List items) {
         ),
 
         // Filas vacías para completar la tabla
-        for (int i = items.length; i < 26; i++)
+        for (int i = items.length; i < 14; i++)
           pw.Container(
             height: 20,
             decoration: pw.BoxDecoration(

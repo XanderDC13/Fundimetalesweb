@@ -121,7 +121,7 @@ class PDFGeneratorAnticipo {
                   ),
                   pw.SizedBox(height: 1),
                   pw.Text(
-                    'Direc.: Brasil y Panamá - Telf.: 2962017 - Tulcán - Ecuador',
+                    'Direc.: Brasil y Panamá - Telf.: 0979230282 - Tulcán - Ecuador',
                     style: pw.TextStyle(fontSize: 6), // Reducido tamaño de fuente
                     textAlign: pw.TextAlign.center,
                   ),

@@ -21,10 +21,11 @@ class _ReporteDocumentosDeskScreenState
   String _filtroCliente = '';
   String _filtroCedula = '';
   bool _cargando = false;
-
+  int _tabActual = 0;
   final TextEditingController _clienteController = TextEditingController();
   final TextEditingController _cedulaController = TextEditingController();
-
+  final TextEditingController _motivoAnulacionController =
+      TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -35,6 +36,7 @@ class _ReporteDocumentosDeskScreenState
   void dispose() {
     _clienteController.dispose();
     _cedulaController.dispose();
+    _motivoAnulacionController.dispose();
     super.dispose();
   }
 
@@ -191,6 +193,49 @@ class _ReporteDocumentosDeskScreenState
     }
   }
 
+  List<Map<String, dynamic>> get _documentosFiltrados {
+    if (_tabActual == 0) {
+      // Tab de Activos - mostrar solo NO anulados
+      return _documentos.where((doc) {
+        final proformaData = doc['proforma'] as Map<String, dynamic>?;
+        final ordenData = doc['orden'] as Map<String, dynamic>?;
+
+        // Si no existe el campo 'anulado' o es false, se considera activo
+        final proformaAnulada =
+            proformaData?.containsKey('anulado') == true
+                ? (proformaData!['anulado'] == true)
+                : false;
+
+        final ordenAnulada =
+            ordenData?.containsKey('anulado') == true
+                ? (ordenData!['anulado'] == true)
+                : false;
+
+        final isAnulado = proformaAnulada || ordenAnulada;
+        return !isAnulado;
+      }).toList();
+    } else {
+      // Tab de Anulados - mostrar solo anulados
+      return _documentos.where((doc) {
+        final proformaData = doc['proforma'] as Map<String, dynamic>?;
+        final ordenData = doc['orden'] as Map<String, dynamic>?;
+
+        final proformaAnulada =
+            proformaData?.containsKey('anulado') == true
+                ? (proformaData!['anulado'] == true)
+                : false;
+
+        final ordenAnulada =
+            ordenData?.containsKey('anulado') == true
+                ? (ordenData!['anulado'] == true)
+                : false;
+
+        final isAnulado = proformaAnulada || ordenAnulada;
+        return isAnulado;
+      }).toList();
+    }
+  }
+
   void _limpiarFiltros() {
     setState(() {
       _fechaInicio = null;
@@ -266,6 +311,144 @@ class _ReporteDocumentosDeskScreenState
     }
   }
 
+  Future<void> _anularDocumento(Map<String, dynamic> documento) async {
+    _motivoAnulacionController.clear();
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Anular Documento'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('¿Está seguro que desea anular este documento?'),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _motivoAnulacionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Motivo de anulación (opcional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Anular'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmar == true) {
+      try {
+        final motivo = _motivoAnulacionController.text.trim();
+        final ahora = Timestamp.now();
+
+        // Anular proforma si existe
+        if (documento['proforma'] != null) {
+          // Convertir numero a int para la búsqueda
+          final numeroProforma = documento['numero_proforma']?.toString() ?? '';
+          final numeroInt = int.tryParse(numeroProforma);
+
+          print(
+            '🔍 Buscando proforma: numero=$numeroInt, ci_ruc=${documento['ci_ruc']}',
+          );
+
+          if (numeroInt != null) {
+            final snapshotProforma =
+                await FirebaseFirestore.instance
+                    .collection('proformas')
+                    .where(
+                      'numero',
+                      isEqualTo: numeroInt,
+                    ) // Usar int, no string
+                    .where('ci_ruc', isEqualTo: documento['ci_ruc'])
+                    .get();
+
+            print('📄 Proformas encontradas: ${snapshotProforma.docs.length}');
+
+            for (var doc in snapshotProforma.docs) {
+              await doc.reference.update({
+                'anulado': true,
+                'motivo_anulacion': motivo.isEmpty ? null : motivo,
+                'fecha_anulacion': ahora,
+              });
+              print('✅ Proforma anulada: ${doc.id}');
+            }
+          }
+        }
+
+        // Anular orden si existe
+        if (documento['orden'] != null) {
+          // Convertir numero a int para la búsqueda
+          final numeroOrden = documento['numero_orden']?.toString() ?? '';
+          final numeroInt = int.tryParse(numeroOrden);
+
+          print(
+            '🔍 Buscando orden: numero=$numeroInt, ci_ruc=${documento['ci_ruc']}',
+          );
+
+          if (numeroInt != null) {
+            final snapshotOrden =
+                await FirebaseFirestore.instance
+                    .collection('ordenes_despacho')
+                    .where(
+                      'numero',
+                      isEqualTo: numeroInt,
+                    ) // Usar int, no string
+                    .where('ci_ruc', isEqualTo: documento['ci_ruc'])
+                    .get();
+
+            print('📦 Órdenes encontradas: ${snapshotOrden.docs.length}');
+
+            for (var doc in snapshotOrden.docs) {
+              await doc.reference.update({
+                'anulado': true,
+                'motivo_anulacion': motivo.isEmpty ? null : motivo,
+                'fecha_anulacion': ahora,
+              });
+              print('✅ Orden anulada: ${doc.id}');
+            }
+          }
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Documento anulado exitosamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+
+        // Recargar datos
+        await _obtenerDatos();
+      } catch (e) {
+        print('❌ Error al anular: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al anular: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MainDeskLayout(
@@ -337,7 +520,7 @@ class _ReporteDocumentosDeskScreenState
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${_documentos.length}',
+                            '${_documentosFiltrados.length}',
                             style: const TextStyle(
                               fontSize: 18,
                               color: Colors.white,
@@ -373,7 +556,7 @@ class _ReporteDocumentosDeskScreenState
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${_documentos.where((doc) => doc['proforma'] != null).length}',
+                            '${_documentosFiltrados.where((doc) => doc['proforma'] != null).length}',
                             style: const TextStyle(
                               fontSize: 18,
                               color: Colors.white,
@@ -409,7 +592,7 @@ class _ReporteDocumentosDeskScreenState
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${_documentos.where((doc) => doc['orden'] != null).length}',
+                            '${_documentosFiltrados.where((doc) => doc['orden'] != null).length}',
                             style: const TextStyle(
                               fontSize: 18,
                               color: Colors.white,
@@ -567,13 +750,138 @@ class _ReporteDocumentosDeskScreenState
                   ),
 
                   const SizedBox(height: 16),
+                  // TABS
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.2),
+                          spreadRadius: 1,
+                          blurRadius: 3,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                _tabActual = 0;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color:
+                                    _tabActual == 0
+                                        ? const Color(0xFF4682B4)
+                                        : Colors.white,
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(12),
+                                  bottomLeft: Radius.circular(12),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.check_circle,
+                                    color:
+                                        _tabActual == 0
+                                            ? Colors.white
+                                            : Colors.grey,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Documentos Activos',
+                                    style: TextStyle(
+                                      color:
+                                          _tabActual == 0
+                                              ? Colors.white
+                                              : Colors.grey,
+                                      fontWeight:
+                                          _tabActual == 0
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 40,
+                          color: Colors.grey.shade300,
+                        ),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                _tabActual = 1;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color:
+                                    _tabActual == 1
+                                        ? const Color(0xFF4682B4)
+                                        : Colors.white,
+                                borderRadius: const BorderRadius.only(
+                                  topRight: Radius.circular(12),
+                                  bottomRight: Radius.circular(12),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.cancel,
+                                    color:
+                                        _tabActual == 1
+                                            ? Colors.white
+                                            : Colors.grey,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Documentos Anulados',
+                                    style: TextStyle(
+                                      color:
+                                          _tabActual == 1
+                                              ? Colors.white
+                                              : Colors.grey,
+                                      fontWeight:
+                                          _tabActual == 1
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
+                  const SizedBox(height: 16),
                   // TABLA DE DOCUMENTOS
                   _cargando
                       ? const Expanded(
                         child: Center(child: CircularProgressIndicator()),
                       )
-                      : _documentos.isEmpty
+                      : _documentosFiltrados.isEmpty
                       ? const Expanded(
                         child: Center(
                           child: Text(
@@ -623,6 +931,7 @@ class _ReporteDocumentosDeskScreenState
                                 1: FlexColumnWidth(3.0), // Cliente
                                 2: FlexColumnWidth(2.0), // Proforma
                                 3: FlexColumnWidth(2.0), // Orden
+                                4: FlexColumnWidth(1.5), // Anular
                               },
                               children: [
                                 // ENCABEZADO
@@ -635,20 +944,49 @@ class _ReporteDocumentosDeskScreenState
                                     _TablaHeaderMain('Cliente'),
                                     _TablaHeaderMain('Proforma'),
                                     _TablaHeaderMain('Orden'),
+                                    _TablaHeaderMain('Anular'),
                                   ],
                                 ),
                                 // FILAS DE DATOS
-                                ..._documentos.asMap().entries.map((entry) {
+                                ..._documentosFiltrados.asMap().entries.map((
+                                  entry,
+                                ) {
                                   final index = entry.key;
                                   final documento = entry.value;
                                   final isEven = index % 2 == 0;
 
+                                  // Verificar si está anulado
+                                  final proformaData =
+                                      documento['proforma']
+                                          as Map<String, dynamic>?;
+                                  final ordenData =
+                                      documento['orden']
+                                          as Map<String, dynamic>?;
+
+                                  final proformaAnulada =
+                                      proformaData?.containsKey('anulado') ==
+                                              true
+                                          ? (proformaData!['anulado'] == true)
+                                          : false;
+
+                                  final ordenAnulada =
+                                      ordenData?.containsKey('anulado') == true
+                                          ? (ordenData!['anulado'] == true)
+                                          : false;
+
+                                  final isAnulado =
+                                      proformaAnulada || ordenAnulada;
+
                                   return TableRow(
                                     decoration: BoxDecoration(
                                       color:
-                                          isEven
-                                              ? Colors.grey.shade50
-                                              : Colors.white,
+                                          isAnulado
+                                              ? Colors
+                                                  .red
+                                                  .shade100 // MODIFICAR: color rojo si está anulado
+                                              : (isEven
+                                                  ? Colors.grey.shade50
+                                                  : Colors.white),
                                     ),
                                     children: [
                                       _TablaCellMain(
@@ -665,7 +1003,9 @@ class _ReporteDocumentosDeskScreenState
                                         child: Center(
                                           child: ElevatedButton.icon(
                                             onPressed:
-                                                documento['proforma'] != null
+                                                (documento['proforma'] !=
+                                                            null &&
+                                                        !isAnulado) // MODIFICAR
                                                     ? () => generarProformaPDF(
                                                       documento['numero_proforma']
                                                               ?.toString() ??
@@ -684,7 +1024,9 @@ class _ReporteDocumentosDeskScreenState
                                             ),
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor:
-                                                  documento['proforma'] != null
+                                                  (documento['proforma'] !=
+                                                              null &&
+                                                          !isAnulado) // MODIFICAR
                                                       ? const Color(0xFF4682B4)
                                                       : Colors.grey,
                                               foregroundColor: Colors.white,
@@ -708,7 +1050,8 @@ class _ReporteDocumentosDeskScreenState
                                         child: Center(
                                           child: ElevatedButton.icon(
                                             onPressed:
-                                                documento['orden'] != null
+                                                (documento['orden'] != null &&
+                                                        !isAnulado) // MODIFICAR
                                                     ? () => generarOrdenPDF(
                                                       documento['numero_orden']
                                                               ?.toString() ??
@@ -727,9 +1070,51 @@ class _ReporteDocumentosDeskScreenState
                                             ),
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor:
-                                                  documento['orden'] != null
+                                                  (documento['orden'] != null &&
+                                                          !isAnulado) // MODIFICAR
                                                       ? const Color(0xFF4682B4)
                                                       : Colors.grey,
+                                              foregroundColor: Colors.white,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
+                                              minimumSize: const Size(0, 32),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      // AGREGAR ESTA COLUMNA COMPLETA:
+                                      Padding(
+                                        padding: const EdgeInsets.all(8),
+                                        child: Center(
+                                          child: ElevatedButton.icon(
+                                            onPressed:
+                                                !isAnulado
+                                                    ? () => _anularDocumento(
+                                                      documento,
+                                                    )
+                                                    : null,
+                                            icon: const Icon(
+                                              Icons.cancel,
+                                              size: 16,
+                                            ),
+                                            label: Text(
+                                              isAnulado ? 'ANULADO' : 'Anular',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  isAnulado
+                                                      ? Colors.grey
+                                                      : Colors.red,
                                               foregroundColor: Colors.white,
                                               padding:
                                                   const EdgeInsets.symmetric(

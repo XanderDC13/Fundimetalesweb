@@ -198,16 +198,105 @@ class _HistorialInsumosDeskWidgetState
                     int.tryParse(_cantidadEditController.text) ??
                     cantidadActual;
 
-                await FirebaseFirestore.instance
-                    .collection('solicitudes_insumos')
-                    .doc(docId)
-                    .update({'cantidad': nuevaCantidad});
+                // Si la cantidad no cambió, no hacer nada
+                if (nuevaCantidad == cantidadActual) {
+                  Navigator.pop(context);
+                  return;
+                }
 
-                Navigator.pop(context);
+                try {
+                  final insumoRef = FirebaseFirestore.instance
+                      .collection('inventario_insumos')
+                      .doc(insumoId);
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Cantidad actualizada')),
-                );
+                  await FirebaseFirestore.instance.runTransaction((
+                    transaction,
+                  ) async {
+                    final insumoSnapshot = await transaction.get(insumoRef);
+                    if (!insumoSnapshot.exists) {
+                      throw Exception('Insumo no encontrado.');
+                    }
+
+                    final stockActual =
+                        (insumoSnapshot['cantidad'] ?? 0) as int;
+
+                    // Calcular la diferencia
+                    final diferencia = nuevaCantidad - cantidadActual;
+
+                    // Si aumentó la cantidad en la solicitud, restar del inventario
+                    // Si disminuyó la cantidad en la solicitud, sumar al inventario
+                    final nuevoStock = stockActual - diferencia;
+
+                    if (nuevoStock < 0) {
+                      throw Exception('Stock insuficiente en inventario.');
+                    }
+
+                    // Actualizar el stock del inventario
+                    transaction.update(insumoRef, {'cantidad': nuevoStock});
+
+                    // Actualizar la cantidad en la solicitud
+                    transaction.update(
+                      FirebaseFirestore.instance
+                          .collection('solicitudes_insumos')
+                          .doc(docId),
+                      {'cantidad': nuevaCantidad},
+                    );
+
+                    // Registrar auditoría
+                    final user = FirebaseAuth.instance.currentUser;
+                    String auditor = 'Administrador';
+
+                    if (user != null) {
+                      final userDoc =
+                          await FirebaseFirestore.instance
+                              .collection('usuarios_activos')
+                              .doc(user.uid)
+                              .get();
+                      if (userDoc.exists)
+                        auditor = userDoc['nombre'] ?? auditor;
+                    }
+
+                    final insumoDoc = await insumoRef.get();
+                    final nombreInsumo =
+                        insumoDoc.exists
+                            ? (insumoDoc['nombre'] ?? insumoId)
+                            : insumoId;
+
+                    final auditoriaRef =
+                        FirebaseFirestore.instance
+                            .collection('auditoria_general')
+                            .doc();
+                    transaction.set(auditoriaRef, {
+                      'fecha': FieldValue.serverTimestamp(),
+                      'usuario_nombre': auditor,
+                      'accion': 'Editar Cantidad Solicitud Insumos',
+                      'detalle':
+                          'Insumo: $nombreInsumo, Cantidad anterior: $cantidadActual, Cantidad nueva: $nuevaCantidad, Diferencia: ${diferencia > 0 ? '+' : ''}$diferencia',
+                    });
+                  });
+
+                  Navigator.pop(context);
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Cantidad actualizada correctamente'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  Navigator.pop(context);
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
               },
             ),
           ],

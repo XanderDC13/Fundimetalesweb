@@ -145,7 +145,7 @@ class ProformaPDFCompartir {
                   ),
                   pw.SizedBox(height: 2),
                   pw.Text(
-                    'Direc.: Brasil y Panamá Telf.: 2962017 - Tulcán - Ecuador',
+                    'Direc.: Brasil y Panamá Telf.: 0979230282 - Tulcán - Ecuador',
                     style: pw.TextStyle(fontSize: 9),
                     textAlign: pw.TextAlign.center,
                   ),
