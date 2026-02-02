@@ -30,11 +30,14 @@ class _ProformaOrdenDespachoDeskScreenState
   final TextEditingController _formCantidadController = TextEditingController();
   final TextEditingController _formPrecioController = TextEditingController();
   final TextEditingController _formTotalController = TextEditingController();
-
+  List<Map<String, dynamic>> _clientesSugeridos = [];
+  bool _mostrarSugerencias = false;
+  final FocusNode _nombreFocusNode = FocusNode();
+  Timer? _debounceNombre;
   String _numeroProforma = '';
   String _numeroOrdenDespacho = '';
   Timer? _debounce;
-
+  Timer? _debounceProducto;
   // Estados para la búsqueda
   bool _isSearching = false;
   bool _clienteEncontrado = false;
@@ -221,6 +224,84 @@ class _ProformaOrdenDespachoDeskScreenState
     }
 
     return true;
+  }
+
+  void _buscarClientesPorNombreConDebounce(String query) {
+    if (_debounceNombre?.isActive ?? false) _debounceNombre!.cancel();
+
+    if (query.trim().isEmpty) {
+      setState(() {
+        _clientesSugeridos = [];
+        _mostrarSugerencias = false;
+      });
+      return;
+    }
+
+    _debounceNombre = Timer(const Duration(milliseconds: 500), () {
+      _buscarClientesPorNombre(query);
+    });
+  }
+
+  Future<void> _buscarClientesPorNombre(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _clientesSugeridos = [];
+        _mostrarSugerencias = false;
+      });
+      return;
+    }
+
+    try {
+      final querySnapshot =
+          await FirebaseFirestore.instance
+              .collection('clientes')
+              .where('nombre', isGreaterThanOrEqualTo: query.toUpperCase())
+              .where(
+                'nombre',
+                isLessThanOrEqualTo: '${query.toUpperCase()}\uf8ff',
+              )
+              .limit(5)
+              .get();
+
+      setState(() {
+        _clientesSugeridos =
+            querySnapshot.docs
+                .map(
+                  (doc) => {
+                    'id': doc.id,
+                    'nombre': doc['nombre'] ?? '',
+                    'ruc': doc['ruc'] ?? '',
+                    'telefono': doc['telefono'] ?? '',
+                    'direccion': doc['direccion'] ?? '',
+                    'correo': doc['correo'] ?? '',
+                    'ciudad': doc['ciudad'] ?? '',
+                  },
+                )
+                .toList();
+        _mostrarSugerencias = _clientesSugeridos.isNotEmpty;
+      });
+    } catch (e) {
+      print('Error al buscar clientes: $e');
+      setState(() {
+        _clientesSugeridos = [];
+        _mostrarSugerencias = false;
+      });
+    }
+  }
+
+  void _seleccionarCliente(Map<String, dynamic> cliente) {
+    setState(() {
+      _clienteController.text = cliente['nombre'] ?? '';
+      _ciRucController.text = cliente['ruc'] ?? '';
+      _telefonoController.text = cliente['telefono'] ?? '';
+      _direccionController.text = cliente['direccion'] ?? '';
+      _emailController.text = cliente['correo'] ?? '';
+      _ciudadController.text = cliente['ciudad'] ?? '';
+      _clienteEncontrado = true;
+      _mensajeBusqueda = 'Cliente encontrado correctamente.';
+      _mostrarSugerencias = false;
+      _clientesSugeridos = [];
+    });
   }
 
   void _buscarClienteConDebounce(String query) {
@@ -616,15 +697,85 @@ class _ProformaOrdenDespachoDeskScreenState
 
           SizedBox(height: 16),
 
-          _buildTextField(
-            controller: _clienteController,
-            label: 'Nombre del Cliente',
-            icon: Icons.person,
-            readOnly: _clienteEncontrado,
-            enabled: _clienteEncontrado || _entradaManualHabilitada,
-            hintText:
-                _entradaManualHabilitada ? 'Ingrese nombre del cliente' : null,
-            onChanged: (value) {},
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: TextField(
+                  controller: _clienteController,
+                  focusNode: _nombreFocusNode,
+                  decoration: InputDecoration(
+                    labelText: 'Nombre del Cliente',
+                    hintText: 'Escriba el nombre del cliente',
+                    prefixIcon: Icon(Icons.person, color: Colors.grey[600]),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    labelStyle: TextStyle(color: Colors.grey[700]),
+                    hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                  ),
+                  onChanged: (value) {
+                    _buscarClientesPorNombreConDebounce(value);
+                  },
+                ),
+              ),
+
+              // Lista de sugerencias
+              if (_mostrarSugerencias && _clientesSugeridos.isNotEmpty)
+                Container(
+                  margin: EdgeInsets.only(top: 4),
+                  constraints: BoxConstraints(maxHeight: 200),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _clientesSugeridos.length,
+                    itemBuilder: (context, index) {
+                      final cliente = _clientesSugeridos[index];
+                      return ListTile(
+                        dense: true,
+                        leading: Icon(
+                          Icons.person,
+                          color: Color(0xFF4682B4),
+                          size: 20,
+                        ),
+                        title: Text(
+                          cliente['nombre'] ?? '',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'CI/RUC: ${cliente['ruc'] ?? ''}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        onTap: () => _seleccionarCliente(cliente),
+                      );
+                    },
+                  ),
+                ),
+            ],
           ),
 
           SizedBox(height: 12),
@@ -727,9 +878,8 @@ class _ProformaOrdenDespachoDeskScreenState
             controller: _formRefController,
             label: 'REF',
             icon: Icons.qr_code,
-            textCapitalization: TextCapitalization.characters, // AGREGAR ESTO
+            textCapitalization: TextCapitalization.characters,
             onChanged: (value) {
-              // Convertir a mayúsculas automáticamente
               String upperValue = value.toUpperCase();
               if (_formRefController.text != upperValue) {
                 _formRefController.value = _formRefController.value.copyWith(
@@ -737,8 +887,13 @@ class _ProformaOrdenDespachoDeskScreenState
                   selection: TextSelection.collapsed(offset: upperValue.length),
                 );
               }
-              // Buscar el producto
-              _buscarProductoPorReferenciaFormulario(upperValue.trim());
+
+              // AGREGAR DEBOUNCE
+              if (_debounceProducto?.isActive ?? false)
+                _debounceProducto!.cancel();
+              _debounceProducto = Timer(const Duration(milliseconds: 500), () {
+                _buscarProductoPorReferenciaFormulario(upperValue.trim());
+              });
             },
           ),
           SizedBox(height: 12),
@@ -2399,11 +2554,11 @@ class _ProformaOrdenDespachoDeskScreenState
       _dineroElectronico = false;
       _tarjetaCredito = false;
       _otros = false;
-      _numeroFacturaController.clear(); // 👈 AGREGAR
-      _valorDeclaradoController.clear(); // 👈 AGREGAR
+      _numeroFacturaController.clear();
+      _valorDeclaradoController.clear();
       _clienteEncontrado = false;
       _mensajeBusqueda = '';
-      _entradaManualHabilitada = true; // CAMBIAR: de false a true
+      _entradaManualHabilitada = true;
       items.clear();
       items.add(ItemOrdenDespacho());
     });
@@ -2414,6 +2569,9 @@ class _ProformaOrdenDespachoDeskScreenState
   @override
   void dispose() {
     _debounce?.cancel();
+    _debounceProducto?.cancel(); 
+    _debounceNombre?.cancel();
+    _nombreFocusNode.dispose();
     _clienteController.dispose();
     _ciRucController.dispose();
     _direccionController.dispose();
