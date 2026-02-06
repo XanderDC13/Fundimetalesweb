@@ -30,76 +30,120 @@ class ProformaPDFGenerator {
       print('Error al cargar logo: $e');
     }
 
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4.landscape,
-        margin: const pw.EdgeInsets.all(10),
-        build: (pw.Context context) {
-          return pw.Row(
-            children: [
-              // Primera proforma (izquierda)
-              pw.Expanded(
-                child: pw.Container(
-                  margin: pw.EdgeInsets.only(right: 5),
-                  child: pw.Column(
-                    children: [
-                      _buildHeader(logoProvider, numeroProforma),
-                      pw.SizedBox(height: 12),
-                      _buildClienteInfo(cliente, ciRuc, direccion, telefono),
-                      pw.SizedBox(height: 12),
-                      _buildItemsTable(items),
-                      pw.SizedBox(height: 12),
-                      _buildTotalesYFormaPago(
-                        subtotal,
-                        iva,
-                        total,
-                        efectivo,
-                        dineroElectronico,
-                        tarjetaCredito,
-                        otros,
-                      ),
-                    ],
+    // Constantes para paginación
+    const itemsPaginaIntermedia = 20; // Páginas sin totales
+    const itemsUltimaPagina = 14; // Última página con totales
+
+    // Calcular paginación
+    int totalPaginas;
+    int itemsRestantes = items.length;
+
+    if (items.length <= itemsUltimaPagina) {
+      // Solo una página
+      totalPaginas = 1;
+    } else {
+      // Calcular cuántas intermedias necesito
+      itemsRestantes = items.length - itemsUltimaPagina;
+      final paginasIntermedias =
+          (itemsRestantes / itemsPaginaIntermedia).ceil();
+      totalPaginas = paginasIntermedias + 1; // +1 por la última
+    }
+
+    for (int pagina = 0; pagina < totalPaginas; pagina++) {
+      final esUltimaPagina = (pagina == totalPaginas - 1);
+
+      int inicio;
+      int fin;
+
+      if (esUltimaPagina) {
+        // Última página: toma los items restantes
+        inicio = pagina * itemsPaginaIntermedia;
+        fin = items.length;
+      } else {
+        // Páginas intermedias: toma 20 items
+        inicio = pagina * itemsPaginaIntermedia;
+        fin = inicio + itemsPaginaIntermedia;
+      }
+
+      final itemsPagina = items.sublist(inicio, fin);
+
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4.landscape,
+          margin: const pw.EdgeInsets.all(10),
+          build: (pw.Context context) {
+            return pw.Row(
+              children: [
+                // Primera proforma (izquierda)
+                pw.Expanded(
+                  child: pw.Container(
+                    margin: pw.EdgeInsets.only(right: 5),
+                    child: pw.Column(
+                      children: [
+                        _buildHeader(logoProvider, numeroProforma),
+                        pw.SizedBox(height: 12),
+                        _buildClienteInfo(cliente, ciRuc, direccion, telefono),
+                        pw.SizedBox(height: 12),
+                        _buildItemsTable(itemsPagina),
+                        if (esUltimaPagina) ...[
+                          pw.SizedBox(height: 12),
+                          _buildTotalesYFormaPago(
+                            subtotal,
+                            iva,
+                            total,
+                            efectivo,
+                            dineroElectronico,
+                            tarjetaCredito,
+                            otros,
+                          ),
+                        ] else
+                          pw.Spacer(),
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              // Línea divisoria vertical
-              pw.Container(
-                width: 1,
-                color: PdfColors.grey,
-                margin: pw.EdgeInsets.symmetric(horizontal: 5),
-              ),
+                // Línea divisoria vertical
+                pw.Container(
+                  width: 1,
+                  color: PdfColors.grey,
+                  margin: pw.EdgeInsets.symmetric(horizontal: 5),
+                ),
 
-              // Segunda proforma (derecha) - IDÉNTICA
-              pw.Expanded(
-                child: pw.Container(
-                  margin: pw.EdgeInsets.only(left: 5),
-                  child: pw.Column(
-                    children: [
-                      _buildHeader(logoProvider, numeroProforma),
-                      pw.SizedBox(height: 12),
-                      _buildClienteInfo(cliente, ciRuc, direccion, telefono),
-                      pw.SizedBox(height: 12),
-                      _buildItemsTable(items),
-                      pw.SizedBox(height: 12),
-                      _buildTotalesYFormaPago(
-                        subtotal,
-                        iva,
-                        total,
-                        efectivo,
-                        dineroElectronico,
-                        tarjetaCredito,
-                        otros,
-                      ),
-                    ],
+                // Segunda proforma (derecha) - IDÉNTICA
+                pw.Expanded(
+                  child: pw.Container(
+                    margin: pw.EdgeInsets.only(left: 5),
+                    child: pw.Column(
+                      children: [
+                        _buildHeader(logoProvider, numeroProforma),
+                        pw.SizedBox(height: 12),
+                        _buildClienteInfo(cliente, ciRuc, direccion, telefono),
+                        pw.SizedBox(height: 12),
+                        _buildItemsTable(itemsPagina),
+                        if (esUltimaPagina) ...[
+                          pw.SizedBox(height: 12),
+                          _buildTotalesYFormaPago(
+                            subtotal,
+                            iva,
+                            total,
+                            efectivo,
+                            dineroElectronico,
+                            tarjetaCredito,
+                            otros,
+                          ),
+                        ] else
+                          pw.Spacer(),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
+              ],
+            );
+          },
+        ),
+      );
+    }
 
     return pdf;
   }
@@ -523,7 +567,7 @@ class ProformaPDFGenerator {
               ],
             ),
           ),
-          // Items con datos
+          // Items (sin filas vacías de relleno)
           ...items.map(
             (item) => pw.Container(
               height: 20,
@@ -628,73 +672,6 @@ class ProformaPDFGenerator {
               ),
             ),
           ),
-
-          for (int i = items.length; i < 14; i++)
-            pw.Container(
-              height: 20,
-              decoration: pw.BoxDecoration(
-                border: pw.Border(
-                  top: pw.BorderSide(color: PdfColors.grey, width: 0.3),
-                ),
-              ),
-              child: pw.Row(
-                children: [
-                  pw.Expanded(
-                    flex: 1,
-                    child: pw.Container(
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border(
-                          right: pw.BorderSide(
-                            color: PdfColors.grey,
-                            width: 0.3,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  pw.Expanded(
-                    flex: 4,
-                    child: pw.Container(
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border(
-                          right: pw.BorderSide(
-                            color: PdfColors.grey,
-                            width: 0.3,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  pw.Expanded(
-                    flex: 1,
-                    child: pw.Container(
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border(
-                          right: pw.BorderSide(
-                            color: PdfColors.grey,
-                            width: 0.3,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  pw.Expanded(
-                    flex: 1,
-                    child: pw.Container(
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border(
-                          right: pw.BorderSide(
-                            color: PdfColors.grey,
-                            width: 0.3,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  pw.Expanded(flex: 1, child: pw.Container()),
-                ],
-              ),
-            ),
         ],
       ),
     );

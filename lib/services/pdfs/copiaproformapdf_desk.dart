@@ -34,93 +34,125 @@ Future<void> generarProformaPDF(String numero, String? ciRuc) async {
 
   final pdf = pw.Document();
 
-  pdf.addPage(
-    pw.Page(
-      pageFormat: PdfPageFormat.a4.landscape, // 👈 LANDSCAPE
-      margin: const pw.EdgeInsets.all(10),
-      build: (context) {
-        return pw.Row(
-          // 👈 ROW para dos columnas
-          children: [
-            // 👈 PRIMERA COPIA (IZQUIERDA)
-            pw.Expanded(
-              child: pw.Container(
-                margin: pw.EdgeInsets.only(right: 5),
-                child: pw.Column(
-                  children: [
-                    _buildHeader(
-                      logoProvider,
-                      data['numero']?.toString() ?? '',
-                    ),
-                    pw.SizedBox(height: 12),
-                    _buildClienteInfo(
-                      data['cliente']?.toString() ?? '',
-                      data['ci_ruc']?.toString() ?? '',
-                      data['direccion']?.toString() ?? '',
-                      data['telefono']?.toString() ?? '',
-                    ),
-                    pw.SizedBox(height: 12),
-                    _buildItemsTable(data['items'] ?? []),
-                    pw.SizedBox(height: 12),
-                    _buildTotalesYFormaPago(
-                      data['subtotal']?.toString() ?? '0.00',
-                      data['iva']?.toString() ?? '0.00',
-                      data['total']?.toString() ?? '0.00',
-                      data['efectivo'] ?? false,
-                      data['dinero_electronico'] ?? false,
-                      data['tarjeta_credito'] ?? false,
-                      data['otros'] ?? false,
-                    ),
-                  ],
+  // 👇 AGREGAR LÓGICA DE PAGINACIÓN AQUÍ
+  final items = data['items'] ?? [];
+  const itemsPaginaIntermedia = 20;
+  const itemsUltimaPagina = 14;
+
+  int totalPaginas;
+  if (items.length <= itemsUltimaPagina) {
+    totalPaginas = 1;
+  } else {
+    final itemsRestantes = items.length - itemsUltimaPagina;
+    final paginasIntermedias = (itemsRestantes / itemsPaginaIntermedia).ceil();
+    totalPaginas = paginasIntermedias + 1;
+  }
+
+  // 👇 BUCLE PARA CADA PÁGINA
+  for (int pagina = 0; pagina < totalPaginas; pagina++) {
+    final esUltimaPagina = (pagina == totalPaginas - 1);
+
+    int inicio;
+    int fin;
+
+    if (esUltimaPagina) {
+      inicio = pagina * itemsPaginaIntermedia;
+      fin = items.length;
+    } else {
+      inicio = pagina * itemsPaginaIntermedia;
+      fin = inicio + itemsPaginaIntermedia;
+    }
+
+    final itemsPagina = items.sublist(inicio, fin);
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: const pw.EdgeInsets.all(10),
+        build: (context) {
+          return pw.Row(
+            children: [
+              // Primera copia
+              pw.Expanded(
+                child: pw.Container(
+                  margin: pw.EdgeInsets.only(right: 5),
+                  child: pw.Column(
+                    children: [
+                      _buildHeader(
+                        logoProvider,
+                        data['numero']?.toString() ?? '',
+                      ),
+                      pw.SizedBox(height: 12),
+                      _buildClienteInfo(
+                        data['cliente']?.toString() ?? '',
+                        data['ci_ruc']?.toString() ?? '',
+                        data['direccion']?.toString() ?? '',
+                        data['telefono']?.toString() ?? '',
+                      ),
+                      pw.SizedBox(height: 12),
+                      _buildItemsTable(itemsPagina),
+                      if (esUltimaPagina) ...[
+                        pw.SizedBox(height: 12),
+                        _buildTotalesYFormaPago(
+                          data['subtotal']?.toString() ?? '0.00',
+                          data['iva']?.toString() ?? '0.00',
+                          data['total']?.toString() ?? '0.00',
+                          data['efectivo'] ?? false,
+                          data['dinero_electronico'] ?? false,
+                          data['tarjeta_credito'] ?? false,
+                          data['otros'] ?? false,
+                        ),
+                      ] else
+                        pw.Spacer(), // 👈 AGREGAR ESTO
+                    ],
+                  ),
                 ),
               ),
-            ),
 
-            // 👈 LÍNEA DIVISORIA
-            pw.Container(
-              width: 1,
-              color: PdfColors.grey,
-              margin: pw.EdgeInsets.symmetric(horizontal: 5),
-            ),
+              pw.Container(width: 1, color: PdfColors.grey),
 
-            // 👈 SEGUNDA COPIA (DERECHA) - IDÉNTICA
-            pw.Expanded(
-              child: pw.Container(
-                margin: pw.EdgeInsets.only(left: 5),
-                child: pw.Column(
-                  children: [
-                    _buildHeader(
-                      logoProvider,
-                      data['numero']?.toString() ?? '',
-                    ),
-                    pw.SizedBox(height: 12),
-                    _buildClienteInfo(
-                      data['cliente']?.toString() ?? '',
-                      data['ci_ruc']?.toString() ?? '',
-                      data['direccion']?.toString() ?? '',
-                      data['telefono']?.toString() ?? '',
-                    ),
-                    pw.SizedBox(height: 12),
-                    _buildItemsTable(data['items'] ?? []),
-                    pw.SizedBox(height: 12),
-                    _buildTotalesYFormaPago(
-                      data['subtotal']?.toString() ?? '0.00',
-                      data['iva']?.toString() ?? '0.00',
-                      data['total']?.toString() ?? '0.00',
-                      data['efectivo'] ?? false,
-                      data['dinero_electronico'] ?? false,
-                      data['tarjeta_credito'] ?? false,
-                      data['otros'] ?? false,
-                    ),
-                  ],
+              // Segunda copia (IGUAL pero con itemsPagina)
+              pw.Expanded(
+                child: pw.Container(
+                  margin: pw.EdgeInsets.only(left: 5),
+                  child: pw.Column(
+                    children: [
+                      _buildHeader(
+                        logoProvider,
+                        data['numero']?.toString() ?? '',
+                      ),
+                      pw.SizedBox(height: 12),
+                      _buildClienteInfo(
+                        data['cliente']?.toString() ?? '',
+                        data['ci_ruc']?.toString() ?? '',
+                        data['direccion']?.toString() ?? '',
+                        data['telefono']?.toString() ?? '',
+                      ),
+                      pw.SizedBox(height: 12),
+                      _buildItemsTable(itemsPagina),
+                      if (esUltimaPagina) ...[
+                        pw.SizedBox(height: 12),
+                        _buildTotalesYFormaPago(
+                          data['subtotal']?.toString() ?? '0.00',
+                          data['iva']?.toString() ?? '0.00',
+                          data['total']?.toString() ?? '0.00',
+                          data['efectivo'] ?? false,
+                          data['dinero_electronico'] ?? false,
+                          data['tarjeta_credito'] ?? false,
+                          data['otros'] ?? false,
+                        ),
+                      ] else
+                        pw.Spacer(), // 👈 AGREGAR ESTO
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
-        );
-      },
-    ),
-  );
+            ],
+          );
+        },
+      ),
+    );
+  }
 
   await Printing.layoutPdf(onLayout: (format) async => pdf.save());
 }
@@ -648,62 +680,6 @@ pw.Widget _buildItemsTable(List items) {
             ),
           ),
         ),
-
-        // Filas vacías para completar la tabla
-        for (int i = items.length; i < 14; i++)
-          pw.Container(
-            height: 20,
-            decoration: pw.BoxDecoration(
-              border: pw.Border(
-                top: pw.BorderSide(color: PdfColors.grey, width: 0.3),
-              ),
-            ),
-            child: pw.Row(
-              children: [
-                pw.Expanded(
-                  flex: 1,
-                  child: pw.Container(
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border(
-                        right: pw.BorderSide(color: PdfColors.grey, width: 0.3),
-                      ),
-                    ),
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 4,
-                  child: pw.Container(
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border(
-                        right: pw.BorderSide(color: PdfColors.grey, width: 0.3),
-                      ),
-                    ),
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 1,
-                  child: pw.Container(
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border(
-                        right: pw.BorderSide(color: PdfColors.grey, width: 0.3),
-                      ),
-                    ),
-                  ),
-                ),
-                pw.Expanded(
-                  flex: 1,
-                  child: pw.Container(
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border(
-                        right: pw.BorderSide(color: PdfColors.grey, width: 0.3),
-                      ),
-                    ),
-                  ),
-                ),
-                pw.Expanded(flex: 1, child: pw.Container()),
-              ],
-            ),
-          ),
       ],
     ),
   );

@@ -25,7 +25,7 @@ class OrdenDespachoPDFGenerator {
       print('Error al cargar logo: $e');
     }
 
-    // Cargar logo de fondo AQUÍ
+    // Cargar logo de fondo
     pw.ImageProvider? backgroundLogoProvider;
     try {
       final logoBytes = await rootBundle.load('lib/assets/LOGOREDESFTN.png');
@@ -34,83 +34,89 @@ class OrdenDespachoPDFGenerator {
       print('Error al cargar logo de fondo: $e');
     }
 
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4.landscape,
-        margin: const pw.EdgeInsets.all(10),
-        build: (pw.Context context) {
-          // ← SIN async
-          return pw.Row(
-            children: [
-              // Primera orden (izquierda)
-              pw.Expanded(
-                child: pw.Container(
-                  margin: pw.EdgeInsets.only(right: 5),
-                  child: pw.Column(
-                    children: [
-                      _buildHeader(logoProvider, numeroOrdenDespacho),
-                      pw.SizedBox(height: 12),
-                      _buildClienteInfo(
-                        cliente,
-                        ciRuc,
-                        email,
-                        telefono, // ← AGREGAR
-                        ciudad, // ← Cambiar orden
-                        direccion,
-                      ),
-                      pw.SizedBox(height: 12),
-                      _buildLeyenda(),
-                      pw.SizedBox(height: 8),
-                      _buildItemsTable(
-                        items,
-                        backgroundLogoProvider,
-                      ), // ← Pasar el logo
-                      pw.Spacer(),
-                    ],
+    // Dividir items en bloques de 16
+    const itemsPorPagina = 16;
+    final totalPaginas = (items.length / itemsPorPagina).ceil();
+
+    for (int pagina = 0; pagina < totalPaginas; pagina++) {
+      final inicio = pagina * itemsPorPagina;
+      final fin =
+          (inicio + itemsPorPagina > items.length)
+              ? items.length
+              : inicio + itemsPorPagina;
+      final itemsPagina = items.sublist(inicio, fin);
+
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4.landscape,
+          margin: const pw.EdgeInsets.all(10),
+          build: (pw.Context context) {
+            return pw.Row(
+              children: [
+                // Primera orden (izquierda)
+                pw.Expanded(
+                  child: pw.Container(
+                    margin: pw.EdgeInsets.only(right: 5),
+                    child: pw.Column(
+                      children: [
+                        _buildHeader(logoProvider, numeroOrdenDespacho),
+                        pw.SizedBox(height: 12),
+                        _buildClienteInfo(
+                          cliente,
+                          ciRuc,
+                          email,
+                          telefono,
+                          ciudad,
+                          direccion,
+                        ),
+                        pw.SizedBox(height: 12),
+                        _buildLeyenda(),
+                        pw.SizedBox(height: 8),
+                        _buildItemsTable(itemsPagina, backgroundLogoProvider),
+                        pw.Spacer(),
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              // Línea divisoria vertical
-              pw.Container(
-                width: 1,
-                color: PdfColors.grey,
-                margin: pw.EdgeInsets.symmetric(horizontal: 5),
-              ),
+                // Línea divisoria vertical
+                pw.Container(
+                  width: 1,
+                  color: PdfColors.grey,
+                  margin: pw.EdgeInsets.symmetric(horizontal: 5),
+                ),
 
-              // Segunda orden (derecha) - IDÉNTICA
-              pw.Expanded(
-                child: pw.Container(
-                  margin: pw.EdgeInsets.only(left: 5),
-                  child: pw.Column(
-                    children: [
-                      _buildHeader(logoProvider, numeroOrdenDespacho),
-                      pw.SizedBox(height: 12),
-                      _buildClienteInfo(
-                        cliente,
-                        ciRuc,
-                        email,
-                        telefono,
-                        ciudad,
-                        direccion,
-                      ),
-                      pw.SizedBox(height: 12),
-                      _buildLeyenda(),
-                      pw.SizedBox(height: 8),
-                      _buildItemsTable(
-                        items,
-                        backgroundLogoProvider,
-                      ), // ← Pasar el logo
-                      pw.Spacer(),
-                    ],
+                // Segunda orden (derecha) - IDÉNTICA
+                pw.Expanded(
+                  child: pw.Container(
+                    margin: pw.EdgeInsets.only(left: 5),
+                    child: pw.Column(
+                      children: [
+                        _buildHeader(logoProvider, numeroOrdenDespacho),
+                        pw.SizedBox(height: 12),
+                        _buildClienteInfo(
+                          cliente,
+                          ciRuc,
+                          email,
+                          telefono,
+                          ciudad,
+                          direccion,
+                        ),
+                        pw.SizedBox(height: 12),
+                        _buildLeyenda(),
+                        pw.SizedBox(height: 8),
+                        _buildItemsTable(itemsPagina, backgroundLogoProvider),
+                        pw.Spacer(),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
+              ],
+            );
+          },
+        ),
+      );
+    }
 
     return pdf;
   }
@@ -513,8 +519,8 @@ class OrdenDespachoPDFGenerator {
                 opacity: 0.20,
                 child: pw.Center(
                   child: pw.Container(
-                    width: 200, // ← Agregar ancho limitado
-                    height: 200, // ← Agregar alto limitado
+                    width: 200,
+                    height: 200,
                     child: pw.Image(
                       backgroundLogoProvider,
                       fit: pw.BoxFit.contain,
@@ -599,7 +605,7 @@ class OrdenDespachoPDFGenerator {
                   ],
                 ),
               ),
-              // Items
+              // Items (sin filas vacías de relleno)
               ...items.map(
                 (item) => pw.Container(
                   height: 20,
@@ -664,47 +670,6 @@ class OrdenDespachoPDFGenerator {
                   ),
                 ),
               ),
-              // Filas vacías para completar la tabla
-              for (int i = items.length; i < 16; i++)
-                pw.Container(
-                  height: 20,
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border(
-                      top: pw.BorderSide(color: PdfColors.grey, width: 0.3),
-                    ),
-                  ),
-                  child: pw.Row(
-                    children: [
-                      pw.Expanded(
-                        flex: 1,
-                        child: pw.Container(
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border(
-                              right: pw.BorderSide(
-                                color: PdfColors.grey,
-                                width: 0.3,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      pw.Expanded(
-                        flex: 1,
-                        child: pw.Container(
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border(
-                              right: pw.BorderSide(
-                                color: PdfColors.grey,
-                                width: 0.3,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      pw.Expanded(flex: 4, child: pw.Container()),
-                    ],
-                  ),
-                ),
             ],
           ),
         ],
@@ -720,7 +685,7 @@ class OrdenDespachoPDFGenerator {
     required String telefono,
     required String direccion,
     required String ciudad,
-    required List<Map<String, String>> items, 
+    required List<Map<String, String>> items,
   }) async {
     final pdf = await generatePDF(
       numeroOrdenDespacho: numeroOrdenDespacho,

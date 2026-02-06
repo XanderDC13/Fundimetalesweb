@@ -239,7 +239,10 @@ class _HistorialInsumosDeskWidgetState
                       FirebaseFirestore.instance
                           .collection('solicitudes_insumos')
                           .doc(docId),
-                      {'cantidad': nuevaCantidad},
+                      {
+                        'cantidad': nuevaCantidad,
+                        'updated_at': FieldValue.serverTimestamp(),
+                      },
                     );
 
                     // Registrar auditoría

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:basefundi/database/database.dart';
+import 'package:basefundi/database/sync_manager.dart';
 import 'package:basefundi/desktop/dashboard_desk.dart';
 import 'package:basefundi/desktop/ventas/carrito_controller_desk.dart';
 import 'package:basefundi/firebase_options.dart';
@@ -10,9 +12,19 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+late AppDatabase database;
+late SyncManager syncManager;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // ✅ NUEVO: Inicializar base de datos drift
+  database = AppDatabase();
+  syncManager = SyncManager(database);
+
+  // ✅ NUEVO: Iniciar sincronización automática
+  syncManager.startAutoSync();
 
   runApp(
     MultiProvider(

@@ -645,6 +645,7 @@ class _SolicitudInsumosDeskWidgetState
           'fecha': FieldValue.serverTimestamp(),
           'solicitado_por_uid': currentUser.uid,
           'solicitado_por_nombre': nombreUsuario,
+          'updated_at': FieldValue.serverTimestamp(),
         });
 
         final auditoriaRef =

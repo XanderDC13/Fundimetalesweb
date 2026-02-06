@@ -7,6 +7,8 @@ import 'package:basefundi/services/navbar_desk.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:basefundi/database/database.dart' as db;
+import 'package:basefundi/main.dart';
 
 class Producto {
   String codigo;
@@ -570,9 +572,8 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
 
                         // Lista de productos con stock por proceso
                         Expanded(
-                          child: StreamBuilder<QuerySnapshot>(
-                            stream:
-                                _firestore.collection('productos').snapshots(),
+                          child: StreamBuilder<List<db.Producto>>(
+                            stream: database.select(database.productos).watch(),
                             builder: (context, snapshot) {
                               if (!snapshot.hasData) {
                                 return const Center(
@@ -580,11 +581,20 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                 );
                               }
 
+                              final productosDb = snapshot.data!;
+
+                              // Convertir de db.Producto (drift) a Producto local
                               final productos =
-                                  snapshot.data!.docs
+                                  productosDb
                                       .map(
-                                        (doc) => Producto.fromMap(
-                                          doc.data() as Map<String, dynamic>,
+                                        (p) => Producto(
+                                          codigo: p.codigo,
+                                          referencia: p.referencia,
+                                          nombre: p.nombre,
+                                          precio:
+                                              p.pvp, 
+                                          cantidad: 0,
+                                          categoria: p.categoria,
                                         ),
                                       )
                                       .where((p) {

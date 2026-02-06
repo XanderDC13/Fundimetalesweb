@@ -24,6 +24,14 @@
 </head>
 
 <body>
+  <script src="https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/sql-wasm.js"></script>
+  <script>
+    // Configurar sql.js para drift
+    window.sqlJsModule = initSqlJs({
+      locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/${file}`
+    });
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 
