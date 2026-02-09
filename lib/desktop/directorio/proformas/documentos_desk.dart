@@ -2099,24 +2099,11 @@ class _ProformaOrdenDespachoDeskScreenState
 
   // FUNCIÓN INTERNA PARA GUARDAR PROFORMA
   Future<void> _guardarProformaInterno() async {
-    final ref = FirebaseFirestore.instance
-        .collection('orden_proforma_counter')
-        .doc('proforma');
-
-    final doc = await ref.get();
-
-    int numero;
-
-    if (doc.exists) {
-      numero = (doc['contador'] ?? 7400) + 1;
-      await ref.update({'contador': numero});
-    } else {
-      numero = 7401;
-      await ref.set({'contador': numero});
-    }
+    // ✅ Usa el número ya asignado (NO lee el contador de nuevo)
+    final numeroAUsar = int.parse(_numeroProforma);
 
     final proformaData = {
-      'numero': numero,
+      'numero': numeroAUsar, // ✅ Usa el número mostrado en pantalla
       'numero_orden': _numeroOrdenDespacho,
       'cliente': _clienteController.text,
       'ci_ruc': _ciRucController.text,
@@ -2151,31 +2138,22 @@ class _ProformaOrdenDespachoDeskScreenState
     };
 
     await FirebaseFirestore.instance.collection('proformas').add(proformaData);
+
+    // ✅ Incrementa el contador DESPUÉS de guardar exitosamente
+    final ref = FirebaseFirestore.instance
+        .collection('orden_proforma_counter')
+        .doc('proforma');
+    await ref.update({'contador': numeroAUsar});
   }
 
   // FUNCIÓN INTERNA PARA GUARDAR ORDEN DE DESPACHO (sin UI)
   Future<void> _guardarOrdenDespacho() async {
-    final ref = FirebaseFirestore.instance
-        .collection('orden_proforma_counter')
-        .doc('orden');
-
-    final doc = await ref.get();
-
-    int numero;
-
-    if (doc.exists) {
-      numero = (doc['contador'] ?? 0) + 1;
-      await ref.update({'contador': numero});
-    } else {
-      numero = 1;
-      await ref.set({'contador': 1});
-    }
+    // ✅ Usa el número ya asignado (NO lee el contador de nuevo)
+    final numeroAUsar = int.parse(_numeroOrdenDespacho);
 
     final ordenData = {
-      // 🔑 NUMERO ORDEN
-      'numero': numero,
+      'numero': numeroAUsar, // ✅ Usa el número mostrado en pantalla
       'numero_proforma': _numeroProforma,
-      // CLIENTE
       'cliente': _clienteController.text,
       'ci_ruc': _ciRucController.text,
       'email': _emailController.text,
@@ -2183,7 +2161,6 @@ class _ProformaOrdenDespachoDeskScreenState
       'ciudad': _ciudadController.text,
       'telefono': _telefonoController.text,
 
-      // ITEMS (COPIA DE LA PROFORMA)
       'items':
           items
               .map(
@@ -2195,7 +2172,6 @@ class _ProformaOrdenDespachoDeskScreenState
               )
               .toList(),
 
-      // CONTROL
       'fecha': Timestamp.now(),
       'estado': 'Pendiente',
     };
@@ -2203,6 +2179,12 @@ class _ProformaOrdenDespachoDeskScreenState
     await FirebaseFirestore.instance
         .collection('ordenes_despacho')
         .add(ordenData);
+
+    // ✅ Incrementa el contador DESPUÉS de guardar exitosamente
+    final ref = FirebaseFirestore.instance
+        .collection('orden_proforma_counter')
+        .doc('orden');
+    await ref.update({'contador': numeroAUsar});
   }
 
   void _mostrarOpcionesCompartir() async {
@@ -2569,7 +2551,7 @@ class _ProformaOrdenDespachoDeskScreenState
   @override
   void dispose() {
     _debounce?.cancel();
-    _debounceProducto?.cancel(); 
+    _debounceProducto?.cancel();
     _debounceNombre?.cancel();
     _nombreFocusNode.dispose();
     _clienteController.dispose();
