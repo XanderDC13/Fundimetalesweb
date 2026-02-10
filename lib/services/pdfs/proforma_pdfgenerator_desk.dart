@@ -20,7 +20,6 @@ class ProformaPDFGenerator {
     required bool otros,
   }) async {
     final pdf = pw.Document();
-
     // Cargar logo
     pw.ImageProvider? logoProvider;
     try {
@@ -30,6 +29,13 @@ class ProformaPDFGenerator {
       print('Error al cargar logo: $e');
     }
 
+    pw.ImageProvider? backgroundLogoProvider;
+    try {
+      final logoBytes = await rootBundle.load('lib/assets/LOGOREDESFTN.png');
+      backgroundLogoProvider = pw.MemoryImage(logoBytes.buffer.asUint8List());
+    } catch (e) {
+      print('Error al cargar logo de fondo: $e');
+    }
     // Constantes para paginación
     const itemsPaginaIntermedia = 20; // Páginas sin totales
     const itemsUltimaPagina = 14; // Última página con totales
@@ -49,23 +55,34 @@ class ProformaPDFGenerator {
       totalPaginas = paginasIntermedias + 1; // +1 por la última
     }
 
+    // ✅ REEMPLAZA CON ESTO:
     for (int pagina = 0; pagina < totalPaginas; pagina++) {
       final esUltimaPagina = (pagina == totalPaginas - 1);
 
       int inicio;
       int fin;
 
-      if (esUltimaPagina) {
-        // Última página: toma los items restantes
-        inicio = pagina * itemsPaginaIntermedia;
+      if (totalPaginas == 1) {
+        inicio = 0;
+        fin = items.length;
+      } else if (pagina == 0) {
+        inicio = 0;
+        fin = itemsUltimaPagina;
+      } else if (esUltimaPagina) {
+        inicio = itemsUltimaPagina + ((pagina - 1) * itemsPaginaIntermedia);
         fin = items.length;
       } else {
-        // Páginas intermedias: toma 20 items
-        inicio = pagina * itemsPaginaIntermedia;
+        inicio = itemsUltimaPagina + ((pagina - 1) * itemsPaginaIntermedia);
         fin = inicio + itemsPaginaIntermedia;
       }
 
-      final itemsPagina = items.sublist(inicio, fin);
+      // Validación
+      if (inicio >= items.length) continue;
+
+      final itemsPagina = items.sublist(
+        inicio,
+        fin.clamp(inicio, items.length),
+      );
 
       pdf.addPage(
         pw.Page(
@@ -84,7 +101,31 @@ class ProformaPDFGenerator {
                         pw.SizedBox(height: 12),
                         _buildClienteInfo(cliente, ciRuc, direccion, telefono),
                         pw.SizedBox(height: 12),
-                        _buildItemsTable(itemsPagina),
+                        pw.Expanded(
+                          child: pw.Stack(
+                            children: [
+                              // Logo de fondo
+                              if (backgroundLogoProvider != null)
+                                pw.Positioned.fill(
+                                  child: pw.Opacity(
+                                    opacity: 0.20,
+                                    child: pw.Center(
+                                      child: pw.Container(
+                                        width: 200,
+                                        height: 200,
+                                        child: pw.Image(
+                                          backgroundLogoProvider,
+                                          fit: pw.BoxFit.contain,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              // Tabla
+                              _buildItemsTable(itemsPagina),
+                            ],
+                          ),
+                        ), // 👈 Aquí termina, SIN pw.Spacer() después
                         if (esUltimaPagina) ...[
                           pw.SizedBox(height: 12),
                           _buildTotalesYFormaPago(
@@ -96,8 +137,7 @@ class ProformaPDFGenerator {
                             tarjetaCredito,
                             otros,
                           ),
-                        ] else
-                          pw.Spacer(),
+                        ],
                       ],
                     ),
                   ),
@@ -120,7 +160,31 @@ class ProformaPDFGenerator {
                         pw.SizedBox(height: 12),
                         _buildClienteInfo(cliente, ciRuc, direccion, telefono),
                         pw.SizedBox(height: 12),
-                        _buildItemsTable(itemsPagina),
+                        pw.Expanded(
+                          child: pw.Stack(
+                            children: [
+                              // Logo de fondo
+                              if (backgroundLogoProvider != null)
+                                pw.Positioned.fill(
+                                  child: pw.Opacity(
+                                    opacity: 0.20,
+                                    child: pw.Center(
+                                      child: pw.Container(
+                                        width: 200,
+                                        height: 200,
+                                        child: pw.Image(
+                                          backgroundLogoProvider,
+                                          fit: pw.BoxFit.contain,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              // Tabla
+                              _buildItemsTable(itemsPagina),
+                            ],
+                          ),
+                        ), // 👈 Aquí termina, SIN pw.Spacer() después
                         if (esUltimaPagina) ...[
                           pw.SizedBox(height: 12),
                           _buildTotalesYFormaPago(
@@ -132,8 +196,7 @@ class ProformaPDFGenerator {
                             tarjetaCredito,
                             otros,
                           ),
-                        ] else
-                          pw.Spacer(),
+                        ],
                       ],
                     ),
                   ),
@@ -452,12 +515,15 @@ class ProformaPDFGenerator {
   }
 
   static pw.Widget _buildItemsTable(List<Map<String, String>> items) {
+    // 👈 SIN backgroundLogoProvider
     return pw.Container(
+      // 👈 Container directo, SIN Expanded
       width: double.infinity,
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.grey, width: 0.3),
       ),
       child: pw.Column(
+        // 👈 Column directo, SIN Stack
         children: [
           // Header
           pw.Container(
@@ -567,7 +633,7 @@ class ProformaPDFGenerator {
               ],
             ),
           ),
-          // Items (sin filas vacías de relleno)
+          // Items
           ...items.map(
             (item) => pw.Container(
               height: 20,

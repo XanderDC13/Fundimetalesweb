@@ -49,21 +49,53 @@ Future<void> generarProformaPDF(String numero, String? ciRuc) async {
   }
 
   // 👇 BUCLE PARA CADA PÁGINA
+  // ✅ SOLUCIÓN CORREGIDA - Convertir a int explícitamente
   for (int pagina = 0; pagina < totalPaginas; pagina++) {
     final esUltimaPagina = (pagina == totalPaginas - 1);
 
     int inicio;
     int fin;
 
-    if (esUltimaPagina) {
-      inicio = pagina * itemsPaginaIntermedia;
+    if (totalPaginas == 1) {
+      // Si solo hay una página, usar todos los items
+      inicio = 0;
+      fin = items.length;
+    } else if (pagina == 0) {
+      // Primera página especial
+      inicio = 0;
+      fin =
+          itemsUltimaPagina
+              .clamp(0, items.length)
+              .toInt(); // 👈 Agregar .toInt()
+    } else if (esUltimaPagina) {
+      // Última página: desde donde quedó hasta el final
+      inicio =
+          (itemsUltimaPagina + ((pagina - 1) * itemsPaginaIntermedia))
+              .toInt(); // 👈 .toInt()
       fin = items.length;
     } else {
-      inicio = pagina * itemsPaginaIntermedia;
-      fin = inicio + itemsPaginaIntermedia;
+      // Páginas intermedias
+      inicio =
+          (itemsUltimaPagina + ((pagina - 1) * itemsPaginaIntermedia))
+              .toInt(); // 👈 .toInt()
+      fin =
+          (inicio + itemsPaginaIntermedia)
+              .clamp(0, items.length)
+              .toInt(); // 👈 .toInt()
     }
 
-    final itemsPagina = items.sublist(inicio, fin);
+    // Validar que los índices sean válidos
+    if (inicio >= items.length || inicio < 0) {
+      print(
+        '⚠️ Índice inicio inválido: $inicio (total items: ${items.length})',
+      );
+      continue;
+    }
+
+    final itemsPagina = items.sublist(
+      inicio,
+      fin.clamp(inicio, items.length).toInt(),
+    ); // 👈 .toInt()
 
     pdf.addPage(
       pw.Page(
