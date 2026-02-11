@@ -505,7 +505,10 @@ class OrdenDespachoPDFGenerator {
                   flex: 3,
                   child: pw.Container(
                     padding: pw.EdgeInsets.all(6),
+                    height: 28, // Altura fija para acomodar múltiples líneas
                     child: pw.Row(
+                      crossAxisAlignment:
+                          pw.CrossAxisAlignment.start, // Alinear arriba
                       children: [
                         pw.Text(
                           'DIRECCION: ',
@@ -518,8 +521,11 @@ class OrdenDespachoPDFGenerator {
                           child: pw.Text(
                             direccion,
                             style: pw.TextStyle(fontSize: 9),
-                            maxLines: 1,
-                            overflow: pw.TextOverflow.clip,
+                            maxLines: 3, // Permitir hasta 3 líneas
+                            overflow:
+                                pw
+                                    .TextOverflow
+                                    .clip, 
                           ),
                         ),
                       ],

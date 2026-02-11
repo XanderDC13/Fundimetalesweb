@@ -473,7 +473,10 @@ pw.Widget _buildClienteInfo(
                 flex: 3,
                 child: pw.Container(
                   padding: pw.EdgeInsets.all(4),
+                  height: 24, // Altura fija para múltiples líneas
                   child: pw.Row(
+                    crossAxisAlignment:
+                        pw.CrossAxisAlignment.start, // Alinear arriba
                     children: [
                       pw.Text(
                         'DIRECCION: ',
@@ -486,8 +489,7 @@ pw.Widget _buildClienteInfo(
                         child: pw.Text(
                           direccion,
                           style: pw.TextStyle(fontSize: 8),
-                          maxLines: 1,
-                          overflow: pw.TextOverflow.clip,
+                          maxLines: 3, // Permitir hasta 3 líneas
                         ),
                       ),
                     ],
