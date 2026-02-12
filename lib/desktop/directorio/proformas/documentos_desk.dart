@@ -59,6 +59,36 @@ class _ProformaOrdenDespachoDeskScreenState
       TextEditingController();
   final TextEditingController _valorDeclaradoController =
       TextEditingController();
+  String sucursalUsuario = '';
+  Map<String, int> stockDisponibleBodega = {};
+  Future<void> _cargarSucursalUsuario() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('usuarios_activos')
+                .doc(user.uid)
+                .get();
+
+        if (userDoc.exists && userDoc.data() != null) {
+          final data = userDoc.data()!;
+          setState(() {
+            sucursalUsuario = data['sede'] ?? 'Quito';
+          });
+        } else {
+          setState(() {
+            sucursalUsuario = 'Quito';
+          });
+        }
+      }
+    } catch (e) {
+      print('Error cargando sucursal del usuario: $e');
+      setState(() {
+        sucursalUsuario = 'Quito';
+      });
+    }
+  }
 
   void _calcularTotalFormulario() {
     setState(() {
@@ -394,6 +424,7 @@ class _ProformaOrdenDespachoDeskScreenState
   @override
   void initState() {
     super.initState();
+    _cargarSucursalUsuario();
     _previsualizarNumeroProforma();
     _previsualizarNumeroOrdenDespacho();
   }
@@ -417,6 +448,122 @@ class _ProformaOrdenDespachoDeskScreenState
     setState(() {
       _numeroOrdenDespacho = numero.toString();
     });
+  }
+
+  Future<Map<String, String>> _obtenerDatosUsuario() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return {
+        'uid': 'desconocido',
+        'nombre': 'Desconocido',
+        'sucursal': sucursalUsuario,
+      };
+    }
+
+    try {
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('usuarios_activos')
+              .doc(user.uid)
+              .get();
+
+      final nombre =
+          userDoc.exists ? (userDoc['nombre'] ?? 'Desconocido') : 'Desconocido';
+      final sucursal =
+          userDoc.exists
+              ? (userDoc['sede'] ?? sucursalUsuario)
+              : sucursalUsuario;
+
+      return {'uid': user.uid, 'nombre': nombre, 'sucursal': sucursal};
+    } catch (e) {
+      return {
+        'uid': user.uid,
+        'nombre': 'Usuario',
+        'sucursal': sucursalUsuario,
+      };
+    }
+  }
+
+  Future<void> _descontarInventario() async {
+    try {
+      final usuario = await _obtenerDatosUsuario();
+      final timestamp = Timestamp.now();
+
+      for (var item in items) {
+        final referencia = item.refController.text.trim();
+        if (referencia.isEmpty) continue;
+
+        final cantidadSolicitada =
+            int.tryParse(item.cantidadController.text) ?? 0;
+        if (cantidadSolicitada <= 0) continue;
+
+        // Ruta al inventario de bodega de la sucursal
+        final docInventario = FirebaseFirestore.instance
+            .collection('inventarios')
+            .doc(usuario['sucursal']!)
+            .collection('procesos')
+            .doc('bodega')
+            .collection('productos')
+            .doc(referencia);
+
+        final snapshot = await docInventario.get();
+        final cantidadActual =
+            snapshot.exists ? (snapshot['cantidad'] ?? 0) : 0;
+
+        // Si no hay suficiente stock, agregar la diferencia antes de descontar
+        if (cantidadActual < cantidadSolicitada) {
+          final diferencia = cantidadSolicitada - cantidadActual;
+
+          // Agregar la diferencia al inventario
+          await docInventario.set({
+            'cantidad':
+                cantidadSolicitada, // Ahora tiene exactamente lo que necesitamos
+            'ultima_actualizacion': timestamp,
+          }, SetOptions(merge: true));
+
+          // Registrar entrada en kardex
+          await FirebaseFirestore.instance
+              .collection('kardex_movimientos')
+              .add({
+                'referencia': referencia,
+                'tipo': 'entrada',
+                'cantidad': diferencia,
+                'fecha': timestamp,
+                'usuario_uid': usuario['uid']!,
+                'usuario_nombre': usuario['nombre']!,
+                'sucursal': usuario['sucursal']!,
+                'motivo': 'Ajuste de inventario - Proforma N° $_numeroProforma',
+              });
+        }
+
+        // Ahora descontar toda la cantidad solicitada
+        final snapshotActualizado = await docInventario.get();
+        final cantidadFinal =
+            snapshotActualizado.exists
+                ? (snapshotActualizado['cantidad'] ?? 0)
+                : 0;
+
+        await docInventario.update({
+          'cantidad': cantidadFinal - cantidadSolicitada,
+          'ultima_actualizacion': timestamp,
+        });
+
+        // Registrar salida en kardex
+        await FirebaseFirestore.instance.collection('kardex_movimientos').add({
+          'referencia': referencia,
+          'tipo': 'salida',
+          'cantidad': cantidadSolicitada,
+          'fecha': timestamp,
+          'usuario_uid': usuario['uid']!,
+          'usuario_nombre': usuario['nombre']!,
+          'sucursal': usuario['sucursal']!,
+          'motivo': 'Proforma N° $_numeroProforma',
+        });
+      }
+    } catch (e) {
+      print('Error descontando inventario: $e');
+      throw e; // Propagar el error para manejarlo en _guardarAmbosDocumentos
+    }
   }
 
   Future<void> _previsualizarNumeroProforma() async {
@@ -2030,7 +2177,7 @@ class _ProformaOrdenDespachoDeskScreenState
             children: [
               CircularProgressIndicator(color: const Color(0xFF4682B4)),
               SizedBox(height: 16),
-              Text('Guardando documentos...'),
+              Text('Guardando documentos y actualizando inventario...'),
             ],
           ),
         );
@@ -2038,10 +2185,13 @@ class _ProformaOrdenDespachoDeskScreenState
     );
 
     try {
-      // Guardar Proforma
+      // 1. Descontar inventario PRIMERO
+      await _descontarInventario();
+
+      // 2. Guardar Proforma
       await _guardarProformaInterno();
 
-      // Guardar Orden de Despacho
+      // 3. Guardar Orden de Despacho
       await _guardarOrdenDespacho();
 
       final user = FirebaseAuth.instance.currentUser;
@@ -2076,7 +2226,9 @@ class _ProformaOrdenDespachoDeskScreenState
       // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Proforma y Orden de Despacho guardadas correctamente'),
+          content: Text(
+            'Documentos guardados e inventario actualizado correctamente',
+          ),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 3),
         ),

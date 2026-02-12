@@ -96,6 +96,7 @@ Future<void> generarOrdenPDF(String numero, String? ciRuc) async {
                       pw.SizedBox(height: 8),
                       _buildItemsTable(itemsPagina),
                       pw.Spacer(),
+                      _buildFooter(),
                     ],
                   ),
                 ),
@@ -132,6 +133,7 @@ Future<void> generarOrdenPDF(String numero, String? ciRuc) async {
                       pw.SizedBox(height: 8),
                       _buildItemsTable(itemsPagina),
                       pw.Spacer(),
+                      _buildFooter(),
                     ],
                   ),
                 ),
@@ -144,6 +146,52 @@ Future<void> generarOrdenPDF(String numero, String? ciRuc) async {
   }
 
   await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+}
+
+// 👇 NUEVO WIDGET PARA EL FOOTER
+pw.Widget _buildFooter() {
+  return pw.Container(
+    width: double.infinity,
+    padding: pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+    decoration: pw.BoxDecoration(
+      border: pw.Border(top: pw.BorderSide(color: PdfColors.grey, width: 0.3)),
+    ),
+    child: pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: [
+        // Izquierda
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          mainAxisSize: pw.MainAxisSize.min,
+          children: [
+            pw.Text(
+              'SOFTWARE ELABORADO POR FUNDIMETALES DEL NORTE',
+              style: pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.Text(
+              'sistemas@fundimetalesdelnorte.com',
+              style: pw.TextStyle(fontSize: 6),
+            ),
+          ],
+        ),
+        // Derecha
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.end,
+          mainAxisSize: pw.MainAxisSize.min,
+          children: [
+            pw.Text(
+              'LENIN ANDRES ONTANEDA YAPUD',
+              style: pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.Text(
+              'ADMINISTRACIÓN - 0984202144',
+              style: pw.TextStyle(fontSize: 6),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
 }
 
 pw.Widget _buildHeader(pw.ImageProvider? logoProvider, String numeroOrden) {
