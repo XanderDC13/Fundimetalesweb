@@ -75,7 +75,7 @@ class OrdenDespachoPDFGenerator {
                         pw.Expanded(
                           child: pw.Stack(
                             children: [
-                              // Logo de fondo
+                              // Solo el logo de fondo en el Stack
                               if (backgroundLogoProvider != null)
                                 pw.Positioned.fill(
                                   child: pw.Opacity(
@@ -92,9 +92,16 @@ class OrdenDespachoPDFGenerator {
                                     ),
                                   ),
                                 ),
-                              _buildItemsTable(itemsPagina),
-                              pw.SizedBox(height: 8), 
-                              _buildFooter(),
+                              // La tabla y footer en Column, por encima del logo
+                              pw.Column(
+                                children: [
+                                  pw.Expanded(
+                                    child: _buildItemsTable(itemsPagina),
+                                  ),
+                                  pw.SizedBox(height: 8),
+                                  _buildFooter(),
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -132,7 +139,7 @@ class OrdenDespachoPDFGenerator {
                         pw.Expanded(
                           child: pw.Stack(
                             children: [
-                              // Logo de fondo
+                              // Solo el logo de fondo en el Stack
                               if (backgroundLogoProvider != null)
                                 pw.Positioned.fill(
                                   child: pw.Opacity(
@@ -149,9 +156,16 @@ class OrdenDespachoPDFGenerator {
                                     ),
                                   ),
                                 ),
-                              _buildItemsTable(itemsPagina),
-                              pw.SizedBox(height: 8), 
-                              _buildFooter(),
+                              // La tabla y footer en Column, por encima del logo
+                              pw.Column(
+                                children: [
+                                  pw.Expanded(
+                                    child: _buildItemsTable(itemsPagina),
+                                  ),
+                                  pw.SizedBox(height: 8),
+                                  _buildFooter(),
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -506,25 +520,23 @@ class OrdenDespachoPDFGenerator {
                 pw.Expanded(
                   flex: 3,
                   child: pw.Container(
-                    padding: pw.EdgeInsets.all(6),
-                    height: 28, // Altura fija para acomodar múltiples líneas
+                    padding: pw.EdgeInsets.all(4),
+                    // Sin height fijo
                     child: pw.Row(
-                      crossAxisAlignment:
-                          pw.CrossAxisAlignment.start, // Alinear arriba
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text(
                           'DIRECCION: ',
                           style: pw.TextStyle(
-                            fontSize: 9,
+                            fontSize: 8,
                             fontWeight: pw.FontWeight.bold,
                           ),
                         ),
                         pw.Expanded(
                           child: pw.Text(
                             direccion,
-                            style: pw.TextStyle(fontSize: 9),
-                            maxLines: 3, // Permitir hasta 3 líneas
-                            overflow: pw.TextOverflow.clip,
+                            style: pw.TextStyle(fontSize: 8),
+                            // Sin maxLines
                           ),
                         ),
                       ],
@@ -732,7 +744,7 @@ class OrdenDespachoPDFGenerator {
             crossAxisAlignment: pw.CrossAxisAlignment.end,
             mainAxisSize: pw.MainAxisSize.min,
             children: [
-              pw.Text(                                                                                                              
+              pw.Text(
                 'LENIN ANDRES ONTANEDA YAPUD',
                 style: pw.TextStyle(
                   fontSize: 6,
