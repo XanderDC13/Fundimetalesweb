@@ -330,60 +330,80 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
                       padding: const EdgeInsets.all(32),
                       child: Column(
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildMetricCard(
-                                  '$totalProductos',
-                                  'Total Productos',
+                          // ✅ DESPUÉS
+                          if (rolUsuario == 'Gerente' ||
+                              rolUsuario == 'Administrador General')
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    '$totalProductos',
+                                    'Total Productos',
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 20),
-                              Expanded(
-                                child: _buildMetricCard(
-                                  '$ventasRealizadas',
-                                  'Ventas',
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    '$ventasRealizadas',
+                                    'Ventas',
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 20),
-                              Expanded(
-                                child: _buildMetricCard(
-                                  '$productosBajoStock',
-                                  'Bajo Stock',
-                                  isClickable: true,
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    '$productosBajoStock',
+                                    'Bajo Stock',
+                                    isClickable: true,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
                           const SizedBox(height: 20),
 
-                          Row(
-                            children: [
-                              Column(
-                                children: [
-                                  SizedBox(
-                                    width: 200,
-                                    child: _buildMetricCard(
-                                      '$numeroUsuarios',
-                                      'Usuarios Activos',
-                                      isClickable:
-                                          true, // ✅ AGREGAR ESTE PARÁMETRO
+                          // ✅ DESPUÉS - solo Gerente y Administrador General ven métricas y gráfico
+                          if (rolUsuario == 'Gerente' ||
+                              rolUsuario == 'Administrador General')
+                            Row(
+                              children: [
+                                Column(
+                                  children: [
+                                    SizedBox(
+                                      width: 200,
+                                      child: _buildMetricCard(
+                                        '$numeroUsuarios',
+                                        'Usuarios Activos',
+                                        isClickable: true,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  SizedBox(
-                                    width: 200,
-                                    child: _buildMetricCard(
-                                      '$usuariosPendientes',
-                                      'Usuarios Pendientes',
+                                    const SizedBox(height: 20),
+                                    SizedBox(
+                                      width: 200,
+                                      child: _buildMetricCard(
+                                        '$usuariosPendientes',
+                                        'Usuarios Pendientes',
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                                const SizedBox(width: 20),
+                                Expanded(child: _buildFlujoDineroChart()),
+                              ],
+                            )
+                          else
+                            // Logo para los demás roles
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 40,
+                                ),
+                                child: Image.asset(
+                                  'lib/assets/logo.png',
+                                  width: 400,
+                                  height: 400,
+                                  fit: BoxFit.contain,
+                                ),
                               ),
-                              const SizedBox(width: 20),
-                              Expanded(child: _buildFlujoDineroChart()),
-                            ],
-                          ),
+                            ),
                           const SizedBox(height: 40),
 
                           _buildGridFunctions(),

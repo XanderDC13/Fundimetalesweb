@@ -31,7 +31,14 @@ Future<void> generarOrdenPDF(String numero, String? ciRuc) async {
   } catch (e) {
     print('Error al cargar logo: $e');
   }
-
+  // Cargar logo de fondo
+  pw.ImageProvider? backgroundLogoProvider;
+  try {
+    final logoBytes = await rootBundle.load('lib/assets/LOGOREDESFTN.png');
+    backgroundLogoProvider = pw.MemoryImage(logoBytes.buffer.asUint8List());
+  } catch (e) {
+    print('Error al cargar logo de fondo: $e');
+  }
   final pdf = pw.Document();
 
   // 👇 LÓGICA DE PAGINACIÓN
@@ -94,9 +101,37 @@ Future<void> generarOrdenPDF(String numero, String? ciRuc) async {
                       pw.SizedBox(height: 12),
                       _buildLeyenda(),
                       pw.SizedBox(height: 8),
-                      _buildItemsTable(itemsPagina),
-                      pw.Spacer(),
-                      _buildFooter(),
+                      pw.Expanded(
+                        child: pw.Stack(
+                          children: [
+                            if (backgroundLogoProvider != null)
+                              pw.Positioned.fill(
+                                child: pw.Opacity(
+                                  opacity: 0.20,
+                                  child: pw.Center(
+                                    child: pw.Container(
+                                      width: 200,
+                                      height: 200,
+                                      child: pw.Image(
+                                        backgroundLogoProvider,
+                                        fit: pw.BoxFit.contain,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            pw.Column(
+                              children: [
+                                pw.Expanded(
+                                  child: _buildItemsTable(itemsPagina),
+                                ),
+                                pw.SizedBox(height: 8),
+                                _buildFooter(),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -131,9 +166,37 @@ Future<void> generarOrdenPDF(String numero, String? ciRuc) async {
                       pw.SizedBox(height: 12),
                       _buildLeyenda(),
                       pw.SizedBox(height: 8),
-                      _buildItemsTable(itemsPagina),
-                      pw.Spacer(),
-                      _buildFooter(),
+                      pw.Expanded(
+                        child: pw.Stack(
+                          children: [
+                            if (backgroundLogoProvider != null)
+                              pw.Positioned.fill(
+                                child: pw.Opacity(
+                                  opacity: 0.20,
+                                  child: pw.Center(
+                                    child: pw.Container(
+                                      width: 200,
+                                      height: 200,
+                                      child: pw.Image(
+                                        backgroundLogoProvider,
+                                        fit: pw.BoxFit.contain,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            pw.Column(
+                              children: [
+                                pw.Expanded(
+                                  child: _buildItemsTable(itemsPagina),
+                                ),
+                                pw.SizedBox(height: 8),
+                                _buildFooter(),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
