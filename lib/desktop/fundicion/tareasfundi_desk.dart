@@ -1,6 +1,9 @@
 import 'package:basefundi/services/navbar_desk.dart';
+import 'package:basefundi/services/pdfs/fundicionpdf.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:printing/printing.dart';
 
 class OperadorControlDeskScreen extends StatefulWidget {
   final String operadorId;
@@ -21,6 +24,7 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _searchTarea = '';
+  String _searchHistorial = '';
   DateTime? _selectedDate;
 
   // ✅ Agregar estos controladores
@@ -161,6 +165,13 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
       children: [
         const SizedBox(height: 20),
 
+        // ✅ FILTROS FUERA DEL STREAMBUILDER
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: _buildFiltersAsignadas(),
+        ),
+        const SizedBox(height: 16),
+
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
             stream:
@@ -231,11 +242,8 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
               }
 
               final docs = snapshot.data!.docs;
-
-              // Aplicar filtros adicionales
               final todasTareas = _filtrarTareas(docs);
 
-              // Separar por prioridad
               final tareasUrgentes =
                   todasTareas
                       .where(
@@ -289,11 +297,7 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // FILTROS SIN CONTADOR (solo para tareas asignadas)
-                    _buildFiltersAsignadas(),
-                    const SizedBox(height: 16),
-
-                    // Tabla de Tareas Urgentes
+                    // ✅ YA NO VA _buildFiltersAsignadas() aquí
                     if (tareasUrgentes.isNotEmpty) ...[
                       _buildTableHeader(
                         'Tareas de Carácter Urgente',
@@ -304,8 +308,6 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
                       _buildTareasTable(tareasUrgentes, Colors.red),
                       const SizedBox(height: 24),
                     ],
-
-                    // Tabla de Tareas Prioritarias
                     if (tareasPrioritarias.isNotEmpty) ...[
                       _buildTableHeader(
                         'Tareas de Carácter Prioritario',
@@ -316,8 +318,6 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
                       _buildTareasTable(tareasPrioritarias, Colors.orange),
                       const SizedBox(height: 24),
                     ],
-
-                    // Tabla de Tareas Normales
                     if (tareasNormales.isNotEmpty) ...[
                       _buildTableHeader(
                         'Tareas Normales',
@@ -328,8 +328,6 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
                       _buildTareasTable(tareasNormales, Colors.blue),
                       const SizedBox(height: 24),
                     ],
-
-                    // Tabla de Tareas de Baja Prioridad
                     if (tareasBajas.isNotEmpty) ...[
                       _buildTableHeader(
                         'Tareas de Baja Prioridad',
@@ -573,7 +571,46 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
       children: [
         const SizedBox(height: 20),
 
-        // Contenido dinámico con StreamBuilder
+        // ✅ BUSCADOR FUERA DEL STREAMBUILDER
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: TextField(
+            controller: _searchHistorialController,
+            decoration: InputDecoration(
+              hintText: 'Buscar por referencia o descripción...',
+              prefixIcon: const Icon(Icons.search),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 12,
+                horizontal: 16,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              suffixIcon:
+                  _searchHistorialController.text.isNotEmpty
+                      ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchHistorialController.clear();
+                          setState(() {
+                            _searchHistorial = '';
+                          });
+                        },
+                      )
+                      : null,
+            ),
+            onChanged: (value) {
+              setState(() {
+                _searchHistorial = value;
+              });
+            },
+          ),
+        ),
+        const SizedBox(height: 10),
+
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
             stream:
@@ -608,25 +645,8 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
                 );
               }
 
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.history, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text(
-                        'No hay historial de tareas completadas',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                );
-              }
+              var docs = snapshot.data?.docs ?? [];
 
-              var docs = snapshot.data!.docs;
-
-              // Ordenar por fecha_completada (más recientes primero)
               docs.sort((a, b) {
                 final fechaA =
                     a['fecha_completada']?.toDate() ?? DateTime.now();
@@ -635,44 +655,53 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
                 return fechaB.compareTo(fechaA);
               });
 
-              // Convertir a Map para el contador y filtros
               final allTareas =
                   docs
                       .map((doc) => doc.data() as Map<String, dynamic>)
                       .toList();
 
-              // Aplicar filtros adicionales (búsqueda, fecha, etc.)
-              final tareas = _filtrarTareas(docs);
-
-              if (tareas.isEmpty &&
-                  (_searchTarea.isNotEmpty || _selectedDate != null)) {
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: Column(
-                    children: [
-                      _buildFiltersHistorial(allTareas),
-                      const SizedBox(height: 32),
-                      const Center(
-                        child: Text(
-                          'No hay resultados para los filtros seleccionados.',
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
+              // Filtrar con _searchHistorial en lugar de _searchTarea
+              final tareas = _filtrarTareasHistorial(docs);
 
               return SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // FILTROS Y CONTADOR (solo en historial)
                     _buildFiltersHistorial(allTareas),
                     const SizedBox(height: 16),
 
-                    // TABLA DE HISTORIAL
-                    if (tareas.isNotEmpty) _buildHistorialTable(tareas),
+                    if (docs.isEmpty)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.only(top: 64),
+                          child: Column(
+                            children: [
+                              Icon(Icons.history, size: 64, color: Colors.grey),
+                              SizedBox(height: 16),
+                              Text(
+                                'No hay historial de tareas completadas',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else if (tareas.isEmpty)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.only(top: 32),
+                          child: Text(
+                            'No hay resultados para los filtros seleccionados.',
+                          ),
+                        ),
+                      )
+                    else
+                      _buildHistorialTable(tareas),
+
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -995,13 +1024,42 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
     return filteredByTarea;
   }
 
+  List<QueryDocumentSnapshot> _filtrarTareasHistorial(
+    List<QueryDocumentSnapshot> tareas,
+  ) {
+    var filtered =
+        tareas.where((tarea) {
+          final referencia =
+              (tarea['referencia'] ?? '').toString().toLowerCase();
+          final descripcion =
+              (tarea['descripcion'] ?? '').toString().toLowerCase();
+          final searchLower = _searchHistorial.toLowerCase();
+          return referencia.contains(searchLower) ||
+              descripcion.contains(searchLower);
+        }).toList();
+
+    if (_selectedDateRange != null) {
+      filtered =
+          filtered.where((tarea) {
+            final fecha = tarea['fecha_completada']?.toDate();
+            if (fecha == null) return false;
+            final start = _selectedDateRange!.start;
+            final end = _selectedDateRange!.end;
+            return fecha.isAfter(start.subtract(const Duration(seconds: 1))) &&
+                fecha.isBefore(end.add(const Duration(days: 1)));
+          }).toList();
+    }
+
+    return filtered;
+  }
+
   Widget _buildFiltersAsignadas() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Campo de búsqueda con controlador
         TextField(
-          controller: _searchHistorialController,
+          controller: _searchController,
           decoration: InputDecoration(
             hintText: 'Buscar por referencia o descripción...',
             prefixIcon: const Icon(Icons.search),
@@ -1016,10 +1074,12 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
               borderSide: BorderSide.none,
             ),
             suffixIcon:
-                _searchHistorialController.text.isNotEmpty
+                _searchController.text.isNotEmpty
                     ? IconButton(
                       icon: const Icon(Icons.clear),
                       onPressed: () {
+                        _searchController
+                            .clear(); // ✅ limpiar el controller también
                         setState(() {
                           _searchTarea = '';
                         });
@@ -1084,26 +1144,26 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
     );
   }
 
-  // Filtros para historial (con contador y suma de cantidades)
+  DateTimeRange? _selectedDateRange; // ← Agregar esta variable de estado arriba
+
   Widget _buildFiltersHistorial(List<Map<String, dynamic>> allTareas) {
-    // Filtrar tareas según fecha seleccionada y búsqueda
+    // Filtrar para el contador usando _searchHistorial
     var tareasFiltradas = allTareas;
 
-    // Aplicar filtro de fecha
-    if (_selectedDate != null) {
+    if (_selectedDateRange != null) {
       tareasFiltradas =
           tareasFiltradas.where((t) {
             final fecha = (t['fecha_completada'] as Timestamp?)?.toDate();
-            return fecha != null &&
-                fecha.year == _selectedDate!.year &&
-                fecha.month == _selectedDate!.month &&
-                fecha.day == _selectedDate!.day;
+            if (fecha == null) return false;
+            final start = _selectedDateRange!.start;
+            final end = _selectedDateRange!.end;
+            return fecha.isAfter(start.subtract(const Duration(seconds: 1))) &&
+                fecha.isBefore(end.add(const Duration(days: 1)));
           }).toList();
     }
 
-    // Aplicar filtro de búsqueda
-    if (_searchTarea.isNotEmpty) {
-      final searchLower = _searchTarea.toLowerCase();
+    if (_searchHistorial.isNotEmpty) {
+      final searchLower = _searchHistorial.toLowerCase();
       tareasFiltradas =
           tareasFiltradas.where((t) {
             final referencia = (t['referencia'] ?? '').toString().toLowerCase();
@@ -1114,131 +1174,145 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
           }).toList();
     }
 
-    // Calcular totales
     final tareasCompletadas = tareasFiltradas.length;
     final cantidadTotal = tareasFiltradas.fold<int>(
       0,
       (sum, tarea) => sum + (tarea['cantidad'] as int? ?? 0),
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    // ✅ YA NO HAY TextField aquí — solo el resumen + botones
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Campo de búsqueda
-        TextField(
-          controller: _searchHistorialController, // ✅ Agregar controlador
-          decoration: InputDecoration(
-            hintText: 'Buscar por referencia o descripción...',
-            prefixIcon: const Icon(Icons.search),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              vertical: 12,
-              horizontal: 16,
-            ),
-            border: OutlineInputBorder(
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(right: 10),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+              border: Border.all(color: Colors.green.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green[600]),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Completadas: $tareasCompletadas | Total fundido: $cantidadTotal',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.green[800],
+                        ),
+                      ),
+                      if (_selectedDateRange != null ||
+                          _searchHistorial.isNotEmpty)
+                        Text(
+                          'Resultado de filtros aplicados',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.green[600],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          onChanged: (value) {
-            setState(() {
-              _searchTarea = value;
-            });
-          },
         ),
-        const SizedBox(height: 10),
 
-        // Row con resumen + botón de filtro
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Resumen de tareas completadas y cantidad total
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(right: 10),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green[600]),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Completadas: $tareasCompletadas | Total fundido: $cantidadTotal',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.green[800],
-                            ),
-                          ),
-                          if (_selectedDate != null || _searchTarea.isNotEmpty)
-                            Text(
-                              'Resultado de filtros aplicados',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.green[600],
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                        ],
-                      ),
+        ElevatedButton.icon(
+          onPressed: () async {
+            final picked = await showDateRangePicker(
+              context: context,
+              firstDate: DateTime(2020),
+              lastDate: DateTime.now(),
+              initialDateRange: _selectedDateRange,
+              builder: (context, child) {
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: const ColorScheme.light(
+                      primary: Color(0xFF2C3E50),
                     ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Botón filtro de fecha
-            ElevatedButton.icon(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _selectedDate ?? DateTime.now(),
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now(),
+                  ),
+                  child: child!,
                 );
-                if (picked != null) {
-                  setState(() {
-                    _selectedDate = picked;
-                  });
-                }
               },
-              icon: const Icon(Icons.calendar_today),
-              label: Text(
-                _selectedDate == null
-                    ? 'Filtrar por fecha'
-                    : 'Filtrado: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4682B4),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
+            );
+            if (picked != null) {
+              setState(() {
+                _selectedDateRange = picked;
+              });
+            }
+          },
+          icon: const Icon(Icons.date_range),
+          label: Text(
+            _selectedDateRange == null
+                ? 'Rango de fechas'
+                : '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month}/${_selectedDateRange!.start.year} - ${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}/${_selectedDateRange!.end.year}',
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF4682B4),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
             ),
-            if (_selectedDate != null) ...[
-              const SizedBox(width: 8),
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _selectedDate = null;
-                  });
-                },
-                child: const Text('Limpiar'),
-              ),
-            ],
-          ],
+          ),
+        ),
+
+        if (_selectedDateRange != null) ...[
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: () => setState(() => _selectedDateRange = null),
+            child: const Text('Limpiar'),
+          ),
+        ],
+
+        const SizedBox(width: 8),
+
+        ElevatedButton.icon(
+          onPressed:
+              tareasFiltradas.isEmpty
+                  ? null
+                  : () => _generarYDescargarPDF(
+                    tareasFiltradas,
+                    _selectedDateRange,
+                  ),
+          icon: const Icon(Icons.picture_as_pdf),
+          label: const Text('Exportar PDF'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red[700],
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
         ),
       ],
+    );
+  }
+
+  Future<void> _generarYDescargarPDF(
+    List<Map<String, dynamic>> tareas,
+    DateTimeRange? rango,
+  ) async {
+    final pdfBytes = await ReportePdfService.generarReporteOperador(
+      operadorNombre: widget.operadorNombre,
+      tareas: tareas,
+      rango: rango,
+    );
+
+    // En web/desktop puedes usar printing o file_saver
+    await Printing.sharePdf(
+      bytes: pdfBytes,
+      filename:
+          'reporte_${widget.operadorNombre}_${DateTime.now().millisecondsSinceEpoch}.pdf',
     );
   }
 
@@ -1854,7 +1928,16 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
                           horizontal: 16,
                         ),
                       ),
-                      onChanged: (value) => referencia = value,
+                      textCapitalization:
+                          TextCapitalization.characters, // ✅ AGREGAR ESTO
+                      inputFormatters: [
+                        TextInputFormatter.withFunction(
+                          (oldValue, newValue) => newValue.copyWith(
+                            text: newValue.text.toUpperCase(),
+                          ),
+                        ),
+                      ], // ✅ AGREGAR ESTO
+                      onChanged: (value) => referencia = value.toUpperCase(),
                     ),
                     const SizedBox(height: 12),
                     // Campo Descripción

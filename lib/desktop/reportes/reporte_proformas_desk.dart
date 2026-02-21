@@ -1,3 +1,4 @@
+import 'package:basefundi/desktop/reportes/editar_proformascot.dart';
 import 'package:basefundi/services/pdfs/copiaproformaventaspdf.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -539,7 +540,7 @@ class _ReporteProformasVentasDeskScreenState
                                 2: FlexColumnWidth(2.0), // RUC
                                 3: FlexColumnWidth(2.5), // Fecha
                                 4: FlexColumnWidth(1.5), // Total
-                                5: FlexColumnWidth(1.0), // Acciones
+                                5: FlexColumnWidth(1.8), // PDF
                               },
                               children: [
                                 // ENCABEZADO
@@ -553,7 +554,7 @@ class _ReporteProformasVentasDeskScreenState
                                     _TablaHeaderMain('RUC'),
                                     _TablaHeaderMain('Fecha'),
                                     _TablaHeaderMain('Total'),
-                                    _TablaHeaderMain('PDF'),
+                                    _TablaHeaderMain('Acciones'),
                                   ],
                                 ),
                                 // FILAS DE DATOS
@@ -593,39 +594,77 @@ class _ReporteProformasVentasDeskScreenState
                                       // Columna PDF
                                       Padding(
                                         padding: const EdgeInsets.all(8),
-                                        child: Center(
-                                          child: ElevatedButton.icon(
-                                            onPressed: () async {
-                                                // Generar PDF directamente con los datos de la proforma
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            ElevatedButton.icon(
+                                              onPressed: () async {
                                                 await generarProformaVentasPDF(
                                                   proforma,
-                                                );                                              
-                                            },
-                                            icon: const Icon(
-                                              Icons.picture_as_pdf,
-                                              size: 16,
-                                            ),
-                                            label: const Text(
-                                              'PDF',
-                                              style: TextStyle(fontSize: 12),
-                                            ),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(
-                                                0xFF4682B4,
+                                                );
+                                              },
+                                              icon: const Icon(
+                                                Icons.picture_as_pdf,
+                                                size: 16,
                                               ),
-                                              foregroundColor: Colors.white,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 4,
-                                                  ),
-                                              minimumSize: const Size(0, 32),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
+                                              label: const Text(
+                                                'PDF',
+                                                style: TextStyle(fontSize: 12),
+                                              ),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(
+                                                  0xFF4682B4,
+                                                ),
+                                                foregroundColor: Colors.white,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4,
+                                                    ),
+                                                minimumSize: const Size(0, 32),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                ),
                                               ),
                                             ),
-                                          ),
+                                            const SizedBox(width: 6),
+                                            ElevatedButton.icon(
+                                              onPressed: () async {
+                                                await EditarProformaVentas.mostrar(
+                                                  context,
+                                                  proforma,
+                                                  proforma['id'],
+                                                  esMobil: false,
+                                                );
+                                                _obtenerDatos();
+                                              },
+                                              icon: const Icon(
+                                                Icons.edit,
+                                                size: 16,
+                                              ),
+                                              label: const Text(
+                                                'Editar',
+                                                style: TextStyle(fontSize: 12),
+                                              ),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    Colors.orange[700],
+                                                foregroundColor: Colors.white,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4,
+                                                    ),
+                                                minimumSize: const Size(0, 32),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],

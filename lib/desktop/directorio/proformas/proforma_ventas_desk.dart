@@ -39,6 +39,73 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
   final List<bool> _isSearchingProduct = [];
   final List<bool> _productoEncontrado = [];
   final List<String> _mensajeBusquedaProducto = [];
+  List<Map<String, dynamic>> _clientesSugeridos = [];
+  bool _mostrarSugerencias = false;
+  final FocusNode _nombreFocusNode = FocusNode();
+  Timer? _debounceNombre;
+  Timer? _debounceProducto;
+
+  void _buscarClientesPorNombreConDebounce(String query) {
+    if (_debounceNombre?.isActive ?? false) _debounceNombre!.cancel();
+
+    if (query.trim().isEmpty) {
+      setState(() {
+        _clientesSugeridos = [];
+        _mostrarSugerencias = false;
+      });
+      return;
+    }
+
+    _debounceNombre = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        final querySnapshot =
+            await FirebaseFirestore.instance
+                .collection('clientes')
+                .where('nombre', isGreaterThanOrEqualTo: query.toUpperCase())
+                .where(
+                  'nombre',
+                  isLessThanOrEqualTo: '${query.toUpperCase()}\uf8ff',
+                )
+                .limit(5)
+                .get();
+
+        setState(() {
+          _clientesSugeridos =
+              querySnapshot.docs
+                  .map(
+                    (doc) => {
+                      'id': doc.id,
+                      'nombre': doc['nombre'] ?? '',
+                      'ruc': doc['ruc'] ?? '',
+                      'telefono': doc['telefono'] ?? '',
+                      'direccion': doc['direccion'] ?? '',
+                      'correo': doc['correo'] ?? '',
+                      'ciudad': doc['ciudad'] ?? '',
+                    },
+                  )
+                  .toList();
+          _mostrarSugerencias = _clientesSugeridos.isNotEmpty;
+        });
+      } catch (e) {
+        print('Error al buscar clientes por nombre: $e');
+      }
+    });
+  }
+
+  void _seleccionarCliente(Map<String, dynamic> cliente) {
+    setState(() {
+      _clienteController.text = cliente['nombre'] ?? '';
+      _rucController.text = cliente['ruc'] ?? '';
+      _telefonoController.text = cliente['telefono'] ?? '';
+      _direccionController.text = cliente['direccion'] ?? '';
+      _correoController.text = cliente['correo'] ?? '';
+      _ciudadController.text = cliente['ciudad'] ?? '';
+      _clienteEncontrado = true;
+      _mensajeBusqueda = 'Cliente encontrado correctamente.';
+      _mostrarSugerencias = false;
+      _clientesSugeridos = [];
+    });
+  }
 
   void _buscarClienteConDebounce(String value) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
@@ -367,10 +434,81 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
           SizedBox(height: 16),
 
           // Campos organizados como en la imagen
-          _buildTextField(
-            controller: _clienteController,
-            label: 'Nombre',
-            icon: Icons.person,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: TextField(
+                  controller: _clienteController,
+                  focusNode: _nombreFocusNode,
+                  decoration: InputDecoration(
+                    labelText: 'Nombre del Cliente',
+                    hintText: 'Escriba el nombre del cliente',
+                    prefixIcon: Icon(Icons.person, color: Colors.grey[600]),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                  onChanged: (value) {
+                    _buscarClientesPorNombreConDebounce(value);
+                  },
+                ),
+              ),
+              if (_mostrarSugerencias && _clientesSugeridos.isNotEmpty)
+                Container(
+                  margin: EdgeInsets.only(top: 4),
+                  constraints: BoxConstraints(maxHeight: 200),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _clientesSugeridos.length,
+                    itemBuilder: (context, index) {
+                      final cliente = _clientesSugeridos[index];
+                      return ListTile(
+                        dense: true,
+                        leading: Icon(
+                          Icons.person,
+                          color: Color(0xFF4682B4),
+                          size: 20,
+                        ),
+                        title: Text(
+                          cliente['nombre'] ?? '',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'RUC: ${cliente['ruc'] ?? ''}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        onTap: () => _seleccionarCliente(cliente),
+                      );
+                    },
+                  ),
+                ),
+            ],
           ),
           SizedBox(height: 12),
 
@@ -434,7 +572,6 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
             icon: Icons.qr_code,
             textCapitalization: TextCapitalization.characters,
             onChanged: (value) {
-              // Convertir a mayúsculas y actualizar el controller
               String upperValue = value.toUpperCase();
               if (_formCodigoController.text != upperValue) {
                 _formCodigoController
@@ -443,8 +580,12 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
                   selection: TextSelection.collapsed(offset: upperValue.length),
                 );
               }
-              // Buscar el producto
-              _buscarProductoPorReferencia(upperValue.trim(), -1);
+              // 👇 DEBOUNCE igual que ProformaOrdenDespachoDeskScreen
+              if (_debounceProducto?.isActive ?? false)
+                _debounceProducto!.cancel();
+              _debounceProducto = Timer(const Duration(milliseconds: 500), () {
+                _buscarProductoPorReferencia(upperValue.trim(), -1);
+              });
             },
           ),
           SizedBox(height: 12),
@@ -1707,5 +1848,14 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
         ),
       );
     }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _debounceNombre?.cancel();
+    _debounceProducto?.cancel(); 
+    _nombreFocusNode.dispose();
+    super.dispose();
   }
 }

@@ -1,5 +1,4 @@
 import 'package:basefundi/desktop/fundicion/listado_empleados_desk.dart';
-import 'package:basefundi/desktop/fundicion/productos_fundir_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareasextras_desk.dart';
 import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
@@ -87,18 +86,6 @@ class _FundicionDeskScreenState extends State<FundicionDeskScreen>
                   padding: const EdgeInsets.all(32),
                   child: ListView(
                     children: [
-                      _buildBoton(
-                        icon: LucideIcons.clipboardList,
-                        titulo: 'Productos a Fundir',
-                        subtitulo: 'Listado completo',
-                        onTap: () {
-                          navegarConFade(
-                            context,
-                            const ProductosFundirDeskScreen(),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 20),
                       _buildBoton(
                         icon: LucideIcons.flame,
                         titulo: 'Control de Actividades',

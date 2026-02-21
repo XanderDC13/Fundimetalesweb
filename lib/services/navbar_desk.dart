@@ -5,7 +5,6 @@ import 'package:basefundi/desktop/directorio/contactos_desk.dart';
 import 'package:basefundi/desktop/directorio/pedidos_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas_desk.dart';
 import 'package:basefundi/desktop/fundicion/listado_empleados_desk.dart';
-import 'package:basefundi/desktop/fundicion/productos_fundir_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareas_cumplir_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareasextras_desk.dart';
 import 'package:basefundi/desktop/inventario/kardex_lista.dart';
@@ -353,10 +352,6 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
         title: 'Fundición',
         menuKey: 'fundicion',
         subItems: [
-          _buildSubItem(
-            label: 'Productos Fundir',
-            onTap: () => _navigateToScreen(const ProductosFundirDeskScreen()),
-          ),
           _buildSubItem(
             label: 'Actividades',
             onTap: () => _navigateToScreen(const OperadoresListDeskScreen()),
