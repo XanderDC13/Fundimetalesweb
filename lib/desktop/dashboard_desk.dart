@@ -494,8 +494,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             ? allYValues.reduce((a, b) => a > b ? a : b)
             : 100;
 
-    final double maxY =
-        maxYValue > 50 ? ((maxYValue + 0.9) / 1).ceil() * 1 : 50;
+    final double maxY = 100000;
 
     return Container(
       height: 350,
@@ -651,6 +650,16 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
                       reservedSize: 50,
                       getTitlesWidget: (value, meta) {
                         if (value == 0) return const Text('0');
+                        if (value >= 1000) {
+                          return Text(
+                            '\$${(value / 1000).toInt()}K',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF6B7280),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          );
+                        }
                         return Text(
                           '\$${value.toInt()}',
                           style: const TextStyle(

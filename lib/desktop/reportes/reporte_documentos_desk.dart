@@ -26,9 +26,18 @@ class _ReporteDocumentosDeskScreenState
   final TextEditingController _cedulaController = TextEditingController();
   final TextEditingController _motivoAnulacionController =
       TextEditingController();
+  String _filtroVendedor = '';
+  List<Map<String, dynamic>> _vendedores = [];
+  // Calcular total en dinero
+  double get totalDinero => _documentosFiltrados.fold(0.0, (sum, doc) {
+    final proforma = doc['proforma'] as Map<String, dynamic>?;
+    final total = double.tryParse(proforma?['total']?.toString() ?? '0') ?? 0.0;
+    return sum + total;
+  });
   @override
   void initState() {
     super.initState();
+    _cargarVendedores();
     _obtenerDatos();
   }
 
@@ -38,6 +47,54 @@ class _ReporteDocumentosDeskScreenState
     _cedulaController.dispose();
     _motivoAnulacionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _cargarVendedores() async {
+    final cedulasUsuarios = [
+      '0401729769',
+      '1729711513',
+      '0402027924',
+      '0402110092',
+    ];
+
+    List<Map<String, dynamic>> lista = [];
+
+    for (String cedula in cedulasUsuarios) {
+      final snap =
+          await FirebaseFirestore.instance
+              .collection('usuarios')
+              .where('cedula', isEqualTo: cedula)
+              .limit(1)
+              .get();
+
+      if (snap.docs.isNotEmpty) {
+        final data = snap.docs.first.data();
+        lista.add({'nombre': data['nombre'] ?? cedula, 'ci_ruc': cedula});
+      } else {
+        lista.add({'nombre': cedula, 'ci_ruc': cedula});
+      }
+    }
+
+    final snapCliente =
+        await FirebaseFirestore.instance
+            .collection('clientes')
+            .where('ruc', isEqualTo: '0000000002')
+            .limit(1)
+            .get();
+
+    if (snapCliente.docs.isNotEmpty) {
+      final data = snapCliente.docs.first.data();
+      lista.add({
+        'nombre': data['nombre'] ?? 'Mostrador',
+        'ci_ruc': '0000000002',
+      });
+    } else {
+      lista.add({'nombre': 'Mostrador', 'ci_ruc': '0000000002'});
+    }
+
+    setState(() {
+      _vendedores = lista;
+    });
   }
 
   Future<void> _obtenerDatos() async {
@@ -170,7 +227,15 @@ class _ReporteDocumentosDeskScreenState
               return ciRuc.contains(_filtroCedula);
             }).toList();
       }
-
+      // Filtrar por vendedor
+      if (_filtroVendedor.isNotEmpty) {
+        documentos =
+            documentos.where((doc) {
+              final proforma = doc['proforma'] as Map<String, dynamic>?;
+              final vendedor = proforma?['vendedor_nombre']?.toString() ?? '';
+              return vendedor == _filtroVendedor;
+            }).toList();
+      }
       // Ordenar por fecha más reciente (proforma o orden)
       documentos.sort((a, b) {
         final fechaA = a['fechaProforma'] ?? a['fechaOrden'];
@@ -236,12 +301,82 @@ class _ReporteDocumentosDeskScreenState
     }
   }
 
+  Widget _buildFiltroVendedor() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          hint: const Row(
+            children: [
+              Icon(Icons.person_pin, color: Colors.grey, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Filtrar por vendedor',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+          value: _filtroVendedor.isEmpty ? null : _filtroVendedor,
+          items: [
+            // Opción para mostrar todos
+            const DropdownMenuItem<String>(
+              value: '',
+              child: Row(
+                children: [
+                  Icon(Icons.people, color: Color(0xFF4682B4), size: 20),
+                  SizedBox(width: 8),
+                  Text('Todos los vendedores'),
+                ],
+              ),
+            ),
+            ..._vendedores.map((v) {
+              return DropdownMenuItem<String>(
+                value: v['nombre'],
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.person,
+                      color: Color(0xFF4682B4),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(v['nombre'], style: const TextStyle(fontSize: 14)),
+                  ],
+                ),
+              );
+            }),
+          ],
+          onChanged: (value) {
+            setState(() {
+              _filtroVendedor = value ?? '';
+            });
+            _obtenerDatos();
+          },
+        ),
+      ),
+    );
+  }
+
   void _limpiarFiltros() {
     setState(() {
       _fechaInicio = null;
       _fechaFin = null;
       _filtroCliente = '';
       _filtroCedula = '';
+      _filtroVendedor = '';
       _clienteController.clear();
       _cedulaController.clear();
     });
@@ -536,41 +671,6 @@ class _ReporteDocumentosDeskScreenState
                   ),
                 ),
                 const SizedBox(width: 16),
-                Expanded(
-                  child: Card(
-                    color: const Color(0xFF4682B4),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          const Icon(
-                            Icons.receipt_long,
-                            color: Colors.white,
-                            size: 32,
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Proformas',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${_documentosFiltrados.where((doc) => doc['proforma'] != null).length}',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Card(
@@ -580,13 +680,13 @@ class _ReporteDocumentosDeskScreenState
                       child: Column(
                         children: [
                           const Icon(
-                            Icons.local_shipping,
+                            Icons.attach_money,
                             color: Colors.white,
                             size: 32,
                           ),
                           const SizedBox(height: 8),
                           const Text(
-                            'Órdenes Despacho',
+                            'Total en Ventas',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.white,
@@ -595,7 +695,7 @@ class _ReporteDocumentosDeskScreenState
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${_documentosFiltrados.where((doc) => doc['orden'] != null).length}',
+                            '\$${totalDinero.toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 18,
                               color: Colors.white,
@@ -749,6 +849,9 @@ class _ReporteDocumentosDeskScreenState
                           ),
                         ],
                       ),
+                      const SizedBox(height: 12),
+                      // Tercera fila: filtro por vendedor
+                      _buildFiltroVendedor(),
                     ],
                   ),
 
