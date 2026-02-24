@@ -1,27 +1,22 @@
+import 'package:basefundi/desktop/administracion/cxc.dart';
 import 'package:basefundi/desktop/ajustes/editperfil_desk.dart';
 import 'package:basefundi/desktop/ajustes/feedback_desk.dart';
 import 'package:basefundi/desktop/dashboard_desk.dart';
 import 'package:basefundi/desktop/directorio/contactos_desk.dart';
-import 'package:basefundi/desktop/directorio/pedidos_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas_desk.dart';
 import 'package:basefundi/desktop/fundicion/listado_empleados_desk.dart';
-import 'package:basefundi/desktop/fundicion/tareas_cumplir_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareasextras_desk.dart';
 import 'package:basefundi/desktop/inventario/kardex_lista.dart';
 import 'package:basefundi/desktop/inventario/medidas_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_proformas_desk.dart';
 import 'package:basefundi/desktop/inventario/productos_desk.dart';
 import 'package:basefundi/desktop/personal/empleados/empleados_registro_desk.dart';
-import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_realizar_desk.dart';
 import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
 import 'package:basefundi/desktop/reportes/auditoria_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_compras_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_documentos_desk.dart';
-import 'package:basefundi/desktop/reportes/reporte_ventas_desk.dart';
 import 'package:basefundi/desktop/reportes/reportes%20inventarios/inventario_procesos_desk.dart';
-import 'package:basefundi/desktop/ventas/modificar_ventas_desk.dart';
-import 'package:basefundi/desktop/ventas/realizar_venta_desk.dart';
 import 'package:basefundi/modulos/ajustes_desk.dart';
 import 'package:basefundi/modulos/fundicion.dart';
 import 'package:basefundi/modulos/inventario_desk.dart';
@@ -296,21 +291,6 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
           ),
         ],
       ),
-      _buildExpandableItem(
-        icon: Icons.shopping_cart,
-        title: 'Ventas',
-        menuKey: 'ventas',
-        subItems: [
-          _buildSubItem(
-            label: 'Realizar Venta',
-            onTap: () => _navigateToScreen(const VentasDetalleDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Modificar Ventas',
-            onTap: () => _navigateToScreen(const ModificarVentaDeskScreen()),
-          ),
-        ],
-      ),
 
       _buildExpandableItem(
         icon: Icons.people,
@@ -321,10 +301,6 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             label: 'Usuarios',
             onTap:
                 () => _navigateToScreen(const EmpleadosPendientesDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Funciones',
-            onTap: () => _navigateToScreen(const FuncionesDeskScreen()),
           ),
         ],
       ),
@@ -338,12 +314,19 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             onTap: () => _navigateToScreen(const OpcionesProformasDeskScreen()),
           ),
           _buildSubItem(
-            label: 'Pedidos',
-            onTap: () => _navigateToScreen(const PedidosDeskScreen()),
-          ),
-          _buildSubItem(
             label: 'Contactos',
             onTap: () => _navigateToScreen(const ContactosDeskScreen()),
+          ),
+        ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.account_balance_wallet,
+        title: 'Administración',
+        menuKey: 'administracion',
+        subItems: [
+          _buildSubItem(
+            label: 'CxC',
+            onTap: () => _navigateToScreen(const CxcScreen()),
           ),
         ],
       ),
@@ -367,10 +350,6 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
         title: 'Reportes',
         menuKey: 'reportes',
         subItems: [
-          _buildSubItem(
-            label: 'Ventas',
-            onTap: () => _navigateToScreen(const ReporteVentasDeskScreen()),
-          ),
           _buildSubItem(
             label: 'Inventario',
             onTap: () => _navigateToScreen(const InventarioProcesoDeskScreen()),
@@ -400,21 +379,6 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
 
   List<Widget> _buildAdminMenuItems() {
     return [
-      _buildExpandableItem(
-        icon: Icons.shopping_cart,
-        title: 'Ventas',
-        menuKey: 'ventas',
-        subItems: [
-          _buildSubItem(
-            label: 'Realizar Venta',
-            onTap: () => _navigateToScreen(const VentasDetalleDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Modificar Ventas',
-            onTap: () => _navigateToScreen(const ModificarVentaDeskScreen()),
-          ),
-        ],
-      ),
       _buildExpandableItem(
         icon: Icons.inventory,
         title: 'Inventario',
@@ -448,9 +412,20 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             onTap:
                 () => _navigateToScreen(const EmpleadosPendientesDeskScreen()),
           ),
+        ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.contacts,
+        title: 'Directorio',
+        menuKey: 'directorio',
+        subItems: [
           _buildSubItem(
-            label: 'Funciones',
-            onTap: () => _navigateToScreen(const FuncionesDeskScreen()),
+            label: 'Proformas',
+            onTap: () => _navigateToScreen(const OpcionesProformasDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Contactos',
+            onTap: () => _navigateToScreen(const ContactosDeskScreen()),
           ),
         ],
       ),
@@ -464,45 +439,19 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             onTap: () => _navigateToScreen(const OpcionesProformasDeskScreen()),
           ),
           _buildSubItem(
-            label: 'Pedidos',
-            onTap: () => _navigateToScreen(const PedidosDeskScreen()),
-          ),
-          _buildSubItem(
             label: 'Contactos',
             onTap: () => _navigateToScreen(const ContactosDeskScreen()),
           ),
         ],
       ),
       _buildExpandableItem(
-        icon: Icons.bar_chart,
-        title: 'Reportes',
-        menuKey: 'reportes',
+        icon: Icons.account_balance_wallet,
+        title: 'Administración',
+        menuKey: 'administracion',
         subItems: [
           _buildSubItem(
-            label: 'Ventas',
-            onTap: () => _navigateToScreen(const ReporteVentasDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Inventario',
-            onTap: () => _navigateToScreen(const InventarioProcesoDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Cotizaciones',
-            onTap:
-                () =>
-                    _navigateToScreen(const ReporteProformasVentasDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Proformas / Ordenes',
-            onTap: () => _navigateToScreen(const ReporteDocumentosDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Materia Prima',
-            onTap: () => _navigateToScreen(const ReporteComprasDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Auditoría',
-            onTap: () => _navigateToScreen(const AuditoriaDeskScreen()),
+            label: 'CxC',
+            onTap: () => _navigateToScreen(const CxcScreen()),
           ),
         ],
       ),
@@ -511,17 +460,6 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
 
   List<Widget> _buildVendedorMenuItems() {
     return [
-      _buildExpandableItem(
-        icon: Icons.shopping_cart,
-        title: 'Ventas',
-        menuKey: 'ventas',
-        subItems: [
-          _buildSubItem(
-            label: 'Realizar Venta',
-            onTap: () => _navigateToScreen(const VentasDetalleDeskScreen()),
-          ),
-        ],
-      ),
       _buildExpandableItem(
         icon: Icons.inventory,
         title: 'Inventario',
@@ -546,9 +484,18 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             label: 'Proformas',
             onTap: () => _navigateToScreen(const OpcionesProformasDeskScreen()),
           ),
+        ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.bar_chart,
+        title: 'Reportes',
+        menuKey: 'reportes',
+        subItems: [
           _buildSubItem(
-            label: 'Contactos',
-            onTap: () => _navigateToScreen(const ContactosDeskScreen()),
+            label: 'Cotizaciones',
+            onTap:
+                () =>
+                    _navigateToScreen(const ReporteProformasVentasDeskScreen()),
           ),
         ],
       ),
@@ -572,14 +519,6 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
 
   List<Widget> _buildOperadorFundicionMenuItems() {
     return [
-      _buildMainItem(
-        icon: Icons.task_alt,
-        title: 'Tareas',
-        onTap:
-            () => _navigateToScreen(
-              OperadorTareasScreen(operadorId: '', operadorNombre: ''),
-            ),
-      ),
     ];
   }
 

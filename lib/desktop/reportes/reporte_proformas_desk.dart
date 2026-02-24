@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:basefundi/services/navbar_desk.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ReporteProformasVentasDeskScreen extends StatefulWidget {
   const ReporteProformasVentasDeskScreen({super.key});
@@ -25,11 +26,13 @@ class _ReporteProformasVentasDeskScreenState
 
   final TextEditingController _clienteController = TextEditingController();
   final TextEditingController _rucController = TextEditingController();
+  String _rolUsuario = '';
+  String _uidUsuario = '';
 
   @override
   void initState() {
     super.initState();
-    _obtenerDatos();
+    _cargarDatosUsuario().then((_) => _obtenerDatos());
   }
 
   @override
@@ -39,17 +42,43 @@ class _ReporteProformasVentasDeskScreenState
     super.dispose();
   }
 
+  Future<void> _cargarDatosUsuario() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('usuarios_activos')
+              .doc(user.uid)
+              .get();
+
+      if (userDoc.exists && userDoc.data() != null) {
+        final data = userDoc.data()!;
+        setState(() {
+          _rolUsuario = data['rol'] ?? ''; // ← CAMBIA 'rol' por tu campo
+          _uidUsuario = user.uid;
+        });
+      }
+    } catch (e) {
+      print('Error cargando usuario: $e');
+      setState(() {});
+    }
+  }
+
   Future<void> _obtenerDatos() async {
     setState(() {
       _cargando = true;
     });
 
     try {
-      // Obtener proformas ventas
+      final esVendedor = _rolUsuario == 'Vendedor';
+
       Query query = FirebaseFirestore.instance
           .collection('proformasventas')
           .orderBy('fecha', descending: true);
 
+      // Filtros de fecha solo si están definidos
       if (_fechaInicio != null) {
         query = query.where(
           'fecha',
@@ -71,7 +100,13 @@ class _ReporteProformasVentasDeskScreenState
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
 
-        // Aplicar filtros adicionales
+        // Si es vendedor, filtrar en memoria por usuario_uid
+        if (esVendedor) {
+          final uidDoc = data['usuario_uid']?.toString() ?? '';
+          if (uidDoc.isEmpty || uidDoc != _uidUsuario) continue;
+        }
+
+        // Filtros de cliente y RUC
         bool cumpleFiltroCliente =
             _filtroCliente.isEmpty ||
             (data['cliente']?.toString().toLowerCase().contains(
@@ -84,11 +119,9 @@ class _ReporteProformasVentasDeskScreenState
             (data['ruc']?.toString().contains(_filtroRuc) ?? false);
 
         if (cumpleFiltroCliente && cumpleFiltroRuc) {
-          // Agregar el ID del documento a los datos
           data['id'] = doc.id;
           proformas.add(data);
 
-          // Sumar al monto total
           final totalFinal =
               double.tryParse(data['total_final']?.toString() ?? '0') ?? 0.0;
           montoTotal += totalFinal;

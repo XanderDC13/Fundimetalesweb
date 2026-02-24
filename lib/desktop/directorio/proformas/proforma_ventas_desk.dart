@@ -333,7 +333,7 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
     }
 
     setState(() {
-      _numeroProforma = "PROFORMA N-$fechaFormateada-$numero";
+      _numeroProforma = "COTIZACION N-$fechaFormateada-$numero";
     });
   }
 
@@ -1752,6 +1752,20 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
 
   void _guardarEnBaseDatos() async {
     try {
+      // ← MOVER AQUÍ ARRIBA, ANTES DE USARLOS
+      final user = FirebaseAuth.instance.currentUser;
+
+      final usuarioDoc =
+          await FirebaseFirestore.instance
+              .collection('usuarios_activos')
+              .doc(user?.uid)
+              .get();
+
+      final usuarioNombre =
+          usuarioDoc.exists
+              ? (usuarioDoc['nombre'] ?? 'Desconocido')
+              : 'Desconocido';
+
       final fechaHoy = DateTime.now();
       final fechaFormateada =
           "${fechaHoy.year}${fechaHoy.month.toString().padLeft(2, '0')}${fechaHoy.day.toString().padLeft(2, '0')}";
@@ -1771,6 +1785,8 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
 
       final proformaData = {
         'numero': _numeroProforma,
+        'usuario_uid': user?.uid ?? '', // ← ahora sí está declarado
+        'usuario_nombre': usuarioNombre, // ← ahora sí está declarado
         'cliente': _clienteController.text,
         'empresa': _nombreComercialController.text,
         'ciudad': _ciudadController.text,
@@ -1798,19 +1814,6 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
         'total_final': _calcularTotalFinal(),
       };
 
-      final user = FirebaseAuth.instance.currentUser;
-
-      final usuarioDoc =
-          await FirebaseFirestore.instance
-              .collection('usuarios_activos')
-              .doc(user?.uid)
-              .get();
-
-      final usuarioNombre =
-          usuarioDoc.exists
-              ? (usuarioDoc['nombre'] ?? 'Desconocido')
-              : 'Desconocido';
-
       await FirebaseFirestore.instance
           .collection('proformasventas')
           .add(proformaData);
@@ -1822,7 +1825,7 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
         'usuario_nombre': usuarioNombre,
         'usuario_uid': user?.uid ?? 'uid_desconocido',
         'accion': 'Nueva proforma ventas',
-        'detalle': 'Número de proforma: ${_numeroProforma}',
+        'detalle': 'Número de proforma: $_numeroProforma',
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1854,7 +1857,7 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
   void dispose() {
     _debounce?.cancel();
     _debounceNombre?.cancel();
-    _debounceProducto?.cancel(); 
+    _debounceProducto?.cancel();
     _nombreFocusNode.dispose();
     super.dispose();
   }

@@ -118,21 +118,21 @@ class _OpcionesProformasDeskScreenState
                           // 👉 SIEMPRE SE MUESTRA
                           _buildBoton(
                             icono: Icons.add_circle_outline,
-                            titulo: 'Proforma / Ordenes',
-                            subtitulo: 'Genera proformas y ordenes de despacho',
-                            destino: ProformaOrdenDespachoDeskScreen(),
+                            titulo: 'Proforma Cotización',
+                            subtitulo:
+                                'Genera proformas de cotización de ventas',
+                            destino: ProformaVentasDeskScreen(),
                           ),
-
                           const SizedBox(height: 20),
 
                           // 👉 SOLO SI NO ES VENDEDOR
                           if (rol != 'Vendedor') ...[
                             _buildBoton(
                               icono: Icons.add_circle_outline,
-                              titulo: 'Proforma Cotización',
+                              titulo: 'Proforma / Ordenes',
                               subtitulo:
-                                  'Genera proformas de cotización de ventas',
-                              destino: ProformaVentasDeskScreen(),
+                                  'Genera proformas y ordenes de despacho',
+                              destino: ProformaOrdenDespachoDeskScreen(),
                             ),
                             const SizedBox(height: 20),
 

@@ -1,7 +1,5 @@
 import 'package:basefundi/desktop/dash_bajostock_desk.dart';
 import 'package:basefundi/desktop/fundicion/listado_empleados_desk.dart';
-import 'package:basefundi/desktop/fundicion/productos_fundir_desk.dart';
-import 'package:basefundi/desktop/fundicion/tareas_cumplir_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareasextras_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_realizar_desk.dart';
@@ -13,7 +11,6 @@ import 'package:basefundi/modulos/fundicion.dart';
 import 'package:basefundi/modulos/inventario_desk.dart';
 import 'package:basefundi/modulos/personal_desk.dart';
 import 'package:basefundi/modulos/reportes_desk.dart';
-import 'package:basefundi/modulos/ventas_desk.dart';
 import 'package:basefundi/services/navbar_desk.dart';
 import 'package:basefundi/services/transition.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -82,19 +79,25 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
     final ingresosMensuales = List<double>.filled(12, 0);
     final egresosMensuales = List<double>.filled(12, 0);
 
-    // 🔹 Cargar INGRESOS desde "ventas"
+    // 🔹 Cargar INGRESOS desde "proformas"
     final ventasSnapshot =
-        await FirebaseFirestore.instance.collection('ventas').get();
+        await FirebaseFirestore.instance.collection('proformas').get();
     for (var doc in ventasSnapshot.docs) {
       final data = doc.data();
       if (data['fecha'] != null) {
         final fecha = (data['fecha'] as Timestamp).toDate();
-
-        // Solo procesar datos del año actual
         if (fecha.year == currentYear) {
-          // Usar 'total' o 'monto' según lo que tengas en tu colección
-          final monto = (data['total'] ?? data['monto'] ?? 0).toDouble();
-          ingresosMensuales[fecha.month - 1] += monto;
+          double totalIngreso = 0.0;
+          if (data['total'] != null) {
+            totalIngreso = double.tryParse(data['total'].toString()) ?? 0.0;
+          } else if (data['items'] != null) {
+            final items = data['items'] as List<dynamic>;
+            for (var item in items) {
+              totalIngreso +=
+                  double.tryParse(item['v_total']?.toString() ?? '0') ?? 0.0;
+            }
+          }
+          ingresosMensuales[fecha.month - 1] += totalIngreso;
         }
       }
     }
@@ -134,11 +137,11 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
     setState(() {
       ingresosData = List.generate(
         12,
-        (i) => FlSpot(i.toDouble() + 1, ingresosMensuales[i] / 1000),
+        (i) => FlSpot(i.toDouble() + 1, ingresosMensuales[i]), // sin / 1000
       );
       egresosData = List.generate(
         12,
-        (i) => FlSpot(i.toDouble() + 1, egresosMensuales[i] / 1000),
+        (i) => FlSpot(i.toDouble() + 1, egresosMensuales[i]), // sin / 1000
       );
     });
   }
@@ -185,22 +188,10 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
   }
 
   Future<void> _cargarVentasHoy() async {
-    final now = DateTime.now();
-    final startOfDay = DateTime(now.year, now.month, now.day);
-    final endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
-
-    final ventasQuery =
-        await FirebaseFirestore.instance
-            .collection('ventas')
-            .where(
-              'fecha',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
-            )
-            .where('fecha', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
-            .get();
-
+    final proformasSnapshot =
+        await FirebaseFirestore.instance.collection('proformas').get();
     setState(() {
-      ventasRealizadas = ventasQuery.docs.length;
+      ventasRealizadas = proformasSnapshot.docs.length;
     });
   }
 
@@ -503,7 +494,8 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             ? allYValues.reduce((a, b) => a > b ? a : b)
             : 100;
 
-    final double maxY = maxYValue > 0 ? ((maxYValue + 0.9) / 1).ceil() * 1 : 1;
+    final double maxY =
+        maxYValue > 50 ? ((maxYValue + 0.9) / 1).ceil() * 1 : 50;
 
     return Container(
       height: 350,
@@ -659,26 +651,14 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
                       reservedSize: 50,
                       getTitlesWidget: (value, meta) {
                         if (value == 0) return const Text('0');
-
-                        if (value >= 1000) {
-                          return Text(
-                            '${(value / 1000).toInt()}M',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF6B7280),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          );
-                        } else {
-                          return Text(
-                            '${value.toInt()}K',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF6B7280),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          );
-                        }
+                        return Text(
+                          '\$${value.toInt()}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF6B7280),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -772,7 +752,7 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
                       String valor;
 
                       // Mostrar el valor real (multiplicado por 1000 porque dividimos por 1000)
-                      double valorReal = rod.toY * 1000;
+                      double valorReal = rod.toY;
                       if (valorReal >= 1000000) {
                         valor =
                             '\$${(valorReal / 1000000).toStringAsFixed(1)}M';
@@ -809,11 +789,6 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
     switch (rolUsuario) {
       case 'Gerente':
         botones = [
-          _gridButton(
-            Icons.attach_money,
-            'Ventas',
-            () => navegarConFade(context, const VentasDeskScreen()),
-          ),
           _gridButton(
             Icons.inventory_2,
             'Inventario',
@@ -855,11 +830,6 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
       case 'Administrador General':
         botones = [
           _gridButton(
-            Icons.attach_money,
-            'Ventas',
-            () => navegarConFade(context, const VentasDeskScreen()),
-          ),
-          _gridButton(
             Icons.inventory_2,
             'Inventario',
             () => navegarConFade(context, const InventarioDeskScreen()),
@@ -895,11 +865,6 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
       case 'Vendedor':
         botones = [
           _gridButton(
-            Icons.attach_money,
-            'Ventas',
-            () => navegarConFade(context, const VentasDeskScreen()),
-          ),
-          _gridButton(
             Icons.inventory_2,
             'Inventario',
             () => navegarConFade(context, const InventarioDeskScreen()),
@@ -925,11 +890,6 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
       case 'Supervisor Fundición':
         botones = [
           _gridButton(
-            Icons.local_fire_department,
-            'Fundición',
-            () => navegarConFade(context, const ProductosFundirDeskScreen()),
-          ),
-          _gridButton(
             Icons.assignment_turned_in,
             'Control Actividades',
             () => navegarConFade(context, const OperadoresListDeskScreen()),
@@ -954,14 +914,6 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
 
       case 'Operador Fundición':
         botones = [
-          _gridButton(
-            Icons.task_alt,
-            'Tareas',
-            () => navegarConFade(
-              context,
-              const OperadorTareasScreen(operadorId: '', operadorNombre: ''),
-            ),
-          ),
           _gridButton(
             Icons.settings,
             'Ajustes',

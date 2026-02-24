@@ -61,6 +61,61 @@ class _ProformaOrdenDespachoDeskScreenState
       TextEditingController();
   String sucursalUsuario = '';
   Map<String, int> stockDisponibleBodega = {};
+
+  String? _vendedorSeleccionado; // nombre del vendedor
+  // ci_ruc para guardar
+  List<Map<String, dynamic>> _vendedores = [];
+
+  Future<void> _cargarVendedores() async {
+    final cedulasUsuarios = [
+      '0401729769',
+      '1729711513',
+      '0402027924',
+      '0402110092',
+    ];
+
+    List<Map<String, dynamic>> lista = [];
+
+    // Cargar los 4 desde colección 'usuarios' con campo 'cedula'
+    for (String cedula in cedulasUsuarios) {
+      final snap =
+          await FirebaseFirestore.instance
+              .collection('usuarios')
+              .where('cedula', isEqualTo: cedula)
+              .limit(1)
+              .get();
+
+      if (snap.docs.isNotEmpty) {
+        final data = snap.docs.first.data();
+        lista.add({'nombre': data['nombre'] ?? cedula, 'ci_ruc': cedula});
+      } else {
+        lista.add({'nombre': cedula, 'ci_ruc': cedula});
+      }
+    }
+
+    // Cargar el del RUC 0000000002 desde clientes
+    final snapCliente =
+        await FirebaseFirestore.instance
+            .collection('clientes')
+            .where('ruc', isEqualTo: '0000000002')
+            .limit(1)
+            .get();
+
+    if (snapCliente.docs.isNotEmpty) {
+      final data = snapCliente.docs.first.data();
+      lista.add({
+        'nombre': data['nombre'] ?? 'Mostrador',
+        'ci_ruc': '0000000002',
+      });
+    } else {
+      lista.add({'nombre': 'Mostrador', 'ci_ruc': '0000000002'});
+    }
+
+    setState(() {
+      _vendedores = lista;
+    });
+  }
+
   Future<void> _cargarSucursalUsuario() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -427,6 +482,56 @@ class _ProformaOrdenDespachoDeskScreenState
     _cargarSucursalUsuario();
     _previsualizarNumeroProforma();
     _previsualizarNumeroOrdenDespacho();
+    _cargarVendedores();
+  }
+
+  Widget _buildSelectorVendedor() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          hint: const Row(
+            children: [
+              Icon(Icons.person_pin, color: Colors.grey, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Seleccionar vendedor',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+          value: _vendedorSeleccionado,
+          items:
+              _vendedores.map((v) {
+                return DropdownMenuItem<String>(
+                  value: v['nombre'],
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.person,
+                        color: Color(0xFF4682B4),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(v['nombre'], style: const TextStyle(fontSize: 14)),
+                    ],
+                  ),
+                );
+              }).toList(),
+          onChanged: (value) {
+            setState(() {
+              _vendedorSeleccionado = value;
+            });
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> _previsualizarNumeroOrdenDespacho() async {
@@ -988,7 +1093,8 @@ class _ProformaOrdenDespachoDeskScreenState
               ),
             ],
           ),
-
+          const SizedBox(height: 12),
+          _buildSelectorVendedor(),
           // BOTÓN GUARDAR CLIENTE (solo visible en modo manual)
           if (_entradaManualHabilitada && !_clienteEncontrado)
             Container(
@@ -2261,6 +2367,7 @@ class _ProformaOrdenDespachoDeskScreenState
       'ci_ruc': _ciRucController.text,
       'direccion': _direccionController.text,
       'telefono': _telefonoController.text,
+      'vendedor_nombre': _vendedorSeleccionado ?? 'Sin asignar',
 
       'items':
           items
@@ -2598,7 +2705,15 @@ class _ProformaOrdenDespachoDeskScreenState
       );
       return false;
     }
-
+    if (_vendedorSeleccionado == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debe seleccionar un vendedor'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return false;
+    }
     return true;
   }
 
@@ -2695,6 +2810,7 @@ class _ProformaOrdenDespachoDeskScreenState
       _entradaManualHabilitada = true;
       items.clear();
       items.add(ItemOrdenDespacho());
+      _vendedorSeleccionado = null;
     });
     _previsualizarNumeroProforma();
     _previsualizarNumeroOrdenDespacho();

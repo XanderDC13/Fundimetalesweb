@@ -1,5 +1,4 @@
 import 'package:basefundi/desktop/personal/empleados/empleados_registro_desk.dart';
-import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
 import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
 import 'package:basefundi/services/navbar_desk.dart';
@@ -90,14 +89,6 @@ class _PersonalDeskScreenState extends State<PersonalDeskScreen>
                         subtitle: 'Lista de usuarios registrados',
                         icon: Icons.group,
                         destination: const EmpleadosPendientesDeskScreen(),
-                      ),
-                      const SizedBox(height: 20),
-                      _buildCard(
-                        context: context,
-                        title: 'Funciones empleados',
-                        subtitle: 'Asignación de funciones',
-                        icon: Icons.assignment,
-                        destination: const FuncionesDeskScreen(),
                       ),
                       const SizedBox(height: 20),
                     ],

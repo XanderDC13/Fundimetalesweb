@@ -264,17 +264,20 @@ class _ReporteDocumentosDeskScreenState
 
   String _construirTextoNumeros(Map<String, dynamic> documento) {
     final numeroProforma = documento['numero_proforma']?.toString();
-    final numeroOrden = documento['numero_orden']?.toString();
+    final ordenData =
+        documento['orden']; // ← verificar si realmente existe una orden
 
     final List<String> partes = [];
 
-    if (numeroOrden != null && numeroOrden.isNotEmpty && numeroOrden != '') {
-      partes.add('ORDEN: $numeroOrden');
+    // Solo mostrar ORDEN si realmente tiene un documento de orden vinculado
+    if (ordenData != null) {
+      final numeroOrden = documento['numero_orden']?.toString();
+      if (numeroOrden != null && numeroOrden.isNotEmpty) {
+        partes.add('ORDEN: $numeroOrden');
+      }
     }
 
-    if (numeroProforma != null &&
-        numeroProforma.isNotEmpty &&
-        numeroProforma != '') {
+    if (numeroProforma != null && numeroProforma.isNotEmpty) {
       partes.add('PROFORMA: $numeroProforma');
     }
 

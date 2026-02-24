@@ -3,7 +3,6 @@ import 'package:basefundi/desktop/reportes/reporte_compras_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_documentos_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_fundicion_desk.dart';
 import 'package:basefundi/desktop/reportes/reporte_proformas_desk.dart';
-import 'package:basefundi/desktop/reportes/reporte_ventas_desk.dart';
 import 'package:basefundi/desktop/reportes/reportes%20inventarios/inventario_procesos_desk.dart';
 import 'package:basefundi/services/transition.dart';
 import 'package:flutter/material.dart';
@@ -91,8 +90,7 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
 
     // Vendedor puede ver Reporte Ventas y Reporte Proformas
     if (_rol == "Vendedor") {
-      return nombreReporte == "Reporte Ventas" ||
-          nombreReporte == "Reporte Proformas";
+      return nombreReporte == "Reporte Cotizaciones";
     }
 
     return false;
@@ -159,22 +157,6 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
                           padding: const EdgeInsets.all(32),
                           child: ListView(
                             children: [
-                              // Reporte Ventas (todos los roles permitidos)
-                              if (_puedeVerReporte("Reporte Ventas")) ...[
-                                _buildBoton(
-                                  icon: LucideIcons.clipboardList,
-                                  titulo: 'Reporte Ventas',
-                                  subtitulo: 'Historial de ventas',
-                                  onTap: () {
-                                    navegarConFade(
-                                      context,
-                                      const ReporteVentasDeskScreen(),
-                                    );
-                                  },
-                                ),
-                                const SizedBox(height: 20),
-                              ],
-
                               // Reporte Inventario (solo Gerente y Admin Tulcán)
                               if (_puedeVerReporte("Reporte Inventario")) ...[
                                 _buildBoton(

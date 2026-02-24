@@ -1,3 +1,4 @@
+import 'package:basefundi/desktop/fundicion/rechazos_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareasfundi_desk.dart';
 import 'package:basefundi/services/navbar_desk.dart';
 import 'package:basefundi/services/pdfs/reportegeneralfundicion.dart';
@@ -69,21 +70,23 @@ class _OperadoresListDeskScreenState extends State<OperadoresListDeskScreen> {
                         // Botón rango de fechas
                         ElevatedButton.icon(
                           onPressed: () async {
-                            final picked = await showDateRangePicker(
+                            final picked = await showDialog<DateTimeRange>(
                               context: context,
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime.now(),
-                              initialDateRange: _selectedDateRange,
-                              builder: (context, child) {
-                                return Theme(
-                                  data: Theme.of(context).copyWith(
-                                    colorScheme: const ColorScheme.light(
-                                      primary: Color(0xFF2C3E50),
+                              builder:
+                                  (ctx) => Dialog(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: SizedBox(
+                                      width: 400,
+                                      height: 500,
+                                      child: DateRangePickerDialog(
+                                        firstDate: DateTime(2020),
+                                        lastDate: DateTime.now(),
+                                        initialDateRange: _selectedDateRange,
+                                      ),
                                     ),
                                   ),
-                                  child: child!,
-                                );
-                              },
                             );
                             if (picked != null) {
                               setState(() => _selectedDateRange = picked);
@@ -460,29 +463,56 @@ class _OperadoresListDeskScreenState extends State<OperadoresListDeskScreen> {
       children: [
         Row(
           children: [
-            Expanded(
-              flex: 2,
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Buscar por nombre ...',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 16,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 300, // ajusta el ancho a tu gusto
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por nombre ...',
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 16,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchOperador = value;
+                      });
+                    },
                   ),
                 ),
-                onChanged: (value) {
-                  setState(() {
-                    _searchOperador = value;
-                  });
-                },
-              ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  // En OperadoresListDeskScreen, botón Rechazos:
+                  onPressed:
+                      () => navegarConFade(
+                        context,
+                        const RechazosFundicionDeskScreen(),
+                      ),
+                  icon: const Icon(Icons.cancel_outlined, size: 18),
+                  label: const Text('Rechazos'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red[700],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(width: 16),
           ],
