@@ -39,6 +39,7 @@ dependencies:
   fl_chart: ^1.0.0
   drift: ^2.30.1
   sqlite3_web: ^0.4.1
+  rxdart: ^0.28.0
   
 dev_dependencies:
   flutter_test:

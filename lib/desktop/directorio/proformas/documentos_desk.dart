@@ -2430,7 +2430,11 @@ class _ProformaOrdenDespachoDeskScreenState
                 },
               )
               .toList(),
-
+      'numero_factura': _numeroFacturaController.text.trim(),
+      'valor_declarado':
+          _valorDeclaradoController.text.trim().isEmpty
+              ? '0'
+              : _valorDeclaradoController.text.trim(),
       'fecha': Timestamp.now(),
       'estado': 'Pendiente',
     };

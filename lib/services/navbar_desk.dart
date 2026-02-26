@@ -430,21 +430,6 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
         ],
       ),
       _buildExpandableItem(
-        icon: Icons.contacts,
-        title: 'Directorio',
-        menuKey: 'directorio',
-        subItems: [
-          _buildSubItem(
-            label: 'Proformas',
-            onTap: () => _navigateToScreen(const OpcionesProformasDeskScreen()),
-          ),
-          _buildSubItem(
-            label: 'Contactos',
-            onTap: () => _navigateToScreen(const ContactosDeskScreen()),
-          ),
-        ],
-      ),
-      _buildExpandableItem(
         icon: Icons.account_balance_wallet,
         title: 'Administración',
         menuKey: 'administracion',
@@ -452,6 +437,35 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
           _buildSubItem(
             label: 'CxC',
             onTap: () => _navigateToScreen(const CxcScreen()),
+          ),
+        ],
+      ),
+      _buildExpandableItem(
+        icon: Icons.bar_chart,
+        title: 'Reportes',
+        menuKey: 'reportes',
+        subItems: [
+          _buildSubItem(
+            label: 'Inventario',
+            onTap: () => _navigateToScreen(const InventarioProcesoDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Cotizaciones',
+            onTap:
+                () =>
+                    _navigateToScreen(const ReporteProformasVentasDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Proformas / Ordenes',
+            onTap: () => _navigateToScreen(const ReporteDocumentosDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Materia Prima',
+            onTap: () => _navigateToScreen(const ReporteComprasDeskScreen()),
+          ),
+          _buildSubItem(
+            label: 'Auditoría',
+            onTap: () => _navigateToScreen(const AuditoriaDeskScreen()),
           ),
         ],
       ),
@@ -518,8 +532,7 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
   }
 
   List<Widget> _buildOperadorFundicionMenuItems() {
-    return [
-    ];
+    return [];
   }
 
   List<Widget> _buildSupervisorMecanizadoMenuItems() {

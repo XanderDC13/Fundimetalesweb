@@ -485,14 +485,6 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
   }
 
   Widget _buildFlujoDineroChart() {
-    final allYValues = [
-      ...ingresosData.map((e) => e.y),
-      ...egresosData.map((e) => e.y),
-    ];
-    final double maxYValue =
-        allYValues.isNotEmpty
-            ? allYValues.reduce((a, b) => a > b ? a : b)
-            : 100;
 
     final double maxY = 100000;
 

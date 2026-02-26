@@ -319,7 +319,7 @@ class _ClienteDetalleDeskScreenState extends State<ClienteDetalleDeskScreen>
                     return _tableRow(
                       proformaId: proformaId,
                       data: {
-                        'numero_orden': data['numero_orden'] ?? '-', 
+                        'numero_orden': data['numero_orden'] ?? '-',
                         'factura': data['numero'].toString(),
                         'tipo': 'FAC',
                         'valor': valorMostrar,

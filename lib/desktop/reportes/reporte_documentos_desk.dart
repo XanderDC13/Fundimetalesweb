@@ -398,22 +398,22 @@ class _ReporteDocumentosDeskScreenState
   }
 
   String _construirTextoNumeros(Map<String, dynamic> documento) {
-    final numeroProforma = documento['numero_proforma']?.toString();
-    final ordenData =
-        documento['orden']; // ← verificar si realmente existe una orden
-
     final List<String> partes = [];
 
-    // Solo mostrar ORDEN si realmente tiene un documento de orden vinculado
-    if (ordenData != null) {
+    // Solo mostrar ORDEN si realmente tiene documento de orden
+    if (documento['orden'] != null) {
       final numeroOrden = documento['numero_orden']?.toString();
       if (numeroOrden != null && numeroOrden.isNotEmpty) {
         partes.add('ORDEN: $numeroOrden');
       }
     }
 
-    if (numeroProforma != null && numeroProforma.isNotEmpty) {
-      partes.add('PROFORMA: $numeroProforma');
+    // ⭐ CAMBIO: solo mostrar PROFORMA si realmente existe el documento de proforma
+    if (documento['proforma'] != null) {
+      final numeroProforma = documento['numero_proforma']?.toString();
+      if (numeroProforma != null && numeroProforma.isNotEmpty) {
+        partes.add('PROFORMA: $numeroProforma');
+      }
     }
 
     return partes.isEmpty ? '—' : partes.join(' | ');
