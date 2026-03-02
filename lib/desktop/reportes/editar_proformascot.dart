@@ -18,11 +18,11 @@ class ItemEditable {
     String cantidad = '',
     String precio = '',
     String total = '',
-  })  : codigoController = TextEditingController(text: codigo),
-        descripcionController = TextEditingController(text: descripcion),
-        cantidadController = TextEditingController(text: cantidad),
-        precioController = TextEditingController(text: precio),
-        totalController = TextEditingController(text: total);
+  }) : codigoController = TextEditingController(text: codigo),
+       descripcionController = TextEditingController(text: descripcion),
+       cantidadController = TextEditingController(text: cantidad),
+       precioController = TextEditingController(text: precio),
+       totalController = TextEditingController(text: total);
 
   void dispose() {
     codigoController.dispose();
@@ -33,12 +33,20 @@ class ItemEditable {
   }
 
   Map<String, dynamic> toMap() => {
-        'codigo': codigoController.text,
-        'descripcion': descripcionController.text,
-        'cantidad': cantidadController.text,
-        'precio': precioController.text,
-        'total': totalController.text,
-      };
+    'codigo': codigoController.text,
+    'descripcion': descripcionController.text,
+    'cantidad': cantidadController.text,
+    'precio': precioController.text,
+    'total': totalController.text,
+  };
+  // En la clase ItemEditable, agregar este método:
+  Map<String, dynamic> toMapProformas() => {
+    'ref': codigoController.text, // 👈 nombre correcto
+    'descripcion': descripcionController.text,
+    'cantidad': cantidadController.text,
+    'v_unit': precioController.text, // 👈 nombre correcto
+    'v_total': totalController.text, // 👈 nombre correcto
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -53,31 +61,39 @@ class EditarProformaVentas {
     Map<String, dynamic> proforma,
     String docId, {
     bool esMobil = false,
+    bool descontarInventario = true, // 👈 AGREGAR
+    String coleccion = 'proformasventas',
   }) async {
     if (esMobil) {
       await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (_) => _EditarProformaWidget(
-          proforma: proforma,
-          docId: docId,
-          esMobil: true,
-        ),
+        builder:
+            (_) => _EditarProformaWidget(
+              proforma: proforma,
+              docId: docId,
+              esMobil: true,
+              descontarInventario: descontarInventario, // 👈
+              coleccion: coleccion,
+            ),
       );
     } else {
       await showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (_) => Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(24),
-          child: _EditarProformaWidget(
-            proforma: proforma,
-            docId: docId,
-            esMobil: false,
-          ),
-        ),
+        builder:
+            (_) => Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.all(24),
+              child: _EditarProformaWidget(
+                proforma: proforma,
+                docId: docId,
+                esMobil: false,
+                descontarInventario: descontarInventario, // 👈
+                coleccion: coleccion,
+              ),
+            ),
       );
     }
   }
@@ -90,11 +106,15 @@ class _EditarProformaWidget extends StatefulWidget {
   final Map<String, dynamic> proforma;
   final String docId;
   final bool esMobil;
+  final bool descontarInventario; // 👈 AGREGAR
+  final String coleccion; // 👈 AGREGAR
 
   const _EditarProformaWidget({
     required this.proforma,
     required this.docId,
     required this.esMobil,
+    required this.descontarInventario, // 👈 AGREGAR
+    required this.coleccion, // 👈 AGREGAR
   });
 
   @override
@@ -113,6 +133,7 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
   final TextEditingController _newCantCtrl = TextEditingController();
   final TextEditingController _newPrecioCtrl = TextEditingController();
   final TextEditingController _newTotalCtrl = TextEditingController();
+  late List<Map<String, dynamic>> _itemsOriginales;
 
   @override
   void initState() {
@@ -120,16 +141,37 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
     _aplicarIVA = widget.proforma['aplicar_iva'] ?? false;
 
     final rawItems = widget.proforma['items'] as List<dynamic>? ?? [];
-    _items = rawItems.map((e) {
-      final m = e as Map<String, dynamic>;
-      return ItemEditable(
-        codigo: m['codigo']?.toString() ?? '',
-        descripcion: m['descripcion']?.toString() ?? '',
-        cantidad: m['cantidad']?.toString() ?? '',
-        precio: m['precio']?.toString() ?? '',
-        total: m['total']?.toString() ?? '',
-      );
-    }).toList();
+    // DESPUÉS
+    final esProformas = widget.coleccion == 'proformas';
+
+    _itemsOriginales =
+        rawItems
+            .map((e) => Map<String, dynamic>.from(e as Map<String, dynamic>))
+            .toList();
+
+    _items =
+        rawItems.map((e) {
+          final m = e as Map<String, dynamic>;
+          return ItemEditable(
+            codigo:
+                esProformas
+                    ? m['ref']?.toString() ??
+                        '' // 👈 proformas usa 'ref'
+                    : m['codigo']?.toString() ?? '',
+            descripcion: m['descripcion']?.toString() ?? '',
+            cantidad: m['cantidad']?.toString() ?? '',
+            precio:
+                esProformas
+                    ? m['v_unit']?.toString() ??
+                        '' // 👈 proformas usa 'v_unit'
+                    : m['precio']?.toString() ?? '',
+            total:
+                esProformas
+                    ? m['v_total']?.toString() ??
+                        '' // 👈 proformas usa 'v_total'
+                    : m['total']?.toString() ?? '',
+          );
+        }).toList();
   }
 
   @override
@@ -176,11 +218,12 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
     if (referencia.isEmpty) return;
 
     try {
-      final snap = await FirebaseFirestore.instance
-          .collection('productos')
-          .where('referencia', isEqualTo: referencia)
-          .limit(1)
-          .get();
+      final snap =
+          await FirebaseFirestore.instance
+              .collection('productos')
+              .where('referencia', isEqualTo: referencia)
+              .limit(1)
+              .get();
 
       if (snap.docs.isEmpty) {
         _showSnack('Producto no encontrado', color: Colors.orange);
@@ -229,8 +272,8 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
         } else {
           // Ítem existente
           _items[itemIndex].descripcionController.text = data['nombre'] ?? '';
-          _items[itemIndex].precioController.text =
-              precioElegido!.toStringAsFixed(2);
+          _items[itemIndex].precioController.text = precioElegido!
+              .toStringAsFixed(2);
           _recalcularItem(itemIndex);
         }
       });
@@ -246,64 +289,81 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
   ) async {
     return showDialog<double>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: const Text('Seleccionar Precio',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(nombre,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            ...List.generate(precios.length, (i) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: OutlinedButton(
-                onPressed: () => Navigator.of(ctx).pop(precios[i]),
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  side: const BorderSide(color: Color(0xFF4682B4)),
-                  padding: const EdgeInsets.all(12),
+      builder:
+          (ctx) => AlertDialog(
+            backgroundColor: Colors.white,
+            title: const Text(
+              'Seleccionar Precio',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nombre,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(nombres[i],
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
-                    Text('\$${precios[i].toStringAsFixed(2)}',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ],
+                const SizedBox(height: 12),
+                ...List.generate(
+                  precios.length,
+                  (i) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(ctx).pop(precios[i]),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0xFF4682B4)),
+                        padding: const EdgeInsets.all(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            nombres[i],
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          Text(
+                            '\$${precios[i].toStringAsFixed(2)}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text(
+                  'Cancelar',
+                  style: TextStyle(color: Colors.grey),
                 ),
               ),
-            )),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancelar',
-                style: TextStyle(color: Colors.grey)),
+            ],
           ),
-        ],
-      ),
     );
   }
 
   // ── Agregar ítem nuevo ──────────────────────────────────────────────────────
   void _agregarItem() {
-    if (_newDescCtrl.text.trim().isEmpty && _newCodigoCtrl.text.trim().isEmpty) {
+    if (_newDescCtrl.text.trim().isEmpty &&
+        _newCodigoCtrl.text.trim().isEmpty) {
       _showSnack('Ingrese al menos código o descripción', color: Colors.orange);
       return;
     }
     setState(() {
-      _items.add(ItemEditable(
-        codigo: _newCodigoCtrl.text,
-        descripcion: _newDescCtrl.text,
-        cantidad: _newCantCtrl.text,
-        precio: _newPrecioCtrl.text,
-        total: _newTotalCtrl.text,
-      ));
+      _items.add(
+        ItemEditable(
+          codigo: _newCodigoCtrl.text,
+          descripcion: _newDescCtrl.text,
+          cantidad: _newCantCtrl.text,
+          precio: _newPrecioCtrl.text,
+          total: _newTotalCtrl.text,
+        ),
+      );
       _newCodigoCtrl.clear();
       _newDescCtrl.clear();
       _newCantCtrl.clear();
@@ -316,25 +376,46 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
   Future<void> _guardar() async {
     setState(() => _guardando = true);
     try {
-      await FirebaseFirestore.instance
-          .collection('proformasventas')
-          .doc(widget.docId)
-          .update({
-        'items': _items.map((i) => i.toMap()).toList(),
-        'subtotal': _subtotal.toStringAsFixed(2),
-        'subtotal_0': '0.00',
-        'iva': _iva.toStringAsFixed(2),
-        'total_final': _totalFinal.toStringAsFixed(2),
-        'aplicar_iva': _aplicarIVA,
-      });
-      if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Proforma actualizada correctamente'),
-            backgroundColor: Colors.green,
-          ),
-        );
+      // 👇 Solo si corresponde
+      if (widget.descontarInventario) {
+        await _procesarDevolucionesInventario(_itemsOriginales);
+      }
+
+      // Para proformas
+      if (widget.coleccion == 'proformas') {
+        await FirebaseFirestore.instance
+            .collection('proformas')
+            .doc(widget.docId)
+            .update({
+              'items': _items.map((i) => i.toMapProformas()).toList(),
+              'subtotal': _subtotal.toStringAsFixed(2),
+              'iva': _iva.toStringAsFixed(2),
+              'total': _totalFinal.toStringAsFixed(
+                2,
+              ), // 👈 'total' no 'total_final'
+            });
+      } else {
+        await FirebaseFirestore.instance
+            .collection('proformasventas')
+            .doc(widget.docId)
+            .update({
+              'items': _items.map((i) => i.toMap()).toList(),
+              'subtotal': _subtotal.toStringAsFixed(2),
+              'subtotal_0': '0.00',
+              'iva': _iva.toStringAsFixed(2),
+              'total_final': _totalFinal.toStringAsFixed(2),
+              'aplicar_iva': _aplicarIVA,
+            });
+
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Proforma actualizada correctamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     } catch (e) {
       _showSnack('Error al guardar: $e', color: Colors.red);
@@ -343,9 +424,81 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
     }
   }
 
+  /// Procesa las devoluciones al inventario cuando se reducen cantidades
+  Future<void> _procesarDevolucionesInventario(
+    List<dynamic> itemsAnteriores,
+  ) async {
+    try {
+      // Crear mapa de items anteriores para fácil búsqueda
+      Map<String, double> cantidadesAnteriores = {};
+      for (var item in itemsAnteriores) {
+        final m = item as Map<String, dynamic>;
+        final codigo = m['codigo']?.toString() ?? '';
+        final cantidad = double.tryParse(m['cantidad']?.toString() ?? '0') ?? 0;
+        cantidadesAnteriores[codigo] = cantidad;
+      }
+
+      // Comparar con items actuales
+      for (var itemActual in _items) {
+        final codigo = itemActual.codigoController.text.trim();
+        if (codigo.isEmpty) continue;
+
+        final cantidadAnterior = cantidadesAnteriores[codigo] ?? 0;
+        final cantidadActual =
+            double.tryParse(itemActual.cantidadController.text) ?? 0;
+
+        // Si la cantidad se redujo, devolver la diferencia al inventario
+        if (cantidadActual < cantidadAnterior) {
+          final cantidadADevolver = cantidadAnterior - cantidadActual;
+
+          print(
+            '📦 Devolviendo $cantidadADevolver unidades del código: $codigo',
+          );
+
+          // Buscar el producto en inventario
+          final snapProducto =
+              await FirebaseFirestore.instance
+                  .collection('productos')
+                  .where('referencia', isEqualTo: codigo)
+                  .limit(1)
+                  .get();
+
+          if (snapProducto.docs.isNotEmpty) {
+            final docProducto = snapProducto.docs.first;
+            final dataProducto = docProducto.data();
+
+            // Obtener cantidad actual en inventario
+            final cantidadActualInventario =
+                double.tryParse(dataProducto['cantidad']?.toString() ?? '0') ??
+                0;
+
+            // Sumar la cantidad devuelta
+            final cantidadNuevaInventario =
+                cantidadActualInventario + cantidadADevolver;
+
+            // Actualizar inventario
+            await docProducto.reference.update({
+              'cantidad': cantidadNuevaInventario.toString(),
+            });
+
+            print(
+              '✅ Inventario actualizado: $codigo ahora tiene $cantidadNuevaInventario unidades',
+            );
+          } else {
+            print('⚠️ Producto no encontrado: $codigo');
+          }
+        }
+      }
+    } catch (e) {
+      print('Error procesando devoluciones: $e');
+      // No lanzar error, solo registrar
+    }
+  }
+
   void _showSnack(String msg, {Color color = Colors.green}) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -390,7 +543,8 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        widget.proforma['numero']?.toString() ?? 'Editar Proforma',
+                        widget.proforma['numero']?.toString() ??
+                            'Editar Proforma',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -417,18 +571,25 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Agregar nuevo ítem ────────────────────────────────────
-                  _buildSectionHeader('Agregar Ítem', Icons.add_circle_outline,
-                      const Color(0xFF4682B4)),
+                  _buildSectionHeader(
+                    'Agregar Ítem',
+                    Icons.add_circle_outline,
+                    const Color(0xFF4682B4),
+                  ),
                   const SizedBox(height: 12),
                   _buildNuevoItemFormMobil(),
                   const SizedBox(height: 20),
 
                   // ── Lista de ítems ────────────────────────────────────────
                   _buildSectionHeader(
-                      'Ítems (${_items.length})', Icons.list_alt, Colors.grey[700]!),
+                    'Ítems (${_items.length})',
+                    Icons.list_alt,
+                    Colors.grey[700]!,
+                  ),
                   const SizedBox(height: 8),
-                  ..._items.asMap().entries.map((e) =>
-                      _buildItemCardMobil(e.key, e.value)),
+                  ..._items.asMap().entries.map(
+                    (e) => _buildItemCardMobil(e.key, e.value),
+                  ),
                   const SizedBox(height: 20),
 
                   // ── Totales ───────────────────────────────────────────────
@@ -470,8 +631,7 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
                 );
               }
               _debounceProducto?.cancel();
-              _debounceProducto =
-                  Timer(const Duration(milliseconds: 600), () {
+              _debounceProducto = Timer(const Duration(milliseconds: 600), () {
                 _buscarProducto(upper, itemIndex: -1);
               });
             },
@@ -500,8 +660,9 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
                   controller: _newPrecioCtrl,
                   label: 'Precio',
                   icon: Icons.attach_money,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   onChanged: (_) => _recalcularNuevoItem(),
                 ),
               ),
@@ -566,18 +727,21 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
                   onChanged: (v) {
                     final upper = v.toUpperCase();
                     if (item.codigoController.text != upper) {
-                      item.codigoController.value =
-                          item.codigoController.value.copyWith(
-                        text: upper,
-                        selection:
-                            TextSelection.collapsed(offset: upper.length),
-                      );
+                      item.codigoController.value = item.codigoController.value
+                          .copyWith(
+                            text: upper,
+                            selection: TextSelection.collapsed(
+                              offset: upper.length,
+                            ),
+                          );
                     }
                     _debounceProducto?.cancel();
-                    _debounceProducto =
-                        Timer(const Duration(milliseconds: 600), () {
-                      _buscarProducto(upper, itemIndex: index);
-                    });
+                    _debounceProducto = Timer(
+                      const Duration(milliseconds: 600),
+                      () {
+                        _buscarProducto(upper, itemIndex: index);
+                      },
+                    );
                   },
                 ),
               ),
@@ -610,8 +774,9 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
                 child: _buildInputField(
                   controller: item.precioController,
                   label: 'Precio',
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   onChanged: (_) => _recalcularItem(index),
                 ),
               ),
@@ -644,15 +809,13 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
           const SizedBox(height: 8),
           // Toggle IVA
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: _aplicarIVA ? Colors.green.shade50 : Colors.grey.shade100,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: _aplicarIVA
-                    ? Colors.green.shade300
-                    : Colors.grey.shade300,
+                color:
+                    _aplicarIVA ? Colors.green.shade300 : Colors.grey.shade300,
               ),
             ),
             child: Row(
@@ -662,9 +825,10 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
                   'IVA 15%: \$${_iva.toStringAsFixed(2)}',
                   style: TextStyle(
                     fontWeight: FontWeight.w500,
-                    color: _aplicarIVA
-                        ? Colors.green.shade700
-                        : Colors.grey.shade600,
+                    color:
+                        _aplicarIVA
+                            ? Colors.green.shade700
+                            : Colors.grey.shade600,
                   ),
                 ),
                 Switch(
@@ -681,10 +845,7 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
             children: [
               const Text(
                 'TOTAL:',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               Text(
                 '\$${_totalFinal.toStringAsFixed(2)}',
@@ -751,17 +912,20 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
                 children: [
                   // ── Formulario de nuevo ítem ─────────────────────────────
                   _buildSectionHeader(
-                      'Agregar Ítem', Icons.add_circle_outline,
-                      const Color(0xFF4682B4)),
+                    'Agregar Ítem',
+                    Icons.add_circle_outline,
+                    const Color(0xFF4682B4),
+                  ),
                   const SizedBox(height: 12),
                   _buildNuevoItemFormDesk(),
                   const SizedBox(height: 24),
 
                   // ── Tabla de ítems ───────────────────────────────────────
                   _buildSectionHeader(
-                      'Ítems actuales (${_items.length})',
-                      Icons.list_alt,
-                      Colors.grey.shade700),
+                    'Ítems actuales (${_items.length})',
+                    Icons.list_alt,
+                    Colors.grey.shade700,
+                  ),
                   const SizedBox(height: 8),
                   _buildTablaDesk(),
                   const SizedBox(height: 24),
@@ -803,15 +967,16 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
                 if (_newCodigoCtrl.text != upper) {
                   _newCodigoCtrl.value = _newCodigoCtrl.value.copyWith(
                     text: upper,
-                    selection:
-                        TextSelection.collapsed(offset: upper.length),
+                    selection: TextSelection.collapsed(offset: upper.length),
                   );
                 }
                 _debounceProducto?.cancel();
-                _debounceProducto =
-                    Timer(const Duration(milliseconds: 600), () {
-                  _buscarProducto(upper, itemIndex: -1);
-                });
+                _debounceProducto = Timer(
+                  const Duration(milliseconds: 600),
+                  () {
+                    _buscarProducto(upper, itemIndex: -1);
+                  },
+                );
               },
             ),
           ),
@@ -843,8 +1008,9 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
             child: _buildInputField(
               controller: _newPrecioCtrl,
               label: 'Precio',
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               onChanged: (_) => _recalcularNuevoItem(),
             ),
           ),
@@ -867,8 +1033,7 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF4682B4),
               foregroundColor: Colors.white,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -893,15 +1058,49 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
             decoration: BoxDecoration(
               color: Colors.grey.shade100,
               borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(10)),
+                top: Radius.circular(10),
+              ),
             ),
             child: const Row(
               children: [
-                SizedBox(width: 110, child: Text('CÓDIGO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                Expanded(flex: 3, child: Text('DESCRIPCIÓN', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                SizedBox(width: 70, child: Text('CANT.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
-                SizedBox(width: 100, child: Text('PRECIO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
-                SizedBox(width: 100, child: Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
+                SizedBox(
+                  width: 110,
+                  child: Text(
+                    'CÓDIGO',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    'DESCRIPCIÓN',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+                SizedBox(
+                  width: 70,
+                  child: Text(
+                    'CANT.',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                SizedBox(
+                  width: 100,
+                  child: Text(
+                    'PRECIO',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                SizedBox(
+                  width: 100,
+                  child: Text(
+                    'TOTAL',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
                 SizedBox(width: 40),
               ],
             ),
@@ -916,8 +1115,9 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
               ),
             )
           else
-            ..._items.asMap().entries.map((e) =>
-                _buildFilaTablaDesk(e.key, e.value)),
+            ..._items.asMap().entries.map(
+              (e) => _buildFilaTablaDesk(e.key, e.value),
+            ),
         ],
       ),
     );
@@ -928,9 +1128,7 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: index % 2 == 0 ? Colors.white : Colors.grey.shade50,
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade200),
-        ),
+        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Row(
         children: [
@@ -942,18 +1140,20 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
               onChanged: (v) {
                 final upper = v.toUpperCase();
                 if (item.codigoController.text != upper) {
-                  item.codigoController.value =
-                      item.codigoController.value.copyWith(
+                  item
+                      .codigoController
+                      .value = item.codigoController.value.copyWith(
                     text: upper,
-                    selection:
-                        TextSelection.collapsed(offset: upper.length),
+                    selection: TextSelection.collapsed(offset: upper.length),
                   );
                 }
                 _debounceProducto?.cancel();
-                _debounceProducto =
-                    Timer(const Duration(milliseconds: 600), () {
-                  _buscarProducto(upper, itemIndex: index);
-                });
+                _debounceProducto = Timer(
+                  const Duration(milliseconds: 600),
+                  () {
+                    _buscarProducto(upper, itemIndex: index);
+                  },
+                );
               },
             ),
           ),
@@ -982,8 +1182,9 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
             width: 100,
             child: _buildInputFieldCompact(
               controller: item.precioController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               onChanged: (_) => _recalcularItem(index),
               textAlign: TextAlign.center,
             ),
@@ -1007,8 +1208,11 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
             width: 40,
             child: IconButton(
               onPressed: () => setState(() => _items.removeAt(index)),
-              icon: Icon(Icons.remove_circle_outline,
-                  color: Colors.red.shade400, size: 20),
+              icon: Icon(
+                Icons.remove_circle_outline,
+                color: Colors.red.shade400,
+                size: 20,
+              ),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),
@@ -1033,22 +1237,28 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
             ),
             child: Column(
               children: [
-                _buildTotalRow('Subtotal:',
-                    '\$${_subtotal.toStringAsFixed(2)}'),
+                _buildTotalRow(
+                  'Subtotal:',
+                  '\$${_subtotal.toStringAsFixed(2)}',
+                ),
                 const SizedBox(height: 8),
                 // IVA toggle
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    color: _aplicarIVA
-                        ? Colors.green.shade50
-                        : Colors.grey.shade100,
+                    color:
+                        _aplicarIVA
+                            ? Colors.green.shade50
+                            : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: _aplicarIVA
-                          ? Colors.green.shade300
-                          : Colors.grey.shade300,
+                      color:
+                          _aplicarIVA
+                              ? Colors.green.shade300
+                              : Colors.grey.shade300,
                     ),
                   ),
                   child: Row(
@@ -1058,9 +1268,10 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
                         'IVA 15%: \$${_iva.toStringAsFixed(2)}',
                         style: TextStyle(
                           fontWeight: FontWeight.w500,
-                          color: _aplicarIVA
-                              ? Colors.green.shade700
-                              : Colors.grey.shade600,
+                          color:
+                              _aplicarIVA
+                                  ? Colors.green.shade700
+                                  : Colors.grey.shade600,
                         ),
                       ),
                       Switch(
@@ -1129,11 +1340,14 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade600)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey.shade600,
+          ),
+        ),
         const SizedBox(height: 4),
         Container(
           height: 40,
@@ -1149,9 +1363,10 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
             onChanged: onChanged,
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
-              prefixIcon: icon != null
-                  ? Icon(icon, size: 16, color: Colors.grey.shade500)
-                  : null,
+              prefixIcon:
+                  icon != null
+                      ? Icon(icon, size: 16, color: Colors.grey.shade500)
+                      : null,
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(
                 horizontal: icon != null ? 4 : 10,
@@ -1187,8 +1402,7 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
         style: const TextStyle(fontSize: 13),
         decoration: const InputDecoration(
           border: InputBorder.none,
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         ),
       ),
     );
@@ -1198,12 +1412,14 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w500)),
-        Text(value,
-            style: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
       ],
     );
   }
@@ -1227,8 +1443,10 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text('Cancelar',
-                  style: TextStyle(color: Colors.black54)),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: Colors.black54),
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -1236,13 +1454,17 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
             flex: 2,
             child: ElevatedButton.icon(
               onPressed: _guardando ? null : _guardar,
-              icon: _guardando
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.save),
+              icon:
+                  _guardando
+                      ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                      : const Icon(Icons.save),
               label: Text(_guardando ? 'Guardando...' : 'Guardar cambios'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF27AE60),

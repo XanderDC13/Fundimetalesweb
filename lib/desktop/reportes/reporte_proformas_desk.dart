@@ -28,7 +28,6 @@ class _ReporteProformasVentasDeskScreenState
   final TextEditingController _rucController = TextEditingController();
   String _rolUsuario = '';
   String _uidUsuario = '';
-
   @override
   void initState() {
     super.initState();
@@ -670,6 +669,9 @@ class _ReporteProformasVentasDeskScreenState
                                                   proforma,
                                                   proforma['id'],
                                                   esMobil: false,
+                                                  descontarInventario:
+                                                      false, // 👈 NO toca inventario
+                                                  coleccion: 'proformasventas',
                                                 );
                                                 _obtenerDatos();
                                               },

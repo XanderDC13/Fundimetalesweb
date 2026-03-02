@@ -18,6 +18,12 @@ class _ProformaFundicionDeskScreenState
     extends State<ProformaFundicionDeskScreen> {
   final TextEditingController _clienteController = TextEditingController();
   String _numeroProforma = '';
+  // AGREGAR ESTOS
+  final TextEditingController _formDescripcionController =
+      TextEditingController();
+  final TextEditingController _formKilosController = TextEditingController();
+  final TextEditingController _formPrecioController = TextEditingController();
+  final TextEditingController _formTotalController = TextEditingController();
 
   // Lista de items
   List<ItemProforma> items = [ItemProforma()];
@@ -83,10 +89,24 @@ class _ProformaFundicionDeskScreenState
                               children: [
                                 _buildMobileClienteSection(),
                                 const SizedBox(height: 16),
-                                _buildMobileItemsSection(),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // IZQUIERDA: Formulario agregar
+                                    Expanded(
+                                      flex: 1,
+                                      child: _buildProductosSection(),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    // DERECHA: Lista de productos
+                                    Expanded(
+                                      flex: 1,
+                                      child: _buildListaProductosSection(),
+                                    ),
+                                  ],
+                                ),
                                 const SizedBox(height: 16),
                                 _buildMobileTotalesSection(),
-                                const SizedBox(height: 20),
                               ],
                             ),
                           ),
@@ -112,6 +132,7 @@ class _ProformaFundicionDeskScreenState
   void initState() {
     super.initState();
     _previsualizarNumeroProforma();
+    items = [];
   }
 
   Future<void> _previsualizarNumeroProforma() async {
@@ -185,178 +206,213 @@ class _ProformaFundicionDeskScreenState
     );
   }
 
-  Widget _buildMobileItemsSection() {
+  Widget _buildProductosSection() {
     return _buildMobileSection(
-      title: 'Items (${items.length})',
-      icon: Icons.list_alt,
+      title: 'Agregar Producto',
+      icon: Icons.inventory_2_outlined,
       color: Colors.grey[800]!,
       child: Column(
         children: [
+          _buildItemInputField(
+            controller: _formDescripcionController,
+            label: 'Descripción',
+            options: [
+              'FUNDICION',
+              'CHATARRA',
+              'COBRE SUCIO',
+              'COBRE LIMPIO',
+              'ALUMINIO SUCIO',
+              'ALUMINIO LIMPIO',
+              'HIERRO',
+            ],
+          ),
+          const SizedBox(height: 12),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Productos y servicios',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                  fontWeight: FontWeight.w500,
+              Expanded(
+                child: _buildItemInputField(
+                  controller: _formKilosController,
+                  label: 'Kilos',
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => _calcularTotalFormulario(),
                 ),
               ),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[800],
-                  borderRadius: BorderRadius.circular(20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildItemInputField(
+                  controller: _formPrecioController,
+                  label: 'Precio',
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (_) => _calcularTotalFormulario(),
                 ),
-                child: IconButton(
-                  onPressed: _agregarItem,
-                  icon: Icon(Icons.add, color: Colors.white),
-                  iconSize: 20,
-                  constraints: BoxConstraints(minWidth: 36, minHeight: 36),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildItemInputField(
+                  controller: _formTotalController,
+                  label: 'Subtotal',
+                  readOnly: true,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 16),
-          ...items.asMap().entries.map((entry) {
-            int index = entry.key;
-            ItemProforma item = entry.value;
-            return _buildMobileItemCard(index, item);
-          }).toList(),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _agregarItem,
+              icon: const Icon(Icons.add),
+              label: const Text('Agregar'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.grey[700],
+                side: BorderSide(color: Colors.grey[400]!),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMobileItemCard(int index, ItemProforma item) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
+  Widget _buildListaProductosSection() {
+    return _buildMobileSection(
+      title: 'Lista Productos (${items.length})',
+      icon: Icons.list_alt,
+      color: Colors.grey[800]!,
       child: Column(
         children: [
-          // Header del item
+          // Header tabla
           Container(
-            padding: EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-              ),
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: const Row(
               children: [
-                Row(
+                Expanded(
+                  flex: 4,
+                  child: Text(
+                    'DESCRIPCIÓN',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'KILOS',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'PRECIO',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'SUBTOTAL',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                SizedBox(width: 36),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          if (items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                'No hay productos agregados',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            )
+          else
+            ...items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: index % 2 == 0 ? Colors.white : Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Row(
                   children: [
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[800],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${index + 1}',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                    Expanded(
+                      flex: 4,
+                      child: Text(
+                        item.descripcionController.text,
+                        style: const TextStyle(fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Producto ${index + 1}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[700],
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        item.kilosController.text,
+                        style: const TextStyle(fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        '\$${item.precioController.text}',
+                        style: const TextStyle(fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        item.totalController.text,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green[700],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 36,
+                      child: IconButton(
+                        onPressed: () => _eliminarItem(index),
+                        icon: Icon(
+                          Icons.remove_circle_outline,
+                          color: Colors.red[400],
+                          size: 18,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
                     ),
                   ],
                 ),
-                if (items.length > 1)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.red[50],
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: IconButton(
-                      onPressed: () => _eliminarItem(index),
-                      icon: Icon(Icons.close, color: Colors.red[600]),
-                      iconSize: 18,
-                      constraints: BoxConstraints(minWidth: 32, minHeight: 32),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-
-          // Contenido del item en una sola línea
-          Padding(
-            padding: EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 4,
-                  child: _buildItemInputField(
-                    controller: item.descripcionController,
-                    label: 'Descripción',
-                    options: ["FUNDICION", "CHATARRA", "ALUMINIO", "HIERRO"],
-                  ),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: _buildItemInputField(
-                    controller: item.kilosController,
-                    label: 'Kilos',
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) => _calcularTotal(index),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: _buildItemInputField(
-                    controller: item.precioController,
-                    label: 'Precio',
-                    keyboardType: TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    onChanged: (value) => _calcularTotal(index),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: _buildItemInputField(
-                    controller: item.totalController,
-                    label: 'Subtotal',
-                    readOnly: true,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green[700],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+              );
+            }),
         ],
       ),
     );
@@ -730,26 +786,43 @@ class _ProformaFundicionDeskScreenState
     );
   }
 
-  void _agregarItem() {
+  void _calcularTotalFormulario() {
     setState(() {
-      items.add(ItemProforma());
+      double kilos = double.tryParse(_formKilosController.text) ?? 0;
+      double precio = double.tryParse(_formPrecioController.text) ?? 0;
+      _formTotalController.text = (kilos * precio).toStringAsFixed(2);
+    });
+  }
+
+  void _agregarItem() {
+    if (_formDescripcionController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⚠️ Ingrese una descripción'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final nuevoItem = ItemProforma();
+    nuevoItem.descripcionController.text = _formDescripcionController.text;
+    nuevoItem.kilosController.text = _formKilosController.text;
+    nuevoItem.precioController.text = _formPrecioController.text;
+    nuevoItem.totalController.text = _formTotalController.text;
+
+    setState(() {
+      items.add(nuevoItem);
+      _formDescripcionController.clear();
+      _formKilosController.clear();
+      _formPrecioController.clear();
+      _formTotalController.clear();
     });
   }
 
   void _eliminarItem(int index) {
-    if (items.length > 1) {
-      setState(() {
-        items.removeAt(index);
-      });
-    }
-  }
-
-  void _calcularTotal(int index) {
     setState(() {
-      double kilos = double.tryParse(items[index].kilosController.text) ?? 0;
-      double precio = double.tryParse(items[index].precioController.text) ?? 0;
-      double total = kilos * precio;
-      items[index].totalController.text = total.toStringAsFixed(2);
+      items.removeAt(index);
     });
   }
 

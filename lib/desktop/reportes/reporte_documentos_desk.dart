@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:basefundi/services/navbar_desk.dart';
+import 'package:basefundi/desktop/reportes/editar_proformascot.dart';
 
 class ReporteDocumentosDeskScreen extends StatefulWidget {
   const ReporteDocumentosDeskScreen({super.key});
@@ -27,6 +28,7 @@ class _ReporteDocumentosDeskScreenState
   final TextEditingController _motivoAnulacionController =
       TextEditingController();
   String _filtroVendedor = '';
+  String _filtroDespacho = '';
   List<Map<String, dynamic>> _vendedores = [];
   // Calcular total en dinero
   double get totalDinero => _documentosFiltrados.fold(0.0, (sum, doc) {
@@ -34,6 +36,7 @@ class _ReporteDocumentosDeskScreenState
     final total = double.tryParse(proforma?['total']?.toString() ?? '0') ?? 0.0;
     return sum + total;
   });
+
   @override
   void initState() {
     super.initState();
@@ -238,6 +241,20 @@ class _ReporteDocumentosDeskScreenState
               return vendedor == _filtroVendedor;
             }).toList();
       }
+      // Filtrar por despacho
+      if (_filtroDespacho.isNotEmpty) {
+        documentos =
+            documentos.where((doc) {
+              final proforma = doc['proforma'] as Map<String, dynamic>?;
+              final despacho = proforma?['despacho']?.toString() ?? '';
+
+              if (_filtroDespacho == 'tulcan') {
+                // Tulcan = los que no tienen despacho seleccionado (null, '', o no existe el campo)
+                return despacho.isEmpty || despacho == 'null';
+              }
+              return despacho == _filtroDespacho;
+            }).toList();
+      }
       // Ordenar por fecha más reciente (proforma o orden)
       documentos.sort((a, b) {
         final fechaA = a['fechaProforma'] ?? a['fechaOrden'];
@@ -372,6 +389,88 @@ class _ReporteDocumentosDeskScreenState
     );
   }
 
+  Widget _buildFiltroDespacho() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          hint: const Row(
+            children: [
+              Icon(Icons.local_shipping, color: Colors.grey, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Filtrar por despacho',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+          value: _filtroDespacho.isEmpty ? null : _filtroDespacho,
+          items: const [
+            DropdownMenuItem<String>(
+              value: '',
+              child: Row(
+                children: [
+                  Icon(Icons.all_inclusive, color: Color(0xFF4682B4), size: 20),
+                  SizedBox(width: 8),
+                  Text('Todos los despachos'),
+                ],
+              ),
+            ),
+            DropdownMenuItem<String>(
+              value: 'quito',
+              child: Row(
+                children: [
+                  Icon(Icons.location_on, color: Color(0xFF4682B4), size: 20),
+                  SizedBox(width: 8),
+                  Text('Despacho Quito'),
+                ],
+              ),
+            ),
+            DropdownMenuItem<String>(
+              value: 'guayaquil',
+              child: Row(
+                children: [
+                  Icon(Icons.location_on, color: Color(0xFF4682B4), size: 20),
+                  SizedBox(width: 8),
+                  Text('Despacho Guayaquil'),
+                ],
+              ),
+            ),
+            DropdownMenuItem<String>(
+              value: 'tulcan',
+              child: Row(
+                children: [
+                  Icon(Icons.location_on, color: Colors.orange, size: 20),
+                  SizedBox(width: 8),
+                  Text('Despacho Tulcán'),
+                ],
+              ),
+            ),
+          ],
+          onChanged: (value) {
+            setState(() {
+              _filtroDespacho = value ?? '';
+            });
+            _obtenerDatos();
+          },
+        ),
+      ),
+    );
+  }
+
   void _limpiarFiltros() {
     setState(() {
       _fechaInicio = null;
@@ -379,6 +478,7 @@ class _ReporteDocumentosDeskScreenState
       _filtroCliente = '';
       _filtroCedula = '';
       _filtroVendedor = '';
+      _filtroDespacho = '';
       _clienteController.clear();
       _cedulaController.clear();
     });
@@ -852,8 +952,13 @@ class _ReporteDocumentosDeskScreenState
                         ],
                       ),
                       const SizedBox(height: 12),
-                      // Tercera fila: filtro por vendedor
-                      _buildFiltroVendedor(),
+                      Row(
+                        children: [
+                          Expanded(child: _buildFiltroVendedor()),
+                          const SizedBox(width: 10),
+                          Expanded(child: _buildFiltroDespacho()),
+                        ],
+                      ),
                     ],
                   ),
 
@@ -1039,7 +1144,8 @@ class _ReporteDocumentosDeskScreenState
                                 1: FlexColumnWidth(3.0), // Cliente
                                 2: FlexColumnWidth(2.0), // Proforma
                                 3: FlexColumnWidth(2.0), // Orden
-                                4: FlexColumnWidth(1.5), // Anular
+                                4: FlexColumnWidth(1.2), // Editar (NUEVA)
+                                5: FlexColumnWidth(1.2), // Anular
                               },
                               children: [
                                 // ENCABEZADO
@@ -1052,6 +1158,7 @@ class _ReporteDocumentosDeskScreenState
                                     _TablaHeaderMain('Cliente'),
                                     _TablaHeaderMain('Proforma'),
                                     _TablaHeaderMain('Orden'),
+                                    _TablaHeaderMain('Editar'),
                                     _TablaHeaderMain('Anular'),
                                   ],
                                 ),
@@ -1159,7 +1266,7 @@ class _ReporteDocumentosDeskScreenState
                                           child: ElevatedButton.icon(
                                             onPressed:
                                                 (documento['orden'] != null &&
-                                                        !isAnulado) // MODIFICAR
+                                                        !isAnulado)
                                                     ? () => generarOrdenPDF(
                                                       documento['numero_orden']
                                                               ?.toString() ??
@@ -1179,8 +1286,66 @@ class _ReporteDocumentosDeskScreenState
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor:
                                                   (documento['orden'] != null &&
-                                                          !isAnulado) // MODIFICAR
+                                                          !isAnulado)
                                                       ? const Color(0xFF4682B4)
+                                                      : Colors.grey,
+                                              foregroundColor: Colors.white,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
+                                              minimumSize: const Size(0, 32),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      // AGREGAR ESTA COLUMNA NUEVA: EDITAR
+                                      Padding(
+                                        padding: const EdgeInsets.all(8),
+                                        child: Center(
+                                          child: ElevatedButton.icon(
+                                            onPressed:
+                                                (documento['proforma'] !=
+                                                            null &&
+                                                        !isAnulado)
+                                                    ? () async {
+                                                      await EditarProformaVentas.mostrar(
+                                                        context,
+                                                        documento['proforma']
+                                                            as Map<
+                                                              String,
+                                                              dynamic
+                                                            >,
+                                                        documento['numero_proforma']
+                                                                ?.toString() ??
+                                                            '',
+                                                        esMobil: false,
+                                                        descontarInventario:
+                                                            true, // 👈 SÍ toca inventario
+                                                        coleccion: 'proformas',
+                                                      );
+                                                      _obtenerDatos();
+                                                    }
+                                                    : null,
+                                            icon: const Icon(
+                                              Icons.edit,
+                                              size: 16,
+                                            ),
+                                            label: const Text(
+                                              'Editar',
+                                              style: TextStyle(fontSize: 12),
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  (documento['proforma'] !=
+                                                              null &&
+                                                          !isAnulado)
+                                                      ? Colors.orange[700]
                                                       : Colors.grey,
                                               foregroundColor: Colors.white,
                                               padding:

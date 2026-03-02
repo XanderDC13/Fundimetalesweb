@@ -65,6 +65,7 @@ class _ProformaOrdenDespachoDeskScreenState
   String? _vendedorSeleccionado; // nombre del vendedor
   // ci_ruc para guardar
   List<Map<String, dynamic>> _vendedores = [];
+  String? _despachoSeleccionado; // 'sin_despacho', 'Quito', 'Guayaquil'
 
   Future<void> _cargarVendedores() async {
     final cedulasUsuarios = [
@@ -592,6 +593,13 @@ class _ProformaOrdenDespachoDeskScreenState
   }
 
   Future<void> _descontarInventario() async {
+    if (_despachoSeleccionado == 'quito' ||
+        _despachoSeleccionado == 'guayaquil') {
+      print(
+        'ℹ️ Despacho seleccionado: $_despachoSeleccionado - No se descuenta inventario',
+      );
+      return; // Salir sin descontar
+    }
     try {
       final usuario = await _obtenerDatosUsuario();
       final timestamp = Timestamp.now();
@@ -1097,6 +1105,112 @@ class _ProformaOrdenDespachoDeskScreenState
           ),
           const SizedBox(height: 12),
           _buildSelectorVendedor(),
+
+          // ⭐ NUEVO: SELECTOR DE DESPACHO
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.location_on, color: Colors.grey[600], size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Seleccionar Despacho',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    // Botón Quito
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _despachoSeleccionado =
+                                _despachoSeleccionado == 'quito'
+                                    ? null
+                                    : 'quito';
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              _despachoSeleccionado == 'quito'
+                                  ? const Color(0xFF4682B4)
+                                  : Colors.grey[200],
+                          foregroundColor:
+                              _despachoSeleccionado == 'quito'
+                                  ? Colors.white
+                                  : Colors.grey[700],
+                          padding: EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: BorderSide(
+                              color:
+                                  _despachoSeleccionado == 'quito'
+                                      ? const Color(0xFF4682B4)
+                                      : Colors.grey[300]!,
+                            ),
+                          ),
+                        ),
+                        child: const Text('Despacho Quito'),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    // Botón Guayaquil
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _despachoSeleccionado =
+                                _despachoSeleccionado == 'guayaquil'
+                                    ? null
+                                    : 'guayaquil';
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              _despachoSeleccionado == 'guayaquil'
+                                  ? const Color(0xFF4682B4)
+                                  : Colors.grey[200],
+                          foregroundColor:
+                              _despachoSeleccionado == 'guayaquil'
+                                  ? Colors.white
+                                  : Colors.grey[700],
+                          padding: EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: BorderSide(
+                              color:
+                                  _despachoSeleccionado == 'guayaquil'
+                                      ? const Color(0xFF4682B4)
+                                      : Colors.grey[300]!,
+                            ),
+                          ),
+                        ),
+                        child: const Text('Despacho Guayaquil'),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+              ],
+            ),
+          ),
+
           // BOTÓN GUARDAR CLIENTE (solo visible en modo manual)
           if (_entradaManualHabilitada && !_clienteEncontrado)
             Container(
@@ -2370,7 +2484,7 @@ class _ProformaOrdenDespachoDeskScreenState
       'direccion': _direccionController.text,
       'telefono': _telefonoController.text,
       'vendedor_nombre': _vendedorSeleccionado ?? 'Sin asignar',
-
+      'despacho': _despachoSeleccionado,
       'items':
           items
               .map(
@@ -2421,7 +2535,7 @@ class _ProformaOrdenDespachoDeskScreenState
       'direccion': _direccionController.text,
       'ciudad': _ciudadController.text,
       'telefono': _telefonoController.text,
-
+      'despacho': _despachoSeleccionado,
       'items':
           items
               .map(
@@ -2815,6 +2929,7 @@ class _ProformaOrdenDespachoDeskScreenState
       _mensajeBusqueda = '';
       _entradaManualHabilitada = true;
       items.clear();
+      _despachoSeleccionado = null;
       items.add(ItemOrdenDespacho());
       _vendedorSeleccionado = null;
     });
