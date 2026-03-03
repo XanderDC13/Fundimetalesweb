@@ -22,7 +22,8 @@ Future<void> generarOrdenPDF(String numero, String? ciRuc) async {
   }
 
   final data = query.docs.first.data();
-
+  final fechaDocumento =
+      (data['fecha'] as Timestamp?)?.toDate() ?? DateTime.now();
   // Cargar logo
   pw.ImageProvider? logoProvider;
   try {
@@ -88,6 +89,7 @@ Future<void> generarOrdenPDF(String numero, String? ciRuc) async {
                       _buildHeader(
                         logoProvider,
                         data['numero']?.toString() ?? '',
+                        fechaDocumento,
                       ),
                       pw.SizedBox(height: 12),
                       _buildClienteInfo(
@@ -153,6 +155,7 @@ Future<void> generarOrdenPDF(String numero, String? ciRuc) async {
                       _buildHeader(
                         logoProvider,
                         data['numero']?.toString() ?? '',
+                        fechaDocumento,
                       ),
                       pw.SizedBox(height: 12),
                       _buildClienteInfo(
@@ -257,7 +260,11 @@ pw.Widget _buildFooter() {
   );
 }
 
-pw.Widget _buildHeader(pw.ImageProvider? logoProvider, String numeroOrden) {
+pw.Widget _buildHeader(
+  pw.ImageProvider? logoProvider,
+  String numeroOrden,
+  DateTime fechaDocumento,
+) {
   return pw.Container(
     width: double.infinity,
     height: 70,
@@ -378,11 +385,9 @@ pw.Widget _buildHeader(pw.ImageProvider? logoProvider, String numeroOrden) {
                   mainAxisAlignment: pw.MainAxisAlignment.center,
                   mainAxisSize: pw.MainAxisSize.min,
                   children: [
-                    _buildFechaBox('D', '${DateTime.now().day}', 14),
-                    pw.SizedBox(width: 2),
-                    _buildFechaBox('M', '${DateTime.now().month}', 14),
-                    pw.SizedBox(width: 2),
-                    _buildFechaBox('A', '${DateTime.now().year}', 18),
+                    _buildFechaBox('D', '${fechaDocumento.day}', 14),
+                    _buildFechaBox('M', '${fechaDocumento.month}', 14),
+                    _buildFechaBox('A', '${fechaDocumento.year}', 18),
                   ],
                 ),
               ],

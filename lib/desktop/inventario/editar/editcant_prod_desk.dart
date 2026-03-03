@@ -19,7 +19,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
   String sucursalUsuario = '';
   String sucursalSeleccionada = '';
   Map<String, List<String>> procesosPorSucursal = {
-    'Tulcán': ['bruto', 'pintura', 'mecanizado', 'bodega'],
+    'Tulcán': ['bruto', 'bodega'],
     'Quito': ['bodega'],
     'Guayaquil': ['bodega'],
   };
