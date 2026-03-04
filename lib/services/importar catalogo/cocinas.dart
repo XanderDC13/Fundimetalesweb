@@ -4,19 +4,19 @@ import 'package:csv/csv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:basefundi/services/navbar_desk.dart';
 
-class ImportarAranasScreen extends StatefulWidget {
-  const ImportarAranasScreen({super.key});
+class ImportarCocinasScreen extends StatefulWidget {
+  const ImportarCocinasScreen({super.key});
 
   @override
-  State<ImportarAranasScreen> createState() => _ImportarAranasScreenState();
+  State<ImportarCocinasScreen> createState() => _ImportarCocinasScreenState();
 }
 
-class _ImportarAranasScreenState extends State<ImportarAranasScreen> {
+class _ImportarCocinasScreenState extends State<ImportarCocinasScreen> {
   bool cargando = false;
   int totalFilas = 0;
   int filasProcesadas = 0;
 
-  Future<void> importararanasCSV() async {
+  Future<void> importarCocinasCSV() async {
     setState(() {
       cargando = true;
       totalFilas = 0;
@@ -40,19 +40,18 @@ class _ImportarAranasScreenState extends State<ImportarAranasScreen> {
         reader.readAsText(file);
 
         reader.onLoadEnd.listen((event) async {
-          await _procesararanasCSV(reader.result as String);
+          await _procesarCocinasCSV(reader.result as String);
         });
       });
     } catch (e) {
-      _manejarError('Error al importar CSV de arañas', e);
+      _manejarError('Error al importar CSV de cocinas', e);
     }
   }
 
-  Future<void> _procesararanasCSV(String contenido) async {
+  Future<void> _procesarCocinasCSV(String contenido) async {
     final rowsAsListOfValues = const CsvToListConverter(
       fieldDelimiter: ';',
       eol: '\n',
-      textDelimiter: "'",
     ).convert(contenido);
 
     if (rowsAsListOfValues.isEmpty) {
@@ -64,13 +63,8 @@ class _ImportarAranasScreenState extends State<ImportarAranasScreen> {
     // Columnas esperadas (índice):
     // 0: referencia
     // 1: nombre
-    // 2: pistainterna
-    // 3: pistaexterna
-    // 4: patas
-    // 5: manzana
-    // 6: pvp
-    // 7: descuento15
-    // 8: peso
+    // 2: dimensiones
+    // 3: pvp
 
     setState(() {
       totalFilas = rowsAsListOfValues.length - 1;
@@ -80,21 +74,15 @@ class _ImportarAranasScreenState extends State<ImportarAranasScreen> {
     for (int i = 1; i < rowsAsListOfValues.length; i++) {
       final fila = rowsAsListOfValues[i];
 
-      if (fila.length < 9) {
+      if (fila.length < 4) {
         print('⚠️ Fila $i incompleta, saltada.');
         continue;
       }
 
       final referencia = fila[0].toString().trim();
       final nombre = fila[1].toString().trim();
-      final pistainterna = fila[2].toString().trim();
-      final pistaexterna = fila[3].toString().trim();
-      final patas = fila[4].toString().trim();
-      final manzana = fila[5].toString().trim();
-      final pvp = double.tryParse(fila[6].toString().trim()) ?? 0.0;
-      final descuento15Raw = double.tryParse(fila[7].toString().trim());
-      final descuento15 = descuento15Raw ?? (pvp * 0.85);
-      final peso = double.tryParse(fila[8].toString().trim()) ?? 0.0;
+      final dimensiones = fila[2].toString().trim();
+      final pvp = double.tryParse(fila[3].toString().trim()) ?? 0.0;
 
       if (referencia.isEmpty || nombre.isEmpty) {
         print('⚠️ Fila $i inválida (faltan datos obligatorios), saltada.');
@@ -104,23 +92,18 @@ class _ImportarAranasScreenState extends State<ImportarAranasScreen> {
       try {
         await FirebaseFirestore.instance
             .collection('catalogo')
-            .doc('Arañas')
+            .doc('Cocinas')
             .collection('productos')
             .doc()
             .set({
               'referencia': referencia,
               'nombre': nombre,
-              'pistainterna': pistainterna,
-              'pistaexterna': pistaexterna,
-              'patas': patas,
-              'manzana': manzana,
+              'dimensiones': dimensiones,
               'pvp': pvp,
-              'descuento15': double.parse(descuento15.toStringAsFixed(2)),
-              'peso': peso,
               'fecha': FieldValue.serverTimestamp(),
             }, SetOptions(merge: true));
 
-        print('✅ Araña guardada: $referencia');
+        print('✅ Cocina guardada: $referencia');
       } catch (e) {
         print('❌ Error fila $i: $e');
       }
@@ -129,7 +112,7 @@ class _ImportarAranasScreenState extends State<ImportarAranasScreen> {
     }
 
     if (!mounted) return;
-    _mostrarMensaje('Arañas importadas correctamente');
+    _mostrarMensaje('Cocinas importadas correctamente');
     setState(() => cargando = false);
   }
 
@@ -170,7 +153,7 @@ class _ImportarAranasScreenState extends State<ImportarAranasScreen> {
                 const Align(
                   alignment: Alignment.center,
                   child: Text(
-                    'Importar CSV - Catálogo de Arañas',
+                    'Importar CSV - Catálogo de Cocinas',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 24,
@@ -192,12 +175,12 @@ class _ImportarAranasScreenState extends State<ImportarAranasScreen> {
                           children: [
                             const CircularProgressIndicator(
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                Color(0xFFE67E22),
+                                Color(0xFFE74C3C),
                               ),
                             ),
                             const SizedBox(height: 20),
                             Text(
-                              'Importando Arañas: $filasProcesadas / $totalFilas',
+                              'Importando Cocinas: $filasProcesadas / $totalFilas',
                               style: const TextStyle(fontSize: 16),
                             ),
                           ],
@@ -214,7 +197,7 @@ class _ImportarAranasScreenState extends State<ImportarAranasScreen> {
                                     width: double.infinity,
                                     padding: const EdgeInsets.all(40),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFE67E22),
+                                      color: const Color(0xFFE74C3C),
                                       borderRadius: BorderRadius.circular(16),
                                       boxShadow: [
                                         BoxShadow(
@@ -227,13 +210,13 @@ class _ImportarAranasScreenState extends State<ImportarAranasScreen> {
                                     child: Column(
                                       children: [
                                         const Icon(
-                                          Icons.settings,
+                                          Icons.kitchen,
                                           size: 80,
                                           color: Colors.white,
                                         ),
                                         const SizedBox(height: 24),
                                         const Text(
-                                          'CATÁLOGO DE ARAÑAS',
+                                          'CATÁLOGO DE COCINAS',
                                           style: TextStyle(
                                             fontSize: 28,
                                             fontWeight: FontWeight.bold,
@@ -242,7 +225,7 @@ class _ImportarAranasScreenState extends State<ImportarAranasScreen> {
                                         ),
                                         const SizedBox(height: 16),
                                         const Text(
-                                          'Columnas CSV:\nreferencia ; nombre ; pista interna ; pista externa ; patas ; manzana ; pvp ; 15% ; peso',
+                                          'Columnas CSV:\nreferencia ; nombre ; dimensiones ; pvp',
                                           textAlign: TextAlign.center,
                                           style: TextStyle(
                                             color: Colors.white70,
@@ -251,13 +234,13 @@ class _ImportarAranasScreenState extends State<ImportarAranasScreen> {
                                         ),
                                         const SizedBox(height: 32),
                                         ElevatedButton.icon(
-                                          onPressed: importararanasCSV,
+                                          onPressed: importarCocinasCSV,
                                           icon: const Icon(
                                             Icons.upload_file,
                                             size: 24,
                                           ),
                                           label: const Text(
-                                            'SUBIR CSV ARAÑAS',
+                                            'SUBIR CSV COCINAS',
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 18,
@@ -266,7 +249,7 @@ class _ImportarAranasScreenState extends State<ImportarAranasScreen> {
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: Colors.white,
                                             foregroundColor: const Color(
-                                              0xFFE67E22,
+                                              0xFFE74C3C,
                                             ),
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 40,

@@ -1,6 +1,13 @@
 import 'package:basefundi/services/importar%20catalogo/accecocina.dart';
+import 'package:basefundi/services/importar%20catalogo/agricolas.dart';
+import 'package:basefundi/services/importar%20catalogo/alcantarillado.dart';
+import 'package:basefundi/services/importar%20catalogo/ara%C3%B1as.dart';
+import 'package:basefundi/services/importar%20catalogo/bocines.dart';
+import 'package:basefundi/services/importar%20catalogo/cocinas.dart';
 import 'package:basefundi/services/importar%20catalogo/discos.dart';
+import 'package:basefundi/services/importar%20catalogo/gimnasio.dart';
 import 'package:basefundi/services/importar%20catalogo/rejillas.dart';
+import 'package:basefundi/services/importar%20catalogo/sistemas.dart';
 import 'package:basefundi/services/importar%20catalogo/soporteria.dart';
 import 'package:basefundi/services/importar%20catalogo/sumideros.dart';
 import 'package:basefundi/services/importar%20catalogo/tambores.dart';
@@ -29,7 +36,7 @@ class _ImportarCatalogoScreenState extends State<ImportarCatalogoScreen> {
     'Accesorios Cocinas',
     'Gimnasio',
     'Agrícolas',
-    'Sistemas Adaptación Frenos',
+    'Sistemas',
     'Soportería',
   ];
 
@@ -40,6 +47,15 @@ class _ImportarCatalogoScreenState extends State<ImportarCatalogoScreen> {
         break;
       case 'Tambores':
         navegarConFade(context, const ImportarTamboresScreen());
+        break;
+      case 'Arañas':
+        navegarConFade(context, const ImportarAranasScreen());
+        break;
+      case 'Bocines':
+        navegarConFade(context, const ImportarBocinesScreen());
+        break;
+      case 'Cocinas':
+        navegarConFade(context, const ImportarCocinasScreen());
         break;
       case 'Soporteria':
         navegarConFade(context, const ImportarSoporteriaScreen());
@@ -52,6 +68,18 @@ class _ImportarCatalogoScreenState extends State<ImportarCatalogoScreen> {
         break;
       case 'Sumideros Rejillas':
         navegarConFade(context, const ImportarSumiderosScreen());
+        break;
+      case 'Alcantarillado':
+        navegarConFade(context, const ImportarAlcantarilladoScreen());
+        break;
+      case 'Gimnasio':
+        navegarConFade(context, const ImportarGimnasioScreen());
+        break;
+      case 'Agrícolas':
+        navegarConFade(context, const ImportarAgricolasScreen());
+        break;
+      case 'Sistemas':
+        navegarConFade(context, const ImportarSistemasScreen());
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(
@@ -218,7 +246,7 @@ class _ImportarCatalogoScreenState extends State<ImportarCatalogoScreen> {
         return Icons.fitness_center;
       case 'Agrícolas':
         return Icons.agriculture;
-      case 'Sistemas Adaptación Frenos':
+      case 'Sistemas':
         return Icons.build;
       case 'Soportería':
         return Icons.construction;

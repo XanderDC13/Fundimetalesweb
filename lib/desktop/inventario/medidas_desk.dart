@@ -14,7 +14,7 @@ class VisualizarCatalogoScreen extends StatefulWidget {
 
 class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
     with SingleTickerProviderStateMixin {
-  String categoriaSeleccionada = 'Discos';
+  String categoriaSeleccionada = 'Tambores';
   String terminoBusqueda = '';
   final TextEditingController _controladorBusqueda = TextEditingController();
   late TabController _tabController;
@@ -78,8 +78,24 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
     }).toList();
   }
 
+  // ── COLUMNAS POR CATEGORÍA ─────────────────────────────────────────────────
   List<String> _obtenerColumnas(String categoria) {
     switch (categoria) {
+      case 'Tambores':
+        return [
+          'Referencia',
+          'Nombre',
+          'Diámetro',
+          'Huecos',
+          'Banda',
+          'Bocín',
+          'POC',
+          'Observaciones',
+          'PVP',
+          '20%',
+          'Peso',
+          'Acciones',
+        ];
       case 'Discos':
         return [
           'Referencia',
@@ -95,41 +111,53 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
           'Peso',
           'Acciones',
         ];
-      case 'Tambores':
+      case 'Arañas':
         return [
           'Referencia',
           'Nombre',
-          'Diámetro',
-          'Hueco',
-          'Banda',
-          'Bocín',
-          'POC',
-          'Observaciones',
+          'Pista Interna',
+          'Pista Externa',
+          'Patas',
+          'Manzana',
           'PVP',
-          '20%',
+          '15%',
           'Peso',
-          'Acciones',
-        ];
-      case 'Soporteria':
-        return [
-          'Referencia',
-          'Nombre',
-          'Dimensiones',
-          'Peso',
-          'PVP',
           'Acciones',
         ];
       case 'Bocines':
         return [
           'Referencia',
           'Nombre',
-          'Pista interna',
-          'Pista externa',
+          'Pista Interna',
+          'Pista Externa',
           'Pernos',
           'Eje',
           'PVP',
           '15%',
           'Peso',
+          'Acciones',
+        ];
+      case 'Alcantarillado':
+        return [
+          'Referencia',
+          'Nombre',
+          'Dim. Tapa',
+          'Dim. Cerco',
+          'Peso Tapa',
+          'Peso Cerco',
+          'Total',
+          'PVP',
+          'Acciones',
+        ];
+      case 'Sumideros':
+        return [
+          'Referencia',
+          'Nombre',
+          'Dim. Tapa',
+          'Dim. Cerco',
+          'Total',
+          'PVP',
+          '15%',
           'Acciones',
         ];
       case 'Rejillas':
@@ -138,7 +166,7 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
           'Nombre',
           'Dimensiones',
           'PVP',
-          'Desc',
+          '20%',
           'Acciones',
         ];
       case 'Accesorios':
@@ -150,15 +178,33 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
           'PVP',
           'Acciones',
         ];
-      case 'Sumideros':
+      case 'Gimnasio':
+        return ['Referencia', 'Nombre', 'Peso', 'PVP', 'Acciones'];
+      case 'Agrícolas':
         return [
           'Referencia',
           'Nombre',
           'Dimensiones',
-          'Tapa',
-          'Cerco',
+          'Peso',
           'PVP',
-          'Desc',
+          'Acciones',
+        ];
+      case 'Sistemas':
+        return [
+          'Referencia',
+          'Nombre',
+          'Dimensiones',
+          'Peso',
+          'PVP',
+          'Acciones',
+        ];
+      case 'Soporteria':
+        return [
+          'Referencia',
+          'Nombre',
+          'Dimensiones',
+          'Peso',
+          'PVP',
           'Acciones',
         ];
       case 'Cocinas':
@@ -168,324 +214,190 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
     }
   }
 
-  String _obtenerValorCelda(
-    Map<String, dynamic> data,
-    String columna,
-    String categoria,
-  ) {
-    switch (categoria) {
-      case 'Discos':
-        switch (columna) {
-          case 'Referencia':
-            return data['referencia']?.toString() ?? '';
-          case 'Nombre':
-            return data['nombre']?.toString() ?? '';
-          case 'Diámetro':
-            return data['diametro']?.toString() ?? '';
-          case 'Altura T':
-            return data['alturaTotal']?.toString() ?? '';
-          case 'Bocín':
-            return data['bocin']?.toString() ?? '';
-          case 'Espesor':
-            return data['espesor']?.toString() ?? '';
-          case 'Huecos':
-            return data['huecos']?.toString() ?? '';
-          case 'S/V':
-            return data['tipo']?.toString() ?? '';
-          case 'PVP':
-            return '\$${data['pvp']?.toString() ?? '0.00'}';
-          case '20%':
-            return '\$${data['descuento20']?.toString() ?? '0.00'}';
-          case 'Peso':
-            return '${data['peso']?.toString() ?? '0.00'} kg';
-          default:
-            return '';
-        }
-      case 'Tambores':
-        switch (columna) {
-          case 'Referencia':
-            return data['referencia']?.toString() ?? '';
-          case 'Nombre':
-            return data['nombre']?.toString() ?? '';
-          case 'Diámetro':
-            return data['diametro']?.toString() ?? '';
-          case 'Hueco':
-            return data['hueco']?.toString() ?? '';
-          case 'Banda':
-            return data['banda']?.toString() ?? '';
-          case 'Bocín':
-            return data['bocin']?.toString() ?? '';
-          case 'POC':
-            return data['poc']?.toString() ?? '';
-          case 'Observaciones':
-            return data['observaciones']?.toString() ?? '';
-          case 'PVP':
-            return '\$${data['pvp']?.toString() ?? '0.00'}';
-          case '20%':
-            return '\$${data['descuento20']?.toString() ?? '0.00'}';
-          case 'Peso':
-            return '${data['peso']?.toString() ?? '0.00'} kg';
-          default:
-            return '';
-        }
-      case 'Soporteria':
-        switch (columna) {
-          case 'Referencia':
-            return data['referencia']?.toString() ?? '';
-          case 'Nombre':
-            return data['nombre']?.toString() ?? '';
-          case 'Dimensiones':
-            return data['dimensiones']?.toString() ?? '';
-          case 'Peso':
-            return '${data['peso']?.toString() ?? '0.00'} kg';
-          case 'PVP':
-            return '\$${data['pvp']?.toString() ?? '0.00'}';
-          default:
-            return '';
-        }
-      case 'Rejillas':
-        switch (columna) {
-          case 'Referencia':
-            return data['referencia']?.toString() ?? '';
-          case 'Nombre':
-            return data['nombre']?.toString() ?? '';
-          case 'Dimensiones':
-            return data['dimensiones']?.toString() ?? '';
-          case 'PVP':
-            return '\$${data['pvp']?.toString() ?? '0.00'}';
-          case 'Desc':
-            return '\$${data['descuento']?.toString() ?? '0.00'}';
-          default:
-            return '';
-        }
-      case 'Accesorios':
-        switch (columna) {
-          case 'Referencia':
-            return data['referencia']?.toString() ?? '';
-          case 'Nombre':
-            return data['nombre']?.toString() ?? '';
-          case 'Dimensiones':
-            return data['dimensiones']?.toString() ?? '';
-          case 'Peso':
-            return '${data['peso']?.toString() ?? '0.00'} kg';
-          case 'PVP':
-            return '\$${data['pvp']?.toString() ?? '0.00'}';
-          default:
-            return '';
-        }
-      case 'Sumideros':
-        switch (columna) {
-          case 'Referencia':
-            return data['referencia']?.toString() ?? '';
-          case 'Nombre':
-            return data['nombre']?.toString() ?? '';
-          case 'Dimensiones':
-            return data['dimensiones']?.toString() ?? '';
-          case 'Tapa':
-            return data['tapa']?.toString() ?? '';
-          case 'Cerco':
-            return data['cerco']?.toString() ?? '';
-          case 'PVP':
-            return '\$${data['pvp']?.toString() ?? '0.00'}';
-          case 'Desc':
-            return '\$${data['descuento']?.toString() ?? '0.00'}';
-          default:
-            return '';
-        }
-      case 'Bocines':
-        switch (columna) {
-          case 'Referencia':
-            return data['referencia']?.toString() ?? '';
-          case 'Nombre':
-            return data['nombre']?.toString() ?? '';
-          case 'Pista interna':
-            return data['pistainterna']?.toString() ?? '';
-          case 'Pista externa':
-            return data['pistaexterna']?.toString() ?? '';
-          case 'Pernos':
-            return data['pernos']?.toString() ?? '';
-          case 'Eje':
-            return data['eje']?.toString() ?? '';
-          case 'PVP':
-            return '\$${data['pvp']?.toString() ?? '0.00'}';
-          case '15%':
-            return '\$${data['descuento20']?.toString() ?? '0.00'}';
-          case 'Peso':
-            return '${data['peso']?.toString() ?? '0.00'} kg';
-          default:
-            return '';
-        }
-      default:
-        return data[columna.toLowerCase()]?.toString() ?? '';
-    }
-  }
-
-  String _obtenerValorParaEdicion(
-    Map<String, dynamic> data,
-    String columna,
-    String categoria,
-  ) {
-    switch (categoria) {
-      case 'Discos':
-        switch (columna) {
-          case 'Referencia':
-            return data['referencia']?.toString() ?? '';
-          case 'Nombre':
-            return data['nombre']?.toString() ?? '';
-          case 'Diámetro':
-            return data['diametro']?.toString() ?? '';
-          case 'Altura T':
-            return data['alturaTotal']?.toString() ?? '';
-          case 'Bocín':
-            return data['bocin']?.toString() ?? '';
-          case 'Espesor':
-            return data['espesor']?.toString() ?? '';
-          case 'Huecos':
-            return data['huecos']?.toString() ?? '';
-          case 'S/V':
-            return data['tipo']?.toString() ?? '';
-          case 'PVP':
-            return data['pvp']?.toString() ?? '';
-          case '20%':
-            return data['descuento20']?.toString() ?? '';
-          case 'Peso':
-            return data['peso']?.toString() ?? '';
-          default:
-            return '';
-        }
-      case 'Tambores':
-        switch (columna) {
-          case 'Referencia':
-            return data['referencia']?.toString() ?? '';
-          case 'Nombre':
-            return data['nombre']?.toString() ?? '';
-          case 'Diámetro':
-            return data['diametro']?.toString() ?? '';
-          case 'Hueco':
-            return data['hueco']?.toString() ?? '';
-          case 'Banda':
-            return data['banda']?.toString() ?? '';
-          case 'Bocín':
-            return data['bocin']?.toString() ?? '';
-          case 'POC':
-            return data['poc']?.toString() ?? '';
-          case 'Observaciones':
-            return data['observaciones']?.toString() ?? '';
-          case 'PVP':
-            return data['pvp']?.toString() ?? '';
-          case '20%':
-            return data['descuento20']?.toString() ?? '';
-          case 'Peso':
-            return data['peso']?.toString() ?? '';
-          default:
-            return '';
-        }
-      case 'Bocines':
-        switch (columna) {
-          case 'Referencia':
-            return data['referencia']?.toString() ?? '';
-          case 'Nombre':
-            return data['nombre']?.toString() ?? '';
-          case 'Pista interna':
-            return data['pistainterna']?.toString() ?? '';
-          case 'Pista externa':
-            return data['pistaexterna']?.toString() ?? '';
-          case 'Pernos':
-            return data['pernos']?.toString() ?? '';
-          case 'Eje':
-            return data['eje']?.toString() ?? '';
-          case 'PVP':
-            return data['pvp']?.toString() ?? '';
-          case '15%':
-            return data['descuento20']?.toString() ?? '';
-          case 'Peso':
-            return data['peso']?.toString() ?? '';
-          default:
-            return '';
-        }
-      case 'Soporteria':
-      case 'Rejillas':
-      case 'Accesorios':
-      case 'Sumideros':
-        if (columna == 'PVP') return data['pvp']?.toString() ?? '';
-        if (columna == 'Desc') return data['descuento']?.toString() ?? '';
-        return data[_convertirColumnaNombreCampo(columna)]?.toString() ?? '';
-      default:
-        return data[_convertirColumnaNombreCampo(columna)]?.toString() ?? '';
-    }
-  }
-
+  // ── COLUMNA → CAMPO FIRESTORE ──────────────────────────────────────────────
   String _convertirColumnaNombreCampo(String columna) {
-    switch (columna) {
-      case 'Referencia':
-        return 'referencia';
-      case 'Nombre':
-        return 'nombre';
-      case 'Diámetro':
-        return 'diametro';
-      case 'Altura T':
-        return 'alturaTotal';
-      case 'Bocín':
-        return 'bocin';
-      case 'Espesor':
-        return 'espesor';
-      case 'Huecos':
-        return 'huecos';
-      case 'S/V':
-        return 'tipo';
-      case 'PVP':
-        return 'pvp';
-      case '20%':
-        return 'descuento20';
-      case 'Peso':
-        return 'peso';
-      case 'Hueco':
-        return 'hueco';
-      case 'Banda':
-        return 'banda';
-      case 'POC':
-        return 'poc';
-      case 'Observaciones':
-        return 'observaciones';
-      case 'Dimensiones':
-        return 'dimensiones';
-      case 'Tapa':
-        return 'tapa';
-      case 'Cerco':
-        return 'cerco';
-      case 'Desc':
-        return 'descuento';
-      case 'Descripción':
-        return 'descripcion';
-      case 'Pista interna':
-        return 'pistainterna';
-      case 'Pista externa':
-        return 'pistaexterna';
-      case 'Pernos':
-        return 'pernos';
-      case 'Eje':
-        return 'eje';
-      case '15%':
-        return 'descuento20';
-      default:
-        return columna.toLowerCase();
-    }
+    const mapa = {
+      'Referencia': 'referencia',
+      'Nombre': 'nombre',
+      'Diámetro': 'diametro',
+      'Altura T': 'alturaTotal',
+      'Bocín': 'bocin',
+      'Espesor': 'espesor',
+      'Huecos': 'huecos',
+      'S/V': 'tipo',
+      'PVP': 'pvp',
+      '20%': 'descuento20',
+      '15%': 'descuento15',
+      'Peso': 'peso',
+      'Banda': 'banda',
+      'POC': 'poc',
+      'Observaciones': 'observaciones',
+      'Pista Interna': 'pistainterna',
+      'Pista Externa': 'pistaexterna',
+      'Pernos': 'pernos',
+      'Eje': 'eje',
+      'Patas': 'patas',
+      'Manzana': 'manzana',
+      'Dimensiones': 'dimensiones',
+      'Dim. Tapa': 'dimensionesTapa',
+      'Dim. Cerco': 'dimensionesCerco',
+      'Peso Tapa': 'pesoTapa',
+      'Peso Cerco': 'pesoCerco',
+      // 'Total' no se guarda → se calcula en tiempo real
+    };
+    return mapa[columna] ?? columna.toLowerCase();
   }
 
   bool _esNumerico(String columna) {
-    const camposNumericos = [
+    const numericos = [
       'Diámetro',
       'Altura T',
       'Espesor',
       'Huecos',
       'Peso',
-      'Hueco',
       'Banda',
       'Bocín',
       'POC',
       'PVP',
+      'Peso Tapa',
+      'Peso Cerco',
     ];
-    return camposNumericos.contains(columna);
+    return numericos.contains(columna);
+  }
+
+  // ── VALOR CELDA (con formato para mostrar en tabla) ────────────────────────
+  String _obtenerValorCelda(
+    Map<String, dynamic> data,
+    String columna,
+    String categoria,
+  ) {
+    switch (columna) {
+      case 'Referencia':
+        return data['referencia']?.toString() ?? '';
+      case 'Nombre':
+        return data['nombre']?.toString() ?? '';
+      case 'Diámetro':
+        return data['diametro']?.toString() ?? '';
+      case 'Altura T':
+        return data['alturaTotal']?.toString() ?? '';
+      case 'Bocín':
+        return data['bocin']?.toString() ?? '';
+      case 'Espesor':
+        return data['espesor']?.toString() ?? '';
+      case 'Huecos':
+        return data['huecos']?.toString() ?? '';
+      case 'S/V':
+        return data['tipo']?.toString() ?? '';
+      case 'Banda':
+        return data['banda']?.toString() ?? '';
+      case 'POC':
+        return data['poc']?.toString() ?? '';
+      case 'Observaciones':
+        return data['observaciones']?.toString() ?? '';
+      case 'Pista Interna':
+        return data['pistainterna']?.toString() ?? '';
+      case 'Pista Externa':
+        return data['pistaexterna']?.toString() ?? '';
+      case 'Pernos':
+        return data['pernos']?.toString() ?? '';
+      case 'Eje':
+        return data['eje']?.toString() ?? '';
+      case 'Patas':
+        return data['patas']?.toString() ?? '';
+      case 'Manzana':
+        return data['manzana']?.toString() ?? '';
+      case 'Dimensiones':
+        return data['dimensiones']?.toString() ?? '';
+      case 'Dim. Tapa':
+        return data['dimensionesTapa']?.toString() ?? '';
+      case 'Dim. Cerco':
+        return data['dimensionesCerco']?.toString() ?? '';
+      case 'Peso Tapa':
+        return data['pesoTapa'] != null ? '${data['pesoTapa']} kg' : '';
+      case 'Peso Cerco':
+        return data['pesoCerco'] != null ? '${data['pesoCerco']} kg' : '';
+      case 'Peso':
+        return data['peso'] != null ? '${data['peso']} kg' : '';
+      case 'PVP':
+        return data['pvp'] != null ? '\$${data['pvp']}' : '';
+      case '20%':
+        return data['descuento20'] != null ? '\$${data['descuento20']}' : '';
+      case '15%':
+        return data['descuento15'] != null ? '\$${data['descuento15']}' : '';
+      case 'Total':
+        // Total = pesoTapa + pesoCerco (calculado, no guardado en Firestore)
+        final tapa = double.tryParse(data['pesoTapa']?.toString() ?? '') ?? 0.0;
+        final cerco =
+            double.tryParse(data['pesoCerco']?.toString() ?? '') ?? 0.0;
+        final suma = tapa + cerco;
+        return suma > 0 ? '${suma.toStringAsFixed(2)} kg' : '';
+      default:
+        return '';
+    }
+  }
+
+  // ── VALOR PARA EDICIÓN (sin formato, texto plano) ─────────────────────────
+  String _obtenerValorParaEdicion(
+    Map<String, dynamic> data,
+    String columna,
+    String categoria,
+  ) {
+    switch (columna) {
+      case 'Referencia':
+        return data['referencia']?.toString() ?? '';
+      case 'Nombre':
+        return data['nombre']?.toString() ?? '';
+      case 'Diámetro':
+        return data['diametro']?.toString() ?? '';
+      case 'Altura T':
+        return data['alturaTotal']?.toString() ?? '';
+      case 'Bocín':
+        return data['bocin']?.toString() ?? '';
+      case 'Espesor':
+        return data['espesor']?.toString() ?? '';
+      case 'Huecos':
+        return data['huecos']?.toString() ?? '';
+      case 'S/V':
+        return data['tipo']?.toString() ?? '';
+      case 'Banda':
+        return data['banda']?.toString() ?? '';
+      case 'POC':
+        return data['poc']?.toString() ?? '';
+      case 'Observaciones':
+        return data['observaciones']?.toString() ?? '';
+      case 'Pista Interna':
+        return data['pistainterna']?.toString() ?? '';
+      case 'Pista Externa':
+        return data['pistaexterna']?.toString() ?? '';
+      case 'Pernos':
+        return data['pernos']?.toString() ?? '';
+      case 'Eje':
+        return data['eje']?.toString() ?? '';
+      case 'Patas':
+        return data['patas']?.toString() ?? '';
+      case 'Manzana':
+        return data['manzana']?.toString() ?? '';
+      case 'Dimensiones':
+        return data['dimensiones']?.toString() ?? '';
+      case 'Dim. Tapa':
+        return data['dimensionesTapa']?.toString() ?? '';
+      case 'Dim. Cerco':
+        return data['dimensionesCerco']?.toString() ?? '';
+      case 'Peso Tapa':
+        return data['pesoTapa']?.toString() ?? '';
+      case 'Peso Cerco':
+        return data['pesoCerco']?.toString() ?? '';
+      case 'Peso':
+        return data['peso']?.toString() ?? '';
+      case 'PVP':
+        return data['pvp']?.toString() ?? '';
+      case '20%':
+        return data['descuento20']?.toString() ?? '';
+      case '15%':
+        return data['descuento15']?.toString() ?? '';
+      default:
+        return '';
+    }
   }
 
   IconData _obtenerIconoPorNombre(String categoria) {
@@ -501,8 +413,18 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
   void _mostrarModalDetalle(Map<String, dynamic> data, String categoria) {
     final excluir = {'referencia', 'nombre', 'fecha', 'Fecha'};
 
-    // ── ORDEN FIJO POR CATEGORÍA ──────────────────────────
     const Map<String, List<String>> ordenCampos = {
+      'Tambores': [
+        'diametro',
+        'huecos',
+        'banda',
+        'bocin',
+        'poc',
+        'observaciones',
+        'peso',
+        'pvp',
+        'descuento20',
+      ],
       'Discos': [
         'diametro',
         'alturaTotal',
@@ -514,16 +436,14 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
         'pvp',
         'descuento20',
       ],
-      'Tambores': [
-        'diametro',
-        'bocin',
-        'hueco',
-        'banda',
-        'poc',
-        'observaciones',
+      'Arañas': [
+        'pistainterna',
+        'pistaexterna',
+        'patas',
+        'manzana',
         'peso',
         'pvp',
-        'descuento20',
+        'descuento15',
       ],
       'Bocines': [
         'pistainterna',
@@ -532,20 +452,35 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
         'eje',
         'peso',
         'pvp',
-        'descuento20',
+        'descuento15',
       ],
-      'Sumideros': ['dimensiones', 'tapa', 'cerco', 'peso', 'pvp', 'descuento'],
-      'Rejillas': ['dimensiones', 'peso', 'pvp', 'descuento'],
-      'Accesorios': ['dimensiones', 'peso', 'pvp', 'descuento'],
+      'Alcantarillado': [
+        'dimensionesTapa',
+        'dimensionesCerco',
+        'pesoTapa',
+        'pesoCerco',
+        'tapaCerco',
+        'pvp',
+      ],
+      'Sumideros': [
+        'dimensionesTapa',
+        'dimensionesCerco',
+        'tapaCerco',
+        'pvp',
+        'descuento15',
+      ],
+      'Rejillas': ['dimensiones', 'pvp', 'descuento20'],
+      'Accesorios': ['dimensiones', 'peso', 'pvp'],
+      'Gimnasio': ['peso', 'pvp'],
+      'Agrícolas': ['dimensiones', 'peso', 'pvp'],
+      'Sistemas': ['dimensiones', 'peso', 'pvp'],
       'Soporteria': ['dimensiones', 'peso', 'pvp'],
-      'Cocinas': ['dimensiones', 'peso', 'pvp'],
+      'Cocinas': ['dimensiones', 'pvp'],
     };
 
-    // Ordenar campos según el orden definido, luego los que sobren al final
     final ordenDefinido = ordenCampos[categoria] ?? [];
 
     final camposOrdenados = [
-      // Primero los que tienen orden definido
       ...ordenDefinido
           .where(
             (k) =>
@@ -555,8 +490,6 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
                 data[k].toString().isNotEmpty,
           )
           .map((k) => MapEntry(k, data[k])),
-
-      // Luego los que no están en el orden definido
       ...data.entries.where(
         (e) =>
             !excluir.contains(e.key) &&
@@ -565,6 +498,15 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
             e.value.toString().isNotEmpty,
       ),
     ];
+
+    // Total calculado para Alcantarillado y Sumideros
+    final bool mostrarTotal =
+        (categoria == 'Alcantarillado' || categoria == 'Sumideros') &&
+        (data['pesoTapa'] != null || data['pesoCerco'] != null);
+    final double totalPeso =
+        (double.tryParse(data['pesoTapa']?.toString() ?? '') ?? 0.0) +
+        (double.tryParse(data['pesoCerco']?.toString() ?? '') ?? 0.0);
+
     showDialog(
       context: context,
       builder:
@@ -647,61 +589,80 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
                     ),
                   ),
 
-                  // Campos
+                  // Lista de campos
                   Flexible(
-                    child:
-                        camposOrdenados.isEmpty
-                            ? const Padding(
-                              padding: EdgeInsets.all(32),
-                              child: Text(
-                                'Sin información adicional',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            )
-                            : ListView.separated(
-                              shrinkWrap: true,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 16,
-                              ),
-                              itemCount: camposOrdenados.length,
-                              separatorBuilder:
-                                  (_, __) => const Divider(height: 1),
-                              itemBuilder: (_, i) {
-                                final entry = camposOrdenados[i];
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 10,
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      itemCount:
+                          camposOrdenados.length + (mostrarTotal ? 1 : 0),
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (_, i) {
+                        // Fila de Total calculado al final
+                        if (mostrarTotal && i == camposOrdenados.length) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 160,
+                                  child: Text(
+                                    'Total (Tapa + Cerco)',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                      color: Color(0xFF4682B4),
+                                    ),
                                   ),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      SizedBox(
-                                        width: 160,
-                                        child: Text(
-                                          _formatKey(entry.key),
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13,
-                                            color: Color(0xFF4682B4),
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Text(
-                                          entry.value.toString(),
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            color: Color(0xFF2C3E50),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    '${totalPeso.toStringAsFixed(2)} kg',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF2C3E50),
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                );
-                              },
+                                ),
+                              ],
                             ),
+                          );
+                        }
+                        final entry = camposOrdenados[i];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: 160,
+                                child: Text(
+                                  _formatKey(entry.key),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: Color(0xFF4682B4),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  entry.value.toString(),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF2C3E50),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ),
 
                   // Botón cerrar
@@ -731,10 +692,10 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
   }
 
   String _formatKey(String key) {
-    // Mapeo de claves técnicas a nombres legibles
     const Map<String, String> nombres = {
       'pvp': 'PVP',
       'descuento20': '20%',
+      'descuento15': '15%',
       'referencia': 'Referencia',
       'nombre': 'Nombre',
       'diametro': 'Diámetro',
@@ -744,25 +705,23 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
       'huecos': 'Huecos',
       'tipo': 'S/V',
       'peso': 'Peso',
-      'hueco': 'Hueco',
       'banda': 'Banda',
       'poc': 'POC',
       'observaciones': 'Observaciones',
       'dimensiones': 'Dimensiones',
-      'tapa': 'Tapa',
-      'cerco': 'Cerco',
-      'descuento': 'Descuento',
+      'dimensionesTapa': 'Dim. Tapa',
+      'dimensionesCerco': 'Dim. Cerco',
+      'pesoTapa': 'Peso Tapa',
+      'pesoCerco': 'Peso Cerco',
       'descripcion': 'Descripción',
       'pistainterna': 'Pista Interna',
       'pistaexterna': 'Pista Externa',
       'pernos': 'Pernos',
       'eje': 'Eje',
+      'patas': 'Patas',
+      'manzana': 'Manzana',
     };
-
-    // Si tiene mapeo directo, usarlo
     if (nombres.containsKey(key)) return nombres[key]!;
-
-    // Si no, formatear automáticamente
     return key
         .replaceAll('_', ' ')
         .split(' ')
@@ -878,7 +837,8 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
     final Map<String, TextEditingController> controladores = {};
 
     for (String col in columnas) {
-      if (col != 'Acciones') {
+      // 'Total' es solo lectura (calculado), 'Acciones' no es campo
+      if (col != 'Acciones' && col != 'Total') {
         controladores[col] = TextEditingController(
           text: _obtenerValorParaEdicion(data, col, categoriaSeleccionada),
         );
@@ -888,148 +848,185 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
     showDialog(
       context: context,
       builder:
-          (_) => Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            backgroundColor: Colors.white,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.55,
-                maxHeight: MediaQuery.of(context).size.height * 0.85,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+          (_) => StatefulBuilder(
+            builder: (ctx, setModalState) {
+              // Calcular total en tiempo real mientras el usuario escribe
+              double _calcularTotal() {
+                final tapa =
+                    double.tryParse(controladores['Peso Tapa']?.text ?? '') ??
+                    0.0;
+                final cerco =
+                    double.tryParse(controladores['Peso Cerco']?.text ?? '') ??
+                    0.0;
+                return tapa + cerco;
+              }
+
+              return Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                backgroundColor: Colors.white,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.55,
+                    maxHeight: MediaQuery.of(context).size.height * 0.85,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.edit_outlined,
-                          color: Color(0xFF4682B4),
-                          size: 26,
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.edit_outlined,
+                              color: Color(0xFF4682B4),
+                              size: 26,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Editar Producto — $categoriaSeleccionada',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2C3E50),
+                              ),
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'Editar Producto — $categoriaSeleccionada',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2C3E50),
-                          ),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children:
-                              columnas
-                                  .where((c) => c != 'Acciones')
-                                  .map(
-                                    (col) => Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 14,
-                                      ),
-                                      child: TextFormField(
-                                        controller: controladores[col],
-                                        decoration: InputDecoration(
-                                          labelText: col,
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          focusedBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            borderSide: const BorderSide(
-                                              color: Color(0xFF4682B4),
-                                              width: 2,
-                                            ),
+                        const SizedBox(height: 20),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                ...controladores.keys.map((col) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 14),
+                                    child: TextFormField(
+                                      controller: controladores[col],
+                                      onChanged: (_) => setModalState(() {}),
+                                      decoration: InputDecoration(
+                                        labelText: col,
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
                                           ),
                                         ),
-                                        keyboardType:
-                                            _esNumerico(col)
-                                                ? TextInputType.number
-                                                : TextInputType.text,
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Color(0xFF4682B4),
+                                            width: 2,
+                                          ),
+                                        ),
+                                      ),
+                                      keyboardType:
+                                          _esNumerico(col)
+                                              ? TextInputType.number
+                                              : TextInputType.text,
+                                    ),
+                                  );
+                                }),
+                                // Si la categoría tiene Total, mostrarlo calculado
+                                if (categoriaSeleccionada == 'Alcantarillado' ||
+                                    categoriaSeleccionada == 'Sumideros')
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 14),
+                                    child: InputDecorator(
+                                      decoration: InputDecoration(
+                                        labelText: 'Total (calculado)',
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        filled: true,
+                                        fillColor: const Color(0xFFF0F4F8),
+                                      ),
+                                      child: Text(
+                                        '${_calcularTotal().toStringAsFixed(2)} kg',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
-                                  )
-                                  .toList(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancelar'),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton(
-                          onPressed: () async {
-                            try {
-                              Map<String, dynamic> datos = {};
-                              for (String col in controladores.keys) {
-                                final v = controladores[col]!.text.trim();
-                                if (v.isNotEmpty) {
-                                  datos[_convertirColumnaNombreCampo(col)] = v;
-                                }
-                              }
-                              await FirebaseFirestore.instance
-                                  .collection('catalogo')
-                                  .doc(categoriaSeleccionada)
-                                  .collection('productos')
-                                  .doc(productoId)
-                                  .update(datos);
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Producto actualizado exitosamente',
                                   ),
-                                  backgroundColor: Color(0xFF2C3E50),
-                                ),
-                              );
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error al actualizar: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4682B4),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              ],
                             ),
                           ),
-                          child: const Text('Actualizar'),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cancelar'),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton(
+                              onPressed: () async {
+                                try {
+                                  Map<String, dynamic> datos = {};
+                                  for (String col in controladores.keys) {
+                                    final v = controladores[col]!.text.trim();
+                                    if (v.isNotEmpty) {
+                                      datos[_convertirColumnaNombreCampo(col)] =
+                                          v;
+                                    }
+                                  }
+                                  await FirebaseFirestore.instance
+                                      .collection('catalogo')
+                                      .doc(categoriaSeleccionada)
+                                      .collection('productos')
+                                      .doc(productoId)
+                                      .update(datos);
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Producto actualizado exitosamente',
+                                      ),
+                                      backgroundColor: Color(0xFF2C3E50),
+                                    ),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error al actualizar: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF4682B4),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text('Actualizar'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
     );
   }
@@ -1040,7 +1037,7 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
     final Map<String, TextEditingController> controladores = {};
 
     for (String col in columnas) {
-      if (col != 'Acciones') {
+      if (col != 'Acciones' && col != 'Total') {
         controladores[col] = TextEditingController();
       }
     }
@@ -1048,154 +1045,183 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
     showDialog(
       context: context,
       builder:
-          (_) => Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            backgroundColor: Colors.white,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.55,
-                maxHeight: MediaQuery.of(context).size.height * 0.85,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+          (_) => StatefulBuilder(
+            builder: (ctx, setModalState) {
+              double _calcularTotal() {
+                final tapa =
+                    double.tryParse(controladores['Peso Tapa']?.text ?? '') ??
+                    0.0;
+                final cerco =
+                    double.tryParse(controladores['Peso Cerco']?.text ?? '') ??
+                    0.0;
+                return tapa + cerco;
+              }
+
+              return Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                backgroundColor: Colors.white,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.55,
+                    maxHeight: MediaQuery.of(context).size.height * 0.85,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          _obtenerIconoPorNombre(categoriaSeleccionada),
-                          color: const Color(0xFF2C3E50),
-                          size: 26,
+                        Row(
+                          children: [
+                            Icon(
+                              _obtenerIconoPorNombre(categoriaSeleccionada),
+                              color: const Color(0xFF2C3E50),
+                              size: 26,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Agregar Producto — $categoriaSeleccionada',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2C3E50),
+                              ),
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'Agregar Producto — $categoriaSeleccionada',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2C3E50),
-                          ),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children:
-                              columnas
-                                  .where((c) => c != 'Acciones')
-                                  .map(
-                                    (col) => Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 14,
-                                      ),
-                                      child: TextFormField(
-                                        controller: controladores[col],
-                                        decoration: InputDecoration(
-                                          labelText: col,
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          focusedBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            borderSide: const BorderSide(
-                                              color: Color(0xFF2C3E50),
-                                              width: 2,
-                                            ),
+                        const SizedBox(height: 20),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                ...controladores.keys.map((col) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 14),
+                                    child: TextFormField(
+                                      controller: controladores[col],
+                                      onChanged: (_) => setModalState(() {}),
+                                      decoration: InputDecoration(
+                                        labelText: col,
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
                                           ),
                                         ),
-                                        keyboardType:
-                                            _esNumerico(col)
-                                                ? TextInputType.number
-                                                : TextInputType.text,
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Color(0xFF2C3E50),
+                                            width: 2,
+                                          ),
+                                        ),
+                                      ),
+                                      keyboardType:
+                                          _esNumerico(col)
+                                              ? TextInputType.number
+                                              : TextInputType.text,
+                                    ),
+                                  );
+                                }),
+                                // Total en tiempo real para Alcantarillado y Sumideros
+                                if (categoriaSeleccionada == 'Alcantarillado' ||
+                                    categoriaSeleccionada == 'Sumideros')
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 14),
+                                    child: InputDecorator(
+                                      decoration: InputDecoration(
+                                        labelText: 'Total (calculado)',
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        filled: true,
+                                        fillColor: const Color(0xFFF0F4F8),
+                                      ),
+                                      child: Text(
+                                        '${_calcularTotal().toStringAsFixed(2)} kg',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
-                                  )
-                                  .toList(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancelar'),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton(
-                          onPressed: () async {
-                            try {
-                              Map<String, dynamic> datos = {};
-                              for (String col in controladores.keys) {
-                                final v = controladores[col]!.text.trim();
-                                if (v.isNotEmpty) {
-                                  datos[_convertirColumnaNombreCampo(col)] = v;
-                                }
-                              }
-                              if (datos.containsKey('pvp')) {
-                                double pvp =
-                                    double.tryParse(datos['pvp'].toString()) ??
-                                    0.0;
-                                datos['descuento20'] = (pvp * 0.8)
-                                    .toStringAsFixed(2);
-                              }
-                              await FirebaseFirestore.instance
-                                  .collection('catalogo')
-                                  .doc(categoriaSeleccionada)
-                                  .collection('productos')
-                                  .add(datos);
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Producto agregado a $categoriaSeleccionada',
                                   ),
-                                  backgroundColor: const Color(0xFF2C3E50),
-                                ),
-                              );
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error al agregar: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2C3E50),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              ],
                             ),
                           ),
-                          child: const Text('Guardar'),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cancelar'),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton(
+                              onPressed: () async {
+                                try {
+                                  Map<String, dynamic> datos = {};
+                                  for (String col in controladores.keys) {
+                                    final v = controladores[col]!.text.trim();
+                                    if (v.isNotEmpty) {
+                                      datos[_convertirColumnaNombreCampo(col)] =
+                                          v;
+                                    }
+                                  }
+                                  await FirebaseFirestore.instance
+                                      .collection('catalogo')
+                                      .doc(categoriaSeleccionada)
+                                      .collection('productos')
+                                      .add(datos);
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Producto agregado a $categoriaSeleccionada',
+                                      ),
+                                      backgroundColor: const Color(0xFF2C3E50),
+                                    ),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error al agregar: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2C3E50),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text('Guardar'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
     );
   }
@@ -1206,7 +1232,7 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
     return MainDeskLayout(
       child: Column(
         children: [
-          // ── HEADER ────────────────────────────────────────────────────────
+          // HEADER
           Container(
             width: double.infinity,
             color: const Color(0xFF2C3E50),
@@ -1235,13 +1261,12 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
             ),
           ),
 
-          // ── BARRA DE CONTROLES ─────────────────────────────────────────────
+          // BARRA DE CONTROLES
           Container(
             color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             child: Row(
               children: [
-                // Buscador
                 Expanded(
                   flex: 4,
                   child: SizedBox(
@@ -1280,8 +1305,6 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
                   ),
                 ),
                 const SizedBox(width: 16),
-
-                // Botón Agregar
                 SizedBox(
                   height: 46,
                   child: ElevatedButton.icon(
@@ -1299,8 +1322,6 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
                   ),
                 ),
                 const SizedBox(width: 10),
-
-                // Botón Importar
                 SizedBox(
                   height: 46,
                   child: ElevatedButton.icon(
@@ -1325,10 +1346,10 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
             ),
           ),
 
-          // ── TAB BAR FIJA CON SCROLL ────────────────────────────────────────
+          // TAB BAR
           Container(
             decoration: BoxDecoration(
-              color: Colors.white, // ← movido aquí adentro
+              color: Colors.white,
               border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
             ),
             child: TabBar(
@@ -1358,15 +1379,14 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
             ),
           ),
 
-          // ── CONTENIDO TABS ─────────────────────────────────────────────────
+          // TAB CONTENT
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children:
-                  categorias.map((c) {
-                    final categoria = c['nombre'] as String;
-                    return _buildTabContenido(categoria);
-                  }).toList(),
+                  categorias
+                      .map((c) => _buildTabContenido(c['nombre'] as String))
+                      .toList(),
             ),
           ),
         ],
@@ -1482,7 +1502,6 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
                   ],
                 ),
               ),
-
               const SizedBox(height: 16),
 
               // Tabla
@@ -1520,7 +1539,6 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
                           filtrados.map((doc) {
                             final data = doc.data() as Map<String, dynamic>;
                             return DataRow(
-                              // Clic en la fila → modal detalle
                               onSelectChanged:
                                   (_) => _mostrarModalDetalle(data, categoria),
                               cells:
@@ -1561,6 +1579,29 @@ class _VisualizarCatalogoScreenState extends State<VisualizarCatalogoScreen>
                                                   ),
                                             ),
                                           ],
+                                        ),
+                                      );
+                                    }
+                                    if (col == 'Nombre') {
+                                      return DataCell(
+                                        SizedBox(
+                                          width: 200,
+                                          child: Tooltip(
+                                            message: _obtenerValorCelda(
+                                              data,
+                                              col,
+                                              categoria,
+                                            ),
+                                            child: Text(
+                                              _obtenerValorCelda(
+                                                data,
+                                                col,
+                                                categoria,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                            ),
+                                          ),
                                         ),
                                       );
                                     }
