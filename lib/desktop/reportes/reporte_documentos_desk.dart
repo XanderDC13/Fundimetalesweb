@@ -168,6 +168,7 @@ class _ReporteDocumentosDeskScreenState
           'cliente': cliente,
           'ci_ruc': ciRuc,
           'proforma': data,
+          'proforma_doc_id': doc.id,
           'orden': null,
           'fechaProforma': (data['fecha'] as Timestamp?)?.toDate(),
           'fechaOrden': null,
@@ -1321,12 +1322,11 @@ class _ReporteDocumentosDeskScreenState
                                                               String,
                                                               dynamic
                                                             >,
-                                                        documento['numero_proforma']
-                                                                ?.toString() ??
-                                                            '',
+                                                        documento['proforma_doc_id'] ??
+                                                            '', // ✅ ID real
                                                         esMobil: false,
                                                         descontarInventario:
-                                                            true, // 👈 SÍ toca inventario
+                                                            true,
                                                         coleccion: 'proformas',
                                                       );
                                                       _obtenerDatos();

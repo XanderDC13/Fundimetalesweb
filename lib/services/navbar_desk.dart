@@ -498,6 +498,10 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             label: 'Proformas',
             onTap: () => _navigateToScreen(const OpcionesProformasDeskScreen()),
           ),
+          _buildSubItem(
+            label: 'Contactos',
+            onTap: () => _navigateToScreen(const ContactosDeskScreen()),
+          ),
         ],
       ),
       _buildExpandableItem(
