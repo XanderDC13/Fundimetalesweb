@@ -390,10 +390,19 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
               'items': _items.map((i) => i.toMapProformas()).toList(),
               'subtotal': _subtotal.toStringAsFixed(2),
               'iva': _iva.toStringAsFixed(2),
-              'total': _totalFinal.toStringAsFixed(
-                2,
-              ), // 👈 'total' no 'total_final'
+              'total': _totalFinal.toStringAsFixed(2),
             });
+
+        // ✅ AGREGADO: cerrar modal y mostrar snackbar
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Cotización actualizada correctamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       } else {
         await FirebaseFirestore.instance
             .collection('proformasventas')
