@@ -259,7 +259,13 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
                       color: PdfColor.fromInt(0xFF4682B4),
                     ),
                     children:
-                        ['Persona Retira', 'Origen', 'Destino', 'Referencias', 'Fecha']
+                        [
+                              'Persona Retira',
+                              'Origen',
+                              'Destino',
+                              'Referencias',
+                              'Fecha',
+                            ]
                             .map(
                               (h) => pw.Padding(
                                 padding: const pw.EdgeInsets.all(8),
@@ -311,6 +317,100 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
                               .toList(),
                     );
                   }),
+                ],
+              ),
+              pw.SizedBox(height: 16),
+              // ── Resumen por referencia ──────────────────────────────────
+              pw.Text(
+                'Resumen por Referencia:',
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 11,
+                ),
+              ),
+              pw.SizedBox(height: 6),
+              pw.Row(
+                children: [
+                  pw.Table(
+                    border: pw.TableBorder.all(color: PdfColors.grey300),
+                    columnWidths: const {
+                      0: pw.FixedColumnWidth(180),
+                      1: pw.FixedColumnWidth(80),
+                    },
+                    children: [
+                      pw.TableRow(
+                        decoration: const pw.BoxDecoration(
+                          color: PdfColor.fromInt(0xFF2C3E50),
+                        ),
+                        children:
+                            ['Referencia', 'Total Retirado']
+                                .map(
+                                  (h) => pw.Padding(
+                                    padding: const pw.EdgeInsets.all(7),
+                                    child: pw.Text(
+                                      h,
+                                      style: pw.TextStyle(
+                                        color: PdfColors.white,
+                                        fontWeight: pw.FontWeight.bold,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                      ),
+                      ...() {
+                        final Map<String, int> totalesPorRef = {};
+                        for (final r in datos) {
+                          final refs =
+                              r['referencias'] as List<Map<String, dynamic>>? ??
+                              [];
+                          for (final ref in refs) {
+                            final nombre = ref['referencia']?.toString() ?? '—';
+                            final cant =
+                                (ref['cantidad'] as num?)?.toInt() ?? 0;
+                            totalesPorRef[nombre] =
+                                (totalesPorRef[nombre] ?? 0) + cant;
+                          }
+                        }
+                        final lista =
+                            totalesPorRef.entries.toList()
+                              ..sort((a, b) => a.key.compareTo(b.key));
+                        return lista.asMap().entries.map((entry) {
+                          final i = entry.key;
+                          final e = entry.value;
+                          return pw.TableRow(
+                            decoration: pw.BoxDecoration(
+                              color:
+                                  i % 2 == 0
+                                      ? PdfColors.grey100
+                                      : PdfColors.white,
+                            ),
+                            children: [
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.all(7),
+                                child: pw.Text(
+                                  e.key,
+                                  style: const pw.TextStyle(fontSize: 9),
+                                ),
+                              ),
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.all(7),
+                                child: pw.Text(
+                                  '${e.value}',
+                                  style: pw.TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: pw.FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList();
+                      }(),
+                    ],
+                  ),
+                  pw.Expanded(child: pw.SizedBox()),
                 ],
               ),
               pw.SizedBox(height: 12),
@@ -579,10 +679,10 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
                     onTap: () async {
                       final p = await showDatePicker(
                         context: context,
+                        useRootNavigator: true, // ← AGREGAR ESTO
                         initialDate: _fechaHastaRetiros ?? DateTime.now(),
                         firstDate: DateTime(2020),
                         lastDate: DateTime.now(),
-                        locale: const Locale('es', 'ES'),
                       );
                       if (p != null) setState(() => _fechaHastaRetiros = p);
                     },
@@ -1090,11 +1190,21 @@ class _DialogoNuevaTareaState extends State<_DialogoNuevaTarea> {
               const SizedBox(height: 16),
               TextField(
                 controller: _descripcionCtrl,
+                textCapitalization: TextCapitalization.characters,
                 decoration: const InputDecoration(
                   labelText: 'Descripción (opcional)',
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 3,
+                onChanged: (v) {
+                  final upper = v.toUpperCase();
+                  if (_descripcionCtrl.text != upper) {
+                    _descripcionCtrl.value = _descripcionCtrl.value.copyWith(
+                      text: upper,
+                      selection: TextSelection.collapsed(offset: upper.length),
+                    );
+                  }
+                },
               ),
             ],
           ),

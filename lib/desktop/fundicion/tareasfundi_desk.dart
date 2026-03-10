@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:basefundi/services/navbar_desk.dart';
 import 'package:basefundi/services/pdfs/fundicionpdf.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -1867,339 +1869,739 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
     );
   }
 
-  Future<void> _mostrarFormularioManual() async {
-    String referencia = '';
-    String descripcion = '';
-    int cantidad = 0;
-    String prioridad = 'prioritario';
+  // BUSCA: Future<void> _mostrarFormularioManual() async {
+  // hasta el cierre final }  del método
+  // REEMPLAZA POR:
 
-    showDialog(
+  Future<void> _mostrarFormularioManual() async {
+    final referenciaCtrl = TextEditingController();
+    final cantidadCtrl = TextEditingController();
+    final descripcionCtrl = TextEditingController();
+    List<Map<String, dynamic>> resultados = [];
+    bool buscando = false;
+    String? referenciaSeleccionada;
+    String prioridad = 'prioritario';
+    Timer? debounce;
+
+    Future<List<Map<String, dynamic>>> buscarReferencias(String query) async {
+      if (query.trim().isEmpty) return [];
+      final upper = query.trim().toUpperCase();
+
+      final bodegaSnap =
+          await FirebaseFirestore.instance
+              .collection('inventarios')
+              .doc('Tulcán')
+              .collection('procesos')
+              .doc('bodega')
+              .collection('productos')
+              .get();
+
+      final brutoSnap =
+          await FirebaseFirestore.instance
+              .collection('inventarios')
+              .doc('Tulcán')
+              .collection('procesos')
+              .doc('bruto')
+              .collection('productos')
+              .get();
+
+      final Map<String, int> stockBodega = {};
+      for (final doc in bodegaSnap.docs) {
+        final c = doc.data()['cantidad'];
+        stockBodega[doc.id] = c is int ? c : (c is num ? c.toInt() : 0);
+      }
+
+      final Map<String, int> stockBruto = {};
+      for (final doc in brutoSnap.docs) {
+        final c = doc.data()['cantidad'];
+        stockBruto[doc.id] = c is int ? c : (c is num ? c.toInt() : 0);
+      }
+
+      final todasRefs = <String>{...stockBodega.keys, ...stockBruto.keys};
+      final refsMatch =
+          todasRefs.where((r) => r.toUpperCase().contains(upper)).toList();
+
+      final List<Map<String, dynamic>> res = [];
+
+      if (refsMatch.isNotEmpty) {
+        for (final ref in refsMatch) {
+          res.add({
+            'referencia': ref,
+            'cantidadBodega': stockBodega[ref] ?? 0,
+            'cantidadBruto': stockBruto[ref] ?? 0,
+          });
+        }
+      } else {
+        final productosSnap =
+            await FirebaseFirestore.instance
+                .collection('productos')
+                .where('referencia', isGreaterThanOrEqualTo: upper)
+                .where('referencia', isLessThanOrEqualTo: '$upper\uf8ff')
+                .limit(10)
+                .get();
+
+        for (final doc in productosSnap.docs) {
+          final ref = doc.data()['referencia']?.toString() ?? doc.id;
+          res.add({'referencia': ref, 'cantidadBodega': 0, 'cantidadBruto': 0});
+        }
+      }
+
+      res.sort((a, b) {
+        final tA = (a['cantidadBodega'] as int) + (a['cantidadBruto'] as int);
+        final tB = (b['cantidadBodega'] as int) + (b['cantidadBruto'] as int);
+        return tB.compareTo(tA);
+      });
+
+      return res;
+    }
+
+    await showDialog(
       context: context,
       barrierDismissible: false,
-      builder:
-          (context) => AlertDialog(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: const Text(
-              'Agregar Tarea Manual',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Color(0xFF333333),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            void buscarConDebounce(String valor) {
+              if (debounce?.isActive ?? false) debounce!.cancel();
+              if (valor.trim().isEmpty) {
+                setStateDialog(() {
+                  resultados = [];
+                  buscando = false;
+                  referenciaSeleccionada = null;
+                });
+                return;
+              }
+              setStateDialog(() => buscando = true);
+              debounce = Timer(const Duration(milliseconds: 500), () async {
+                final res = await buscarReferencias(valor);
+                if (context.mounted) {
+                  setStateDialog(() {
+                    resultados = res;
+                    buscando = false;
+                  });
+                }
+              });
+            }
+
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-            ),
-            content: SizedBox(
-              width: 400,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Campo Referencia
-                    TextField(
-                      decoration: InputDecoration(
-                        labelText: 'Referencia (ej: 635TD)',
-                        labelStyle: const TextStyle(color: Colors.black87),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFC0C0C0),
+              title: const Text(
+                'Agregar Tarea Manual',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Color(0xFF333333),
+                ),
+              ),
+              content: SizedBox(
+                width: 400,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Campo referencia ──────────────────────────────────
+                      TextField(
+                        controller: referenciaCtrl,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: InputDecoration(
+                          labelText: 'Referencia (ej: 635TD)',
+                          labelStyle: const TextStyle(color: Colors.black87),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFC0C0C0),
+                            ),
                           ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFC0C0C0),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFC0C0C0),
+                            ),
                           ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF4682B4),
-                            width: 2,
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF4682B4),
+                              width: 2,
+                            ),
                           ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
+                          suffixIcon:
+                              buscando
+                                  ? const Padding(
+                                    padding: EdgeInsets.all(10),
+                                    child: SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  )
+                                  : referenciaCtrl.text.isNotEmpty
+                                  ? IconButton(
+                                    icon: const Icon(Icons.close, size: 18),
+                                    onPressed: () {
+                                      referenciaCtrl.clear();
+                                      setStateDialog(() {
+                                        resultados = [];
+                                        referenciaSeleccionada = null;
+                                      });
+                                    },
+                                  )
+                                  : null,
                         ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 16,
-                        ),
+                        inputFormatters: [
+                          TextInputFormatter.withFunction(
+                            (oldValue, newValue) => newValue.copyWith(
+                              text: newValue.text.toUpperCase(),
+                            ),
+                          ),
+                        ],
+                        onChanged: (v) {
+                          final upper = v.toUpperCase();
+                          if (referenciaCtrl.text != upper) {
+                            referenciaCtrl.value = referenciaCtrl.value
+                                .copyWith(
+                                  text: upper,
+                                  selection: TextSelection.collapsed(
+                                    offset: upper.length,
+                                  ),
+                                );
+                          }
+                          setStateDialog(() => referenciaSeleccionada = null);
+                          buscarConDebounce(upper);
+                        },
                       ),
-                      textCapitalization:
-                          TextCapitalization.characters, // ✅ AGREGAR ESTO
-                      inputFormatters: [
-                        TextInputFormatter.withFunction(
-                          (oldValue, newValue) => newValue.copyWith(
-                            text: newValue.text.toUpperCase(),
+
+                      // ── Chip referencia seleccionada ──────────────────────
+                      if (referenciaSeleccionada != null) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
                           ),
-                        ),
-                      ], // ✅ AGREGAR ESTO
-                      onChanged: (value) => referencia = value.toUpperCase(),
-                    ),
-                    const SizedBox(height: 12),
-                    // Campo Descripción
-                    TextField(
-                      decoration: InputDecoration(
-                        labelText: 'Descripción de la tarea',
-                        labelStyle: const TextStyle(color: Colors.black87),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFC0C0C0),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4682B4).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFF4682B4)),
                           ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFC0C0C0),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF4682B4),
-                            width: 2,
-                          ),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 16,
-                        ),
-                      ),
-                      maxLines: 2,
-                      onChanged: (value) => descripcion = value,
-                    ),
-                    const SizedBox(height: 12),
-                    // Campo Cantidad
-                    TextField(
-                      decoration: InputDecoration(
-                        labelText: 'Cantidad',
-                        labelStyle: const TextStyle(color: Colors.black87),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFC0C0C0),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFC0C0C0),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF4682B4),
-                            width: 2,
-                          ),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 16,
-                        ),
-                      ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (value) => cantidad = int.tryParse(value) ?? 0,
-                    ),
-                    const SizedBox(height: 12),
-                    // Dropdown Prioridad
-                    DropdownButtonFormField<String>(
-                      value: prioridad,
-                      decoration: InputDecoration(
-                        labelText: 'Prioridad',
-                        labelStyle: const TextStyle(color: Colors.black87),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFC0C0C0),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFC0C0C0),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF4682B4),
-                            width: 2,
-                          ),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 16,
-                        ),
-                      ),
-                      dropdownColor: Colors.white,
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'urgente',
                           child: Row(
                             children: [
-                              Icon(
-                                Icons.priority_high,
-                                color: Colors.red,
-                                size: 16,
-                              ),
-                              SizedBox(width: 8),
-                              Text('Urgente'),
-                            ],
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'prioritario',
-                          child: Row(
-                            children: [
-                              Icon(Icons.star, color: Colors.orange, size: 16),
-                              SizedBox(width: 8),
-                              Text('Prioritario'),
-                            ],
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'normal',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.remove,
+                              const Icon(
+                                Icons.check_circle,
                                 color: Color(0xFF4682B4),
                                 size: 16,
                               ),
-                              SizedBox(width: 8),
-                              Text('Normal'),
-                            ],
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'baja',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.keyboard_arrow_down,
-                                color: Colors.green,
-                                size: 16,
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  referenciaSeleccionada!,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF2C3E50),
+                                  ),
+                                ),
                               ),
-                              SizedBox(width: 8),
-                              Text('Baja'),
+                              GestureDetector(
+                                onTap:
+                                    () => setStateDialog(() {
+                                      referenciaSeleccionada = null;
+                                      referenciaCtrl.clear();
+                                    }),
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 14,
+                                  color: Colors.red,
+                                ),
+                              ),
                             ],
                           ),
                         ),
                       ],
-                      onChanged: (value) => prioridad = value ?? 'prioritario',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                ),
-                child: const Text(
-                  'Cancelar',
-                  style: TextStyle(color: Colors.grey, fontSize: 16),
-                ),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4682B4),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                  elevation: 2,
-                ),
-                onPressed: () async {
-                  if (referencia.trim().isEmpty || descripcion.trim().isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Complete todos los campos'),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                    return;
-                  }
 
-                  try {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder:
-                          (context) =>
-                              const Center(child: CircularProgressIndicator()),
-                    );
+                      // ── Lista de resultados ───────────────────────────────
+                      if (resultados.isNotEmpty &&
+                          referenciaSeleccionada == null) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          constraints: const BoxConstraints(maxHeight: 200),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.07),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: resultados.length,
+                            separatorBuilder:
+                                (_, __) => const Divider(
+                                  height: 1,
+                                  color: Colors.black12,
+                                ),
+                            itemBuilder: (context, i) {
+                              final item = resultados[i];
+                              final ref = item['referencia'].toString();
+                              final cantBodega = item['cantidadBodega'] as int;
+                              final cantBruto = item['cantidadBruto'] as int;
+                              final sinStock =
+                                  cantBodega == 0 && cantBruto == 0;
 
-                    await FirebaseFirestore.instance
-                        .collection('tareas_operador')
-                        .add({
-                          'operador_id': widget.operadorId,
-                          'referencia': referencia.trim(),
-                          'descripcion': descripcion.trim(),
-                          'cantidad': cantidad,
-                          'prioridad': prioridad,
-                          'estado': 'asignada',
-                          'fecha_asignacion': DateTime.now(),
-                        });
-
-                    Navigator.of(context).pop(); // Cerrar loading
-                    Navigator.of(context).pop(); // Cerrar diálogo
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Tarea "$referencia" asignada exitosamente',
+                              return InkWell(
+                                onTap: () {
+                                  referenciaCtrl.text = ref;
+                                  setStateDialog(() {
+                                    referenciaSeleccionada = ref;
+                                    resultados = [];
+                                  });
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              sinStock
+                                                  ? Colors.grey.shade100
+                                                  : const Color(
+                                                    0xFF4682B4,
+                                                  ).withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          border: Border.all(
+                                            color:
+                                                sinStock
+                                                    ? Colors.grey.shade400
+                                                    : const Color(
+                                                      0xFF4682B4,
+                                                    ).withOpacity(0.5),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          ref,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color:
+                                                sinStock
+                                                    ? Colors.grey.shade600
+                                                    : const Color(0xFF4682B4),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            _buildStockBadge(
+                                              'Bodega',
+                                              cantBodega,
+                                            ),
+                                            const SizedBox(height: 4),
+                                            _buildStockBadge(
+                                              'Bruto',
+                                              cantBruto,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (sinStock)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.shade50,
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.orange.shade300,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'Sin stock',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.orange.shade700,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                        backgroundColor: Colors.green,
+                      ],
+
+                      if (!buscando &&
+                          resultados.isEmpty &&
+                          referenciaCtrl.text.isNotEmpty &&
+                          referenciaSeleccionada == null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Sin resultados para "${referenciaCtrl.text}"',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade500,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 14),
+
+                      // ── Descripción en mayúsculas ─────────────────────────
+                      TextField(
+                        controller: descripcionCtrl,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: InputDecoration(
+                          labelText: 'Descripción de la tarea',
+                          labelStyle: const TextStyle(color: Colors.black87),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFC0C0C0),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFC0C0C0),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF4682B4),
+                              width: 2,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
+                        ),
+                        maxLines: 2,
+                        inputFormatters: [
+                          TextInputFormatter.withFunction(
+                            (oldValue, newValue) => newValue.copyWith(
+                              text: newValue.text.toUpperCase(),
+                            ),
+                          ),
+                        ],
+                        onChanged: (v) {},
                       ),
-                    );
-                  } catch (e) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Error al asignar tarea'),
-                        backgroundColor: Colors.red,
+                      const SizedBox(height: 12),
+
+                      // ── Cantidad ──────────────────────────────────────────
+                      TextField(
+                        decoration: InputDecoration(
+                          labelText: 'Cantidad',
+                          labelStyle: const TextStyle(color: Colors.black87),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFC0C0C0),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFC0C0C0),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF4682B4),
+                              width: 2,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {},
                       ),
-                    );
-                  }
-                },
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.add_task, size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      'Asignar',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      const SizedBox(height: 12),
+
+                      // ── Prioridad ─────────────────────────────────────────
+                      DropdownButtonFormField<String>(
+                        value: prioridad,
+                        decoration: InputDecoration(
+                          labelText: 'Prioridad',
+                          labelStyle: const TextStyle(color: Colors.black87),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFC0C0C0),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFC0C0C0),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF4682B4),
+                              width: 2,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
+                        ),
+                        dropdownColor: Colors.white,
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'urgente',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.priority_high,
+                                  color: Colors.red,
+                                  size: 16,
+                                ),
+                                SizedBox(width: 8),
+                                Text('Urgente'),
+                              ],
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'prioritario',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.star,
+                                  color: Colors.orange,
+                                  size: 16,
+                                ),
+                                SizedBox(width: 8),
+                                Text('Prioritario'),
+                              ],
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'normal',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.remove,
+                                  color: Color(0xFF4682B4),
+                                  size: 16,
+                                ),
+                                SizedBox(width: 8),
+                                Text('Normal'),
+                              ],
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'baja',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.keyboard_arrow_down,
+                                  color: Colors.green,
+                                  size: 16,
+                                ),
+                                SizedBox(width: 8),
+                                Text('Baja'),
+                              ],
+                            ),
+                          ),
+                        ],
+                        onChanged:
+                            (value) => prioridad = value ?? 'prioritario',
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ],
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    debounce?.cancel();
+                    Navigator.of(context).pop();
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                  ),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4682B4),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    elevation: 2,
+                  ),
+                  onPressed: () async {
+                    final refTexto =
+                        referenciaSeleccionada ?? referenciaCtrl.text.trim();
+                    if (refTexto.isEmpty ||
+                        descripcionCtrl.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Complete todos los campos'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      return;
+                    }
+                    try {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder:
+                            (context) => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                      );
+                      await FirebaseFirestore.instance
+                          .collection('tareas_operador')
+                          .add({
+                            'operador_id': widget.operadorId,
+                            'referencia': refTexto,
+                            'descripcion': descripcionCtrl.text.trim(),
+                            'cantidad': int.tryParse(cantidadCtrl.text) ?? 0,
+                            'prioridad': prioridad,
+                            'estado': 'asignada',
+                            'fecha_asignacion': DateTime.now(),
+                          });
+                      debounce?.cancel();
+                      Navigator.of(context).pop();
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Tarea "$refTexto" asignada exitosamente',
+                          ),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } catch (e) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Error al asignar tarea'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add_task, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Asignar',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildStockBadge(String label, int cantidad) {
+    final color = cantidad > 0 ? Colors.green.shade700 : Colors.grey;
+    final bg = cantidad > 0 ? Colors.green.shade50 : Colors.grey.shade100;
+    final border = cantidad > 0 ? Colors.green.shade300 : Colors.grey.shade300;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label: ',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
           ),
+          Text(
+            '$cantidad',
+            style: TextStyle(
+              fontSize: 11,
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
