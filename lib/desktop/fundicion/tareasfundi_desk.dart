@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:basefundi/services/navbar_desk.dart';
 import 'package:basefundi/services/pdfs/fundicionpdf.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -1748,37 +1747,73 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
                       itemBuilder: (context, index) {
                         // Última posición: opción manual
                         if (index == productosDisponibles.length) {
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            color: const Color(0xFFE3F2FD),
-                            child: ListTile(
-                              leading: const Icon(
-                                Icons.add_circle_outline,
-                                color: Color(0xFF4682B4),
-                                size: 28,
-                              ),
-                              title: const Text(
-                                'Agregar tarea manualmente',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF4682B4),
+                          return Column(
+                            children: [
+                              Card(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                color: const Color(0xFFE3F2FD),
+                                child: ListTile(
+                                  leading: const Icon(
+                                    Icons.add_circle_outline,
+                                    color: Color(0xFF4682B4),
+                                    size: 28,
+                                  ),
+                                  title: const Text(
+                                    'Agregar tarea manualmente',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF4682B4),
+                                    ),
+                                  ),
+                                  subtitle: const Text(
+                                    'Crear una nueva tarea personalizada',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                  trailing: const Icon(
+                                    Icons.arrow_forward_ios,
+                                    color: Color(0xFF4682B4),
+                                    size: 16,
+                                  ),
+                                  onTap: () {
+                                    Navigator.of(context).pop();
+                                    _mostrarFormularioManual();
+                                  },
                                 ),
                               ),
-                              subtitle: const Text(
-                                'Crear una nueva tarea personalizada',
-                                style: TextStyle(fontSize: 12),
+                              Card(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                color: const Color(0xFFE8F5E9),
+                                child: ListTile(
+                                  leading: const Icon(
+                                    Icons.assignment_add,
+                                    color: Colors.green,
+                                    size: 28,
+                                  ),
+                                  title: const Text(
+                                    'Tareas Extras',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                  subtitle: const Text(
+                                    'Asignar una tarea extra al operador',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                  trailing: const Icon(
+                                    Icons.arrow_forward_ios,
+                                    color: Colors.green,
+                                    size: 16,
+                                  ),
+                                  onTap: () {
+                                    Navigator.of(context).pop();
+                                    _mostrarDialogoTareaExtra();
+                                  },
+                                ),
                               ),
-                              trailing: const Icon(
-                                Icons.arrow_forward_ios,
-                                color: Color(0xFF4682B4),
-                                size: 16,
-                              ),
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                _mostrarFormularioManual();
-                              },
-                            ),
+                            ],
                           );
                         }
 
@@ -2568,6 +2603,171 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
         );
       },
     );
+  }
+
+  Future<void> _mostrarDialogoTareaExtra() async {
+    String tipoTarea = 'Descargar camioneta';
+    final descripcionCtrl = TextEditingController();
+    bool guardando = false;
+
+    final tiposTareas = [
+      'Descargar camioneta',
+      'Cargar camioneta',
+      'Bajar viruta',
+      'Limpiar hornos',
+      'Mantenimiento de equipos',
+      'Limpieza general',
+      'Organizar material',
+      'Otro',
+    ];
+
+    await showDialog(
+      context: context,
+      builder:
+          (context) => StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                title: const Text('Nueva Tarea Extra'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4682B4).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF4682B4)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.person,
+                              color: Color(0xFF4682B4),
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                widget.operadorNombre,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2C3E50),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: tipoTarea,
+                        decoration: const InputDecoration(
+                          labelText: 'Tipo de tarea',
+                          border: OutlineInputBorder(),
+                        ),
+                        items:
+                            tiposTareas
+                                .map(
+                                  (t) => DropdownMenuItem(
+                                    value: t,
+                                    child: Text(t),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (v) => setDialogState(() => tipoTarea = v!),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: descripcionCtrl,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: InputDecoration(
+                          labelText: 'Descripción',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                        ),
+                        maxLines: 2,
+                      ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Cancelar',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed:
+                        guardando
+                            ? null
+                            : () async {
+                              setDialogState(() => guardando = true);
+                              try {
+                                await FirebaseFirestore.instance
+                                    .collection('tareas_extras')
+                                    .add({
+                                      'tipo_tarea': tipoTarea,
+                                      'operador_id': widget.operadorId,
+                                      'descripcion':
+                                          descripcionCtrl.text
+                                              .trim()
+                                              .toUpperCase(),
+                                      'fecha_asignacion': Timestamp.now(),
+                                      'estado': 'pendiente',
+                                    });
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Tarea extra creada exitosamente',
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  setDialogState(() => guardando = false);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error: $e')),
+                                  );
+                                }
+                              }
+                            },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                    child:
+                        guardando
+                            ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                            : const Text('Crear'),
+                  ),
+                ],
+              );
+            },
+          ),
+    );
+
+    descripcionCtrl.dispose();
   }
 
   Widget _buildStockBadge(String label, int cantidad) {

@@ -2473,11 +2473,20 @@ class _ProformaOrdenDespachoDeskScreenState
 
   // FUNCIÓN INTERNA PARA GUARDAR PROFORMA
   Future<void> _guardarProformaInterno() async {
-    // ✅ Usa el número ya asignado (NO lee el contador de nuevo)
     final numeroAUsar = int.parse(_numeroProforma);
 
+    // NUEVO: obtener sede del usuario logueado
+    final user = FirebaseAuth.instance.currentUser;
+    final usuarioDoc =
+        await FirebaseFirestore.instance
+            .collection('usuarios_activos')
+            .doc(user?.uid)
+            .get();
+    final sedeOrigen =
+        usuarioDoc.exists ? (usuarioDoc['sede'] ?? 'Tulcán') : 'Tulcán';
+
     final proformaData = {
-      'numero': numeroAUsar, // ✅ Usa el número mostrado en pantalla
+      'numero': numeroAUsar,
       'numero_orden': _numeroOrdenDespacho,
       'cliente': _clienteController.text,
       'ci_ruc': _ciRucController.text,
@@ -2485,6 +2494,7 @@ class _ProformaOrdenDespachoDeskScreenState
       'telefono': _telefonoController.text,
       'vendedor_nombre': _vendedorSeleccionado ?? 'Sin asignar',
       'despacho': _despachoSeleccionado,
+      'sede_origen': sedeOrigen, // NUEVO
       'items':
           items
               .map(
@@ -2497,24 +2507,20 @@ class _ProformaOrdenDespachoDeskScreenState
                 },
               )
               .toList(),
-
       'subtotal': _calcularSubtotal(),
       'iva': _calcularIVA(),
       'total': _calcularTotalFinal(),
-
       'numero_factura': _numeroFacturaController.text.trim(),
       'valor_declarado':
           _valorDeclaradoController.text.trim().isEmpty
               ? '0'
               : _valorDeclaradoController.text.trim(),
-
       'fecha': Timestamp.now(),
       'estado': '',
     };
 
     await FirebaseFirestore.instance.collection('proformas').add(proformaData);
 
-    // ✅ Incrementa el contador DESPUÉS de guardar exitosamente
     final ref = FirebaseFirestore.instance
         .collection('orden_proforma_counter')
         .doc('proforma');

@@ -100,8 +100,8 @@ class _FundicionDeskScreenState extends State<FundicionDeskScreen>
                       const SizedBox(height: 20),
                       _buildBoton(
                         icon: LucideIcons.flame,
-                        titulo: 'Tareas Extras',
-                        subtitulo: 'Funciones extras de los usuarios',
+                        titulo: 'Retiros de Mercadería',
+                        subtitulo: 'Unidades retiradas por usuarios',
                         onTap: () {
                           navegarConFade(context, const TareasExtrasScreen());
                         },

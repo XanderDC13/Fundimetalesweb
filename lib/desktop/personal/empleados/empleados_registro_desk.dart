@@ -16,7 +16,7 @@ class EmpleadosPendientesDeskScreen extends StatefulWidget {
 class _EmpleadosPendientesDeskScreenState
     extends State<EmpleadosPendientesDeskScreen> {
   final Map<String, String> rolesDisponibles = {
-    'Administrador': 'Administrador General',
+    'Administrador General': 'Administrador General',
     'Gerente': 'Gerente',
     'Vendedor': 'Vendedor',
     'SupervisorFundicion': 'Supervisor Fundicion',

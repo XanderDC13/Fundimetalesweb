@@ -217,7 +217,7 @@ class _EmpleadosActivosDeskScreenState
                                                             children: [
                                                               Icon(
                                                                 value ==
-                                                                        'Administrador'
+                                                                        'Administrador General'
                                                                     ? Icons
                                                                         .security
                                                                     : Icons

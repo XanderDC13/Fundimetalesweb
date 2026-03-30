@@ -323,7 +323,9 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
                         children: [
                           // ✅ DESPUÉS
                           if (rolUsuario == 'Gerente' ||
-                              rolUsuario == 'Administrador General')
+                              (rolUsuario == 'Administrador General' &&
+                                  sedeUsuario != 'Quito' &&
+                                  sedeUsuario != 'Guayaquil'))
                             Row(
                               children: [
                                 Expanded(
@@ -353,7 +355,9 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
 
                           // ✅ DESPUÉS - solo Gerente y Administrador General ven métricas y gráfico
                           if (rolUsuario == 'Gerente' ||
-                              rolUsuario == 'Administrador General')
+                              (rolUsuario == 'Administrador General' &&
+                                  sedeUsuario != 'Quito' &&
+                                  sedeUsuario != 'Guayaquil'))
                             Row(
                               children: [
                                 Column(
@@ -485,7 +489,6 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
   }
 
   Widget _buildFlujoDineroChart() {
-
     final double maxY = 100000;
 
     return Container(
@@ -835,21 +838,23 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             'Inventario',
             () => navegarConFade(context, const InventarioDeskScreen()),
           ),
-          _gridButton(
-            Icons.people,
-            'Personal',
-            () => navegarConFade(context, const PersonalDeskScreen()),
-          ),
+          if (sedeUsuario != 'Quito' && sedeUsuario != 'Guayaquil')
+            _gridButton(
+              Icons.people,
+              'Personal',
+              () => navegarConFade(context, const PersonalDeskScreen()),
+            ),
           _gridButton(
             Icons.calculate,
             'Directorio',
             () => navegarConFade(context, const DirectorioDeskScreen()),
           ),
-          _gridButton(
-            Icons.account_balance_wallet,
-            'Administración',
-            () => navegarConFade(context, const AdministracionDeskScreen()),
-          ),
+          if (sedeUsuario != 'Quito' && sedeUsuario != 'Guayaquil')
+            _gridButton(
+              Icons.account_balance_wallet,
+              'Administración',
+              () => navegarConFade(context, const AdministracionDeskScreen()),
+            ),
           _gridButton(
             Icons.bar_chart,
             'Reportes',

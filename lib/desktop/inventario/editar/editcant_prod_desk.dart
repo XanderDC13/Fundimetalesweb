@@ -1031,22 +1031,14 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
     Proceso procesoActual,
   ) {
     final TextEditingController cantidadController = TextEditingController();
-    Proceso? procesoDestino;
     bool puedeGuardar = false;
     final cantidadDisponible = cantidadesPorProceso[procesoActual.id] ?? 0;
 
-    // Filtrar procesos disponibles para mover (siguiente en la cadena)
-    final procesosDisponibles =
-        procesos.where((p) => p.orden > procesoActual.orden).toList();
-
-    // Función para validar el formulario
-    void validarFormulario() {
-      final cantidad = int.tryParse(cantidadController.text) ?? 0;
-      puedeGuardar =
-          procesoDestino != null &&
-          cantidad > 0 &&
-          cantidad <= cantidadDisponible;
-    }
+    // Buscar proceso destino "bodega" automáticamente
+    final procesoDestino = procesos.firstWhere(
+      (p) => p.id.toLowerCase() == 'bodega',
+      orElse: () => procesos.last,
+    );
 
     showDialog(
       context: context,
@@ -1070,15 +1062,15 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.transfer_within_a_station,
-                          color: const Color(0xFF4682B4),
+                          color: Color(0xFF4682B4),
                           size: 28,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Mover desde ${procesoActual.nombre}',
+                            'Mover a ${procesoDestino.nombre}',
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -1089,7 +1081,6 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -1107,7 +1098,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Disponible en ${procesoActual.nombre}: $cantidadDisponible unidades',
+                              'Disponible: $cantidadDisponible unidades',
                               style: TextStyle(
                                 color: Colors.blue.shade700,
                                 fontWeight: FontWeight.w500,
@@ -1118,47 +1109,6 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // Dropdown para seleccionar proceso destino
-                    DropdownButtonFormField<Proceso>(
-                      decoration: InputDecoration(
-                        labelText: 'Proceso destino',
-                        prefixIcon: const Icon(
-                          Icons.arrow_forward,
-                          color: Color(0xFF4682B4),
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFFF8F9FA),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE9ECEF),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF4682B4),
-                          ),
-                        ),
-                      ),
-                      items:
-                          procesosDisponibles.map((proceso) {
-                            return DropdownMenuItem<Proceso>(
-                              value: proceso,
-                              child: Text(proceso.nombre),
-                            );
-                          }).toList(),
-                      onChanged: (Proceso? selected) {
-                        setModalState(() {
-                          procesoDestino = selected;
-                          validarFormulario();
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Campo cantidad
                     TextField(
                       controller: cantidadController,
                       keyboardType: TextInputType.number,
@@ -1185,13 +1135,14 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                         ),
                       ),
                       onChanged: (value) {
+                        final cantidad = int.tryParse(value) ?? 0;
                         setModalState(() {
-                          validarFormulario();
+                          puedeGuardar =
+                              cantidad > 0 && cantidad <= cantidadDisponible;
                         });
                       },
                     ),
                     const SizedBox(height: 24),
-
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -1212,7 +1163,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                                         0;
                                     await _procesarMovimiento(
                                       procesoActual,
-                                      procesoDestino!,
+                                      procesoDestino,
                                       cantidad,
                                     );
                                     if (mounted) Navigator.pop(context);
@@ -1220,7 +1171,7 @@ class _EditInvProdDeskScreenState extends State<EditInvProdDeskScreen> {
                                   : null,
                           icon: const Icon(Icons.transfer_within_a_station),
                           label: const Text(
-                            'Realizar movimiento',
+                            'Mover a Bodega',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                           style: ElevatedButton.styleFrom(

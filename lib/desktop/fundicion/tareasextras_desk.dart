@@ -15,24 +15,9 @@ class TareasExtrasScreen extends StatefulWidget {
   State<TareasExtrasScreen> createState() => _TareasExtrasScreenState();
 }
 
-class _TareasExtrasScreenState extends State<TareasExtrasScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  List<Map<String, dynamic>> _tareasExtras = [];
+class _TareasExtrasScreenState extends State<TareasExtrasScreen> {
   List<Map<String, dynamic>> _retirosMercaderia = [];
-  Map<String, String> _nombresOperadores = {};
   bool _cargando = false;
-
-  final List<String> _tiposTareas = [
-    'Descargar camioneta',
-    'Cargar camioneta',
-    'Bajar viruta',
-    'Limpiar hornos',
-    'Mantenimiento de equipos',
-    'Limpieza general',
-    'Organizar material',
-    'Otro',
-  ];
 
   DateTime? _fechaDesdeRetiros;
   DateTime? _fechaHastaRetiros;
@@ -63,66 +48,12 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() => setState(() {}));
     _obtenerDatos();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  Future<String> _obtenerNombreOperador(String operadorId) async {
-    if (_nombresOperadores.containsKey(operadorId))
-      return _nombresOperadores[operadorId]!;
-    try {
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('usuarios_activos')
-              .doc(operadorId)
-              .get();
-      if (doc.exists) {
-        final nombre = doc.data()?['nombre'] ?? 'Sin nombre';
-        _nombresOperadores[operadorId] = nombre;
-        return nombre;
-      }
-    } catch (e) {
-      debugPrint('Error operador $operadorId: $e');
-    }
-    return 'Operador desconocido';
   }
 
   Future<void> _obtenerDatos() async {
     setState(() => _cargando = true);
     try {
-      final tareasSnap =
-          await FirebaseFirestore.instance
-              .collection('tareas_extras')
-              .orderBy('fecha_asignacion', descending: true)
-              .get();
-
-      final List<Map<String, dynamic>> tareas = [];
-      for (final doc in tareasSnap.docs) {
-        final data = doc.data();
-        String opNombre = 'Sin operador';
-        if (data['operador_id'] != null &&
-            data['operador_id'].toString().isNotEmpty) {
-          opNombre = await _obtenerNombreOperador(
-            data['operador_id'].toString(),
-          );
-        }
-        tareas.add({
-          'id': doc.id,
-          'operador': opNombre,
-          'tipo_tarea': data['tipo_tarea'] ?? 'Sin especificar',
-          'descripcion': data['descripcion'] ?? '',
-          'fecha': data['fecha_asignacion'],
-          'estado': data['estado']?.toString() ?? 'pendiente',
-        });
-      }
-
       final retirosSnap =
           await FirebaseFirestore.instance
               .collection('retiros_mercaderia')
@@ -157,7 +88,6 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
       }
 
       setState(() {
-        _tareasExtras = tareas;
         _retirosMercaderia = retiros;
         _cargando = false;
       });
@@ -289,7 +219,6 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
                     final refsText = refs
                         .map(
                           (ref) =>
-                              // ✅ CORRECTO
                               '${ref['referencia'] ?? ''} x ${ref['cantidad'] ?? 0}',
                         )
                         .join('\n');
@@ -320,7 +249,6 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
                 ],
               ),
               pw.SizedBox(height: 16),
-              // ── Resumen por referencia ──────────────────────────────────
               pw.Text(
                 'Resumen por Referencia:',
                 style: pw.TextStyle(
@@ -428,29 +356,6 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
     await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }
 
-  void _mostrarDialogoNuevaTarea() async {
-    final usuarios = await _cargarUsuarios();
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder:
-          (context) => _DialogoNuevaTarea(
-            tiposTareas: _tiposTareas,
-            todosLosUsuarios: usuarios,
-            onGuardar: (tipoTarea, operadorId, descripcion) async {
-              await FirebaseFirestore.instance.collection('tareas_extras').add({
-                'tipo_tarea': tipoTarea,
-                'operador_id': operadorId,
-                'descripcion': descripcion,
-                'fecha_asignacion': Timestamp.now(),
-                'estado': 'pendiente',
-              });
-              _obtenerDatos();
-            },
-          ),
-    );
-  }
-
   void _mostrarDialogoNuevoRetiro() async {
     final usuarios = await _cargarUsuarios();
     if (!mounted) return;
@@ -473,92 +378,6 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
               _obtenerDatos();
             },
           ),
-    );
-  }
-
-  Widget _buildTablaTareasExtras() {
-    if (_cargando)
-      return const Expanded(child: Center(child: CircularProgressIndicator()));
-    if (_tareasExtras.isEmpty) {
-      return const Expanded(
-        child: Center(
-          child: Text(
-            'No hay tareas extras registradas.',
-            style: TextStyle(fontSize: 14, color: Color(0xFF2C3E50)),
-          ),
-        ),
-      );
-    }
-    return Expanded(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(8),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.2),
-                spreadRadius: 2,
-                blurRadius: 5,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Table(
-            border: TableBorder(
-              horizontalInside: BorderSide(
-                color: Colors.grey.shade300,
-                width: 1,
-              ),
-              bottom: BorderSide(color: Colors.grey.shade300, width: 1),
-              top: BorderSide(color: Colors.grey.shade300, width: 1),
-            ),
-            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-            columnWidths: const {
-              0: FlexColumnWidth(2.5),
-              1: FlexColumnWidth(2.5),
-              2: FlexColumnWidth(3.0),
-              3: FlexColumnWidth(2.5),
-              4: FlexColumnWidth(1.5),
-            },
-            children: [
-              const TableRow(
-                decoration: BoxDecoration(color: Color(0xFF4682B4)),
-                children: [
-                  _TablaHeader('Operador'),
-                  _TablaHeader('Tipo de Tarea'),
-                  _TablaHeader('Descripción'),
-                  _TablaHeader('Fecha'),
-                  _TablaHeader('Estado'),
-                ],
-              ),
-              ..._tareasExtras.asMap().entries.map((entry) {
-                final index = entry.key;
-                final tarea = entry.value;
-                return TableRow(
-                  decoration: BoxDecoration(
-                    color: index % 2 == 0 ? Colors.grey.shade50 : Colors.white,
-                  ),
-                  children: [
-                    _TablaCell(tarea['operador']?.toString() ?? '—'),
-                    _TablaCell(tarea['tipo_tarea']?.toString() ?? '—'),
-                    _TablaCell(
-                      (tarea['descripcion']?.toString().isEmpty ?? true)
-                          ? '—'
-                          : tarea['descripcion'].toString(),
-                    ),
-                    _TablaCell(_formatearFecha(tarea['fecha'])),
-                    _TablaCellEstado(
-                      tarea['estado']?.toString() ?? 'pendiente',
-                    ),
-                  ],
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -679,7 +498,7 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
                     onTap: () async {
                       final p = await showDatePicker(
                         context: context,
-                        useRootNavigator: true, // ← AGREGAR ESTO
+                        useRootNavigator: true,
                         initialDate: _fechaHastaRetiros ?? DateTime.now(),
                         firstDate: DateTime(2020),
                         lastDate: DateTime.now(),
@@ -868,6 +687,7 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
                                     : Colors.white,
                           ),
                           children: [
+                            // ✅ BIEN - sin isNumero, usa el valor por defecto false
                             _TablaCell(
                               retiro['persona_retiro']?.toString() ?? '—',
                             ),
@@ -914,7 +734,6 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Text(
-                                                  // ✅ CORRECTO
                                                   ref['referencia']
                                                           ?.toString() ??
                                                       '—',
@@ -998,7 +817,7 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
                   const Align(
                     alignment: Alignment.center,
                     child: Text(
-                      'Tareas Extras y Retiros',
+                      'Retiros de Mercadería',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -1008,19 +827,6 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
                   ),
                 ],
               ),
-            ),
-          ),
-          Container(
-            color: const Color(0xFF2C3E50),
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: Colors.white,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white70,
-              tabs: const [
-                Tab(text: 'Tareas Extras'),
-                Tab(text: 'Retiros de Mercadería'),
-              ],
             ),
           ),
           Expanded(
@@ -1033,16 +839,11 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       ElevatedButton.icon(
-                        onPressed:
-                            _tabController.index == 0
-                                ? _mostrarDialogoNuevaTarea
-                                : _mostrarDialogoNuevoRetiro,
+                        onPressed: _mostrarDialogoNuevoRetiro,
                         icon: const Icon(Icons.add, color: Colors.white),
-                        label: Text(
-                          _tabController.index == 0
-                              ? 'Nueva Tarea'
-                              : 'Registrar Retiro',
-                          style: const TextStyle(color: Colors.white),
+                        label: const Text(
+                          'Registrar Retiro',
+                          style: TextStyle(color: Colors.white),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4682B4),
@@ -1051,9 +852,7 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _tabController.index == 0
-                      ? _buildTablaTareasExtras()
-                      : _buildTablaRetiros(),
+                  _buildTablaRetiros(),
                 ],
               ),
             ),
@@ -1065,215 +864,7 @@ class _TareasExtrasScreenState extends State<TareasExtrasScreen>
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// DIÁLOGO NUEVA TAREA
-// ═══════════════════════════════════════════════════════════════════════════
-class _DialogoNuevaTarea extends StatefulWidget {
-  final List<String> tiposTareas;
-  final List<Map<String, dynamic>> todosLosUsuarios;
-  final Future<void> Function(
-    String tipoTarea,
-    String operadorId,
-    String descripcion,
-  )
-  onGuardar;
-
-  const _DialogoNuevaTarea({
-    required this.tiposTareas,
-    required this.todosLosUsuarios,
-    required this.onGuardar,
-  });
-
-  @override
-  State<_DialogoNuevaTarea> createState() => _DialogoNuevaTareaState();
-}
-
-class _DialogoNuevaTareaState extends State<_DialogoNuevaTarea> {
-  late String _tipoTarea;
-  String? _operadorId;
-  String? _operadorNombre;
-  late List<Map<String, dynamic>> _filtrados;
-  final _busquedaCtrl = TextEditingController();
-  final _descripcionCtrl = TextEditingController();
-  bool _guardando = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _tipoTarea = widget.tiposTareas[0];
-    _filtrados = List.from(widget.todosLosUsuarios);
-  }
-
-  @override
-  void dispose() {
-    _busquedaCtrl.dispose();
-    _descripcionCtrl.dispose();
-    super.dispose();
-  }
-
-  void _filtrar(String q) {
-    setState(() {
-      _filtrados =
-          widget.todosLosUsuarios
-              .where(
-                (u) => u['nombre'].toString().toLowerCase().contains(
-                  q.toLowerCase(),
-                ),
-              )
-              .toList();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Nueva Tarea Extra'),
-      content: SizedBox(
-        width: 480,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DropdownButtonFormField<String>(
-                value: _tipoTarea,
-                decoration: const InputDecoration(
-                  labelText: 'Tipo de tarea',
-                  border: OutlineInputBorder(),
-                ),
-                items:
-                    widget.tiposTareas
-                        .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                        .toList(),
-                onChanged: (v) => setState(() => _tipoTarea = v!),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Asignar a operador',
-                style: TextStyle(fontSize: 13, color: Colors.black54),
-              ),
-              const SizedBox(height: 6),
-              if (_operadorNombre != null)
-                _ChipSeleccionado(
-                  nombre: _operadorNombre!,
-                  onQuitar:
-                      () => setState(() {
-                        _operadorId = null;
-                        _operadorNombre = null;
-                        _busquedaCtrl.clear();
-                        _filtrados = List.from(widget.todosLosUsuarios);
-                      }),
-                )
-              else ...[
-                TextField(
-                  controller: _busquedaCtrl,
-                  decoration: const InputDecoration(
-                    hintText: 'Buscar operador...',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                  ),
-                  onChanged: _filtrar,
-                ),
-                const SizedBox(height: 6),
-                _ListaUsuarios(
-                  usuarios: _filtrados,
-                  onSeleccionar:
-                      (u) => setState(() {
-                        _operadorId = u['id'];
-                        _operadorNombre = u['nombre'];
-                      }),
-                ),
-              ],
-              const SizedBox(height: 16),
-              TextField(
-                controller: _descripcionCtrl,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(
-                  labelText: 'Descripción (opcional)',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-                onChanged: (v) {
-                  final upper = v.toUpperCase();
-                  if (_descripcionCtrl.text != upper) {
-                    _descripcionCtrl.value = _descripcionCtrl.value.copyWith(
-                      text: upper,
-                      selection: TextSelection.collapsed(offset: upper.length),
-                    );
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed:
-              _guardando
-                  ? null
-                  : () async {
-                    if (_operadorId == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Debe seleccionar un operador'),
-                        ),
-                      );
-                      return;
-                    }
-                    setState(() => _guardando = true);
-                    try {
-                      await widget.onGuardar(
-                        _tipoTarea,
-                        _operadorId!,
-                        _descripcionCtrl.text,
-                      );
-                      if (mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Tarea creada exitosamente'),
-                          ),
-                        );
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-                        setState(() => _guardando = false);
-                      }
-                    }
-                  },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF4682B4),
-          ),
-          child:
-              _guardando
-                  ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                  : const Text('Crear', style: TextStyle(color: Colors.white)),
-        ),
-      ],
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// DIÁLOGO NUEVO RETIRO  ← VERSIÓN CORREGIDA
+// DIÁLOGO NUEVO RETIRO
 // ═══════════════════════════════════════════════════════════════════════════
 class _DialogoNuevoRetiro extends StatefulWidget {
   final List<Map<String, dynamic>> todosLosUsuarios;
@@ -1300,15 +891,13 @@ class _DialogoNuevoRetiroState extends State<_DialogoNuevoRetiro> {
   final _busquedaCtrl = TextEditingController();
   bool _guardando = false;
 
-  // Referencias seleccionadas: {id, referencia, nombre, cantidadCtrl}
   final List<Map<String, dynamic>> _referenciasSeleccionadas = [];
 
-  // Buscador de productos con debounce
   List<Map<String, dynamic>> _resultadosBusqueda = [];
   final _busquedaProductoCtrl = TextEditingController();
   bool _buscandoProducto = false;
   Timer? _debounceProducto;
-  final _scrollCtrl = ScrollController(); // ← scroll del diálogo
+  final _scrollCtrl = ScrollController();
 
   @override
   void initState() {
@@ -1328,7 +917,6 @@ class _DialogoNuevoRetiroState extends State<_DialogoNuevoRetiro> {
     super.dispose();
   }
 
-  // ── Búsqueda con debounce ─────────────────────────────────────────────────
   void _buscarProductoConDebounce(String query) {
     if (_debounceProducto?.isActive ?? false) _debounceProducto!.cancel();
     if (query.trim().isEmpty) {
@@ -1399,7 +987,6 @@ class _DialogoNuevoRetiroState extends State<_DialogoNuevoRetiro> {
       _busquedaProductoCtrl.clear();
       _resultadosBusqueda = [];
     });
-    // Scroll al final para mostrar el campo de cantidad recién agregado
     Future.delayed(const Duration(milliseconds: 150), () {
       if (_scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(
@@ -1499,8 +1086,7 @@ class _DialogoNuevoRetiroState extends State<_DialogoNuevoRetiro> {
               const Divider(),
               const SizedBox(height: 8),
 
-              // ── 2. ENCABEZADO REFERENCIAS (solo título + badge contador) ──
-              // ¡¡IMPORTANTE: el bloque de cantidades está FUERA de este Row!!
+              // ── 2. ENCABEZADO REFERENCIAS ────────────────────────────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -1594,7 +1180,6 @@ class _DialogoNuevoRetiroState extends State<_DialogoNuevoRetiro> {
               const SizedBox(height: 6),
 
               // ── 4. LISTA DE RESULTADOS ───────────────────────────────────
-              // Verde cuando la referencia ya fue agregada
               if (_resultadosBusqueda.isNotEmpty)
                 Container(
                   constraints: const BoxConstraints(maxHeight: 200),
@@ -1622,7 +1207,6 @@ class _DialogoNuevoRetiroState extends State<_DialogoNuevoRetiro> {
                             yaEsta ? Colors.green.shade50 : Colors.transparent,
                         child: ListTile(
                           dense: true,
-                          // Badge de referencia — azul normal, verde si ya está
                           leading: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -1657,7 +1241,6 @@ class _DialogoNuevoRetiroState extends State<_DialogoNuevoRetiro> {
                               ),
                             ),
                           ),
-                          // Texto indicador cuando ya está seleccionada
                           title:
                               yaEsta
                                   ? Row(
@@ -1698,11 +1281,9 @@ class _DialogoNuevoRetiroState extends State<_DialogoNuevoRetiro> {
                   ),
                 ),
 
-              // ── 5. BANNER + CAMPOS DE CANTIDAD ──────────────────────────
-              // Este bloque está completamente FUERA del Row de "Referencias"
+              // ── 5. CAMPOS DE CANTIDAD ────────────────────────────────────
               if (_referenciasSeleccionadas.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                // Banner verde
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
@@ -1736,7 +1317,6 @@ class _DialogoNuevoRetiroState extends State<_DialogoNuevoRetiro> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Una fila por referencia seleccionada
                 ..._referenciasSeleccionadas.asMap().entries.map((entry) {
                   final i = entry.key;
                   final ref = entry.value;
@@ -1753,7 +1333,6 @@ class _DialogoNuevoRetiroState extends State<_DialogoNuevoRetiro> {
                     ),
                     child: Row(
                       children: [
-                        // Badge referencia
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
@@ -1773,7 +1352,6 @@ class _DialogoNuevoRetiroState extends State<_DialogoNuevoRetiro> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // Campo cantidad
                         Expanded(
                           child: TextField(
                             controller:
@@ -1806,7 +1384,6 @@ class _DialogoNuevoRetiroState extends State<_DialogoNuevoRetiro> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        // Botón eliminar
                         IconButton(
                           icon: const Icon(
                             Icons.delete_outline,
@@ -2046,53 +1623,6 @@ class _TablaCell extends StatelessWidget {
           color: isNumero ? Colors.blue.shade700 : const Color(0xFF2C3E50),
         ),
         textAlign: isNumero ? TextAlign.center : TextAlign.left,
-      ),
-    );
-  }
-}
-
-class _TablaCellEstado extends StatelessWidget {
-  final String estado;
-  const _TablaCellEstado(this.estado);
-
-  @override
-  Widget build(BuildContext context) {
-    Color color;
-    String texto;
-    switch (estado.toLowerCase()) {
-      case 'terminado':
-      case 'terminada':
-      case 'completada':
-        color = Colors.green;
-        texto = 'Terminado';
-        break;
-      case 'pendiente':
-        color = Colors.orange;
-        texto = 'Pendiente';
-        break;
-      default:
-        color = Colors.grey;
-        texto = estado;
-    }
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color),
-          ),
-          child: Text(
-            texto,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ),
       ),
     );
   }

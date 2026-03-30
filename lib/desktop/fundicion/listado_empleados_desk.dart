@@ -4,7 +4,9 @@ import 'package:basefundi/services/navbar_desk.dart';
 import 'package:basefundi/services/pdfs/reportegeneralfundicion.dart';
 import 'package:basefundi/services/transition.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:printing/printing.dart';
 
 class OperadoresListDeskScreen extends StatefulWidget {
@@ -372,8 +374,33 @@ class _OperadoresListDeskScreenState extends State<OperadoresListDeskScreen> {
     );
   }
 
+  Future<Uint8List> _generarPDFIsolate(Map<String, dynamic> params) async {
+    final tareas = params['tareas'] as List<Map<String, dynamic>>;
+    final nombresOperadores =
+        params['nombresOperadores'] as Map<String, String>;
+    final tareasExtras = params['tareasExtras'] as List<Map<String, dynamic>>;
+    final rangoStart = params['rangoStart'] as int?;
+    final rangoEnd = params['rangoEnd'] as int?;
+    final logoBytes = params['logoBytes'] as Uint8List; // ← agregar
+
+    DateTimeRange? rango;
+    if (rangoStart != null && rangoEnd != null) {
+      rango = DateTimeRange(
+        start: DateTime.fromMillisecondsSinceEpoch(rangoStart),
+        end: DateTime.fromMillisecondsSinceEpoch(rangoEnd),
+      );
+    }
+
+    return ReporteGeneralPdfService.generarReporteGeneral(
+      tareas: tareas,
+      nombresOperadores: nombresOperadores,
+      rango: rango,
+      tareasExtras: tareasExtras,
+      logoBytes: logoBytes, // ← agregar
+    );
+  }
+
   Future<void> _exportarPDFGeneral() async {
-    // Mostrar loading
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -381,23 +408,22 @@ class _OperadoresListDeskScreenState extends State<OperadoresListDeskScreen> {
     );
 
     try {
-      // 1. Obtener todos los usuarios
-      final usuariosSnapshot =
-          await FirebaseFirestore.instance.collection('usuarios').get();
+      final results = await Future.wait([
+        FirebaseFirestore.instance.collection('usuarios').get(),
+        FirebaseFirestore.instance
+            .collection('tareas_operador')
+            .where('estado', isEqualTo: 'completada')
+            .get(),
+        FirebaseFirestore.instance.collection('tareas_extras').get(),
+      ]);
 
-      // 2. Obtener tareas completadas con filtro de fecha
-      Query query = FirebaseFirestore.instance
-          .collection('tareas_operador')
-          .where('estado', isEqualTo: 'completada');
+      final usuariosSnapshot = results[0];
+      final tareasSnapshot = results[1];
+      final extrasSnapshot = results[2];
 
-      final tareasSnapshot = await query.get();
-
-      // 3. Filtrar por rango de fechas si está seleccionado
       var todasTareas =
           tareasSnapshot.docs
-              .map(
-                (doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>},
-              )
+              .map((doc) => {'id': doc.id, ...doc.data()})
               .toList();
 
       if (_selectedDateRange != null) {
@@ -416,13 +442,33 @@ class _OperadoresListDeskScreenState extends State<OperadoresListDeskScreen> {
             }).toList();
       }
 
-      // 4. Construir mapa de operadores con sus nombres
+      var tareasExtras =
+          extrasSnapshot.docs
+              .map((doc) => {'id': doc.id, ...doc.data()})
+              .toList();
+
+      if (_selectedDateRange != null) {
+        tareasExtras =
+            tareasExtras.where((t) {
+              final fecha = (t['fecha_asignacion'] as Timestamp?)?.toDate();
+              if (fecha == null) return false;
+              return fecha.isAfter(
+                    _selectedDateRange!.start.subtract(
+                      const Duration(seconds: 1),
+                    ),
+                  ) &&
+                  fecha.isBefore(
+                    _selectedDateRange!.end.add(const Duration(days: 1)),
+                  );
+            }).toList();
+      }
+
       final Map<String, String> nombresOperadores = {
         for (var u in usuariosSnapshot.docs)
           u.id: (u.data())['nombre'] ?? 'Sin nombre',
       };
 
-      Navigator.of(context).pop(); // Cerrar loading
+      Navigator.of(context).pop();
 
       if (todasTareas.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -434,16 +480,21 @@ class _OperadoresListDeskScreenState extends State<OperadoresListDeskScreen> {
         return;
       }
 
-      // 5. Generar PDF
-      final pdfBytes = await ReporteGeneralPdfService.generarReporteGeneral(
-        tareas: todasTareas,
-        nombresOperadores: nombresOperadores,
-        rango: _selectedDateRange,
-      );
+      // Cargar logo UNA sola vez en el hilo principal
+      final logoBytes = await rootBundle.load('lib/assets/logo.png');
 
-      await Printing.sharePdf(
-        bytes: pdfBytes,
-        filename:
+      final pdfBytes = await compute(_generarPDFIsolate, {
+        'tareas': todasTareas,
+        'nombresOperadores': nombresOperadores,
+        'tareasExtras': tareasExtras,
+        'rangoStart': _selectedDateRange?.start.millisecondsSinceEpoch,
+        'rangoEnd': _selectedDateRange?.end.millisecondsSinceEpoch,
+        'logoBytes': logoBytes.buffer.asUint8List(), // ← pasar los bytes
+      });
+
+      await Printing.layoutPdf(
+        onLayout: (_) async => pdfBytes,
+        name:
             'reporte_general_fundicion_${DateTime.now().millisecondsSinceEpoch}.pdf',
       );
     } catch (e) {

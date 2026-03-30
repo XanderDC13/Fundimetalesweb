@@ -35,7 +35,8 @@ class MenuStateManager {
   String? _expandedMenu;
   String _rolUsuario = 'Empleado';
   bool _isInitialized = false;
-
+  String _sedeUsuario = '';
+  String get sedeUsuario => _sedeUsuario;
   String? get expandedMenu => _expandedMenu;
   String get rolUsuario => _rolUsuario;
   bool get isInitialized => _isInitialized;
@@ -47,6 +48,10 @@ class MenuStateManager {
   void setRolUsuario(String rol) {
     _rolUsuario = rol;
     _isInitialized = true;
+  }
+
+  void setSedeUsuario(String sede) {
+    _sedeUsuario = sede;
   }
 
   void toggleMenu(String menu) {
@@ -113,6 +118,7 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
         final data = doc.data()!;
         final rol = data['rol'] ?? 'Empleado';
         _menuStateManager.setRolUsuario(rol);
+        _menuStateManager.setSedeUsuario(data['sede'] ?? ''); // ✅ Agregar aquí
         setState(() {});
       }
     } catch (e) {
@@ -340,7 +346,7 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             onTap: () => _navigateToScreen(const OperadoresListDeskScreen()),
           ),
           _buildSubItem(
-            label: 'Tareas Extras',
+            label: 'Retiros Mercadería',
             onTap: () => _navigateToScreen(const TareasExtrasScreen()),
           ),
         ],
@@ -378,6 +384,10 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
   }
 
   List<Widget> _buildAdminMenuItems() {
+    final bool sedeLimitada =
+        _menuStateManager.sedeUsuario == 'Quito' ||
+        _menuStateManager.sedeUsuario == 'Guayaquil';
+
     return [
       _buildExpandableItem(
         icon: Icons.inventory,
@@ -402,18 +412,20 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
           ),
         ],
       ),
-      _buildExpandableItem(
-        icon: Icons.people,
-        title: 'Personal',
-        menuKey: 'personal',
-        subItems: [
-          _buildSubItem(
-            label: 'Usuarios',
-            onTap:
-                () => _navigateToScreen(const EmpleadosPendientesDeskScreen()),
-          ),
-        ],
-      ),
+      if (!sedeLimitada)
+        _buildExpandableItem(
+          icon: Icons.people,
+          title: 'Personal',
+          menuKey: 'personal',
+          subItems: [
+            _buildSubItem(
+              label: 'Usuarios',
+              onTap:
+                  () =>
+                      _navigateToScreen(const EmpleadosPendientesDeskScreen()),
+            ),
+          ],
+        ),
       _buildExpandableItem(
         icon: Icons.contacts,
         title: 'Directorio',
@@ -429,17 +441,18 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
           ),
         ],
       ),
-      _buildExpandableItem(
-        icon: Icons.account_balance_wallet,
-        title: 'Administración',
-        menuKey: 'administracion',
-        subItems: [
-          _buildSubItem(
-            label: 'CxC',
-            onTap: () => _navigateToScreen(const CxcScreen()),
-          ),
-        ],
-      ),
+      if (!sedeLimitada)
+        _buildExpandableItem(
+          icon: Icons.account_balance_wallet,
+          title: 'Administración',
+          menuKey: 'administracion',
+          subItems: [
+            _buildSubItem(
+              label: 'CxC',
+              onTap: () => _navigateToScreen(const CxcScreen()),
+            ),
+          ],
+        ),
       _buildExpandableItem(
         icon: Icons.bar_chart,
         title: 'Reportes',

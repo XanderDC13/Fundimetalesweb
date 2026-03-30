@@ -1,5 +1,6 @@
 import 'package:basefundi/services/pdfs/copiaordenpdf_desk.dart';
 import 'package:basefundi/services/pdfs/copiaproformapdf_desk.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -29,6 +30,8 @@ class _ReporteDocumentosDeskScreenState
       TextEditingController();
   String _filtroVendedor = '';
   String _filtroDespacho = '';
+  String? _rolUsuario;
+  String? _sedeUsuario;
   List<Map<String, dynamic>> _vendedores = [];
   // Calcular total en dinero
   double get totalDinero => _documentosFiltrados.fold(0.0, (sum, doc) {
@@ -41,7 +44,7 @@ class _ReporteDocumentosDeskScreenState
   void initState() {
     super.initState();
     _cargarVendedores();
-    _obtenerDatos();
+    _cargarRolYSede();
   }
 
   @override
@@ -50,6 +53,23 @@ class _ReporteDocumentosDeskScreenState
     _cedulaController.dispose();
     _motivoAnulacionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _cargarRolYSede() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('usuarios_activos')
+            .doc(user.uid)
+            .get();
+    if (doc.exists) {
+      setState(() {
+        _rolUsuario = doc['rol'];
+        _sedeUsuario = doc['sede'];
+      });
+    }
+    _obtenerDatos();
   }
 
   Future<void> _cargarVendedores() async {
@@ -254,6 +274,16 @@ class _ReporteDocumentosDeskScreenState
                 return despacho.isEmpty || despacho == 'null';
               }
               return despacho == _filtroDespacho;
+            }).toList();
+      }
+      // Filtro automático para Administrador General de Quito/Guayaquil
+      if (_rolUsuario == 'Administrador General' &&
+          (_sedeUsuario == 'Quito' || _sedeUsuario == 'Guayaquil')) {
+        documentos =
+            documentos.where((doc) {
+              final proforma = doc['proforma'] as Map<String, dynamic>?;
+              final sedeOrigen = proforma?['sede_origen']?.toString() ?? '';
+              return sedeOrigen == _sedeUsuario;
             }).toList();
       }
       // Ordenar por fecha más reciente (proforma o orden)
@@ -1205,9 +1235,78 @@ class _ReporteDocumentosDeskScreenState
                                                   : Colors.white),
                                     ),
                                     children: [
-                                      _TablaCellMain(
-                                        _construirTextoNumeros(documento),
-                                        false,
+                                      Padding(
+                                        padding: const EdgeInsets.all(8),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              _construirTextoNumeros(documento),
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                color: Color(0xFF2C3E50),
+                                              ),
+                                            ),
+                                            Builder(
+                                              builder: (_) {
+                                                final proforma =
+                                                    documento['proforma']
+                                                        as Map<
+                                                          String,
+                                                          dynamic
+                                                        >?;
+                                                final sede =
+                                                    proforma?['sede_origen']
+                                                        ?.toString() ??
+                                                    '';
+                                                if (sede == 'Quito' ||
+                                                    sede == 'Guayaquil') {
+                                                  return Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                          top: 4,
+                                                        ),
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.location_on,
+                                                          size: 12,
+                                                          color:
+                                                              sede == 'Quito'
+                                                                  ? Colors
+                                                                      .blue[700]
+                                                                  : Colors
+                                                                      .green[700],
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 2,
+                                                        ),
+                                                        Text(
+                                                          sede,
+                                                          style: TextStyle(
+                                                            fontSize: 11,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            color:
+                                                                sede == 'Quito'
+                                                                    ? Colors
+                                                                        .blue[700]
+                                                                    : Colors
+                                                                        .green[700],
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                }
+                                                return const SizedBox.shrink();
+                                              },
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                       _TablaCellMain(
                                         documento['cliente']?.toString() ?? '—',

@@ -711,7 +711,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                               child: Text('Gerente'),
                                             ),
                                             DropdownMenuItem(
-                                              value: 'Administrador',
+                                              value: 'Administrador General',
                                               child: Text(
                                                 'Administrador General',
                                               ),

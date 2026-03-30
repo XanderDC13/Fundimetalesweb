@@ -82,13 +82,13 @@ class _ReportesDeskScreenState extends State<ReportesDeskScreen>
       return true;
     }
 
-    // Administradores de Quito/Guayaquil solo pueden ver Reporte Ventas
+    // Administradores de Quito/Guayaquil solo pueden ver Reporte Proformas/Ordenes
     if (_rol == "Administrador General" &&
         (_sede == "Quito" || _sede == "Guayaquil")) {
-      return nombreReporte == "Reporte Ventas";
+      return nombreReporte == "Reporte Proformas";
     }
 
-    // Vendedor puede ver Reporte Ventas y Reporte Proformas
+    // Vendedor puede ver Reporte Cotizaciones
     if (_rol == "Vendedor") {
       return nombreReporte == "Reporte Cotizaciones";
     }
