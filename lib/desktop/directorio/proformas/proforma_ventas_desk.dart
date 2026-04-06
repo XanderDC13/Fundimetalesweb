@@ -337,7 +337,7 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
     });
   }
 
-  bool _aplicarIVA = true;
+  bool _aplicarIVA = false;
 
   // SECCIÓN CLIENTE (basada en la imagen)
   Widget _buildClienteSection() {
@@ -1696,7 +1696,7 @@ class _ProformaVentasDeskScreenState extends State<ProformaVentasDeskScreen> {
         validez: _validezController.text,
         saldo: _saldoController.text,
         entrega: _entregaController.text,
-        lugar: _lugarController.text,
+        lugar: _lugarController.text, nombreComercial: '',
       );
 
       // AQUÍ ES DONDE CAMBIA - después de que se cierre la vista previa

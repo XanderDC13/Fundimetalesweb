@@ -30,7 +30,6 @@ class _ReporteDocumentosDeskScreenState
       TextEditingController();
   String _filtroVendedor = '';
   String _filtroDespacho = '';
-  String? _rolUsuario;
   String? _sedeUsuario;
   List<Map<String, dynamic>> _vendedores = [];
   // Calcular total en dinero
@@ -65,7 +64,6 @@ class _ReporteDocumentosDeskScreenState
             .get();
     if (doc.exists) {
       setState(() {
-        _rolUsuario = doc['rol'];
         _sedeUsuario = doc['sede'];
       });
     }
@@ -276,16 +274,17 @@ class _ReporteDocumentosDeskScreenState
               return despacho == _filtroDespacho;
             }).toList();
       }
-      // Filtro automático para Administrador General de Quito/Guayaquil
-      if (_rolUsuario == 'Administrador General' &&
-          (_sedeUsuario == 'Quito' || _sedeUsuario == 'Guayaquil')) {
+      // Filtro automático por sede
+      if (_sedeUsuario == 'Quito' || _sedeUsuario == 'Guayaquil') {
         documentos =
             documentos.where((doc) {
               final proforma = doc['proforma'] as Map<String, dynamic>?;
-              final sedeOrigen = proforma?['sede_origen']?.toString() ?? '';
+              if (proforma == null) return false;
+              final sedeOrigen = proforma['sede_origen']?.toString() ?? '';
               return sedeOrigen == _sedeUsuario;
             }).toList();
       }
+
       // Ordenar por fecha más reciente (proforma o orden)
       documentos.sort((a, b) {
         final fechaA = a['fechaProforma'] ?? a['fechaOrden'];

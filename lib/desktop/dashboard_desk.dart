@@ -1,4 +1,5 @@
 import 'package:basefundi/desktop/dash_bajostock_desk.dart';
+import 'package:basefundi/desktop/directorio/aceptarpedidosdesk.dart';
 import 'package:basefundi/desktop/fundicion/listado_empleados_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareasextras_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
@@ -849,6 +850,12 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             'Directorio',
             () => navegarConFade(context, const DirectorioDeskScreen()),
           ),
+          if (sedeUsuario != 'Tulcán')
+            _gridButton(
+              Icons.location_city,
+              'Envíos',
+              () => navegarConFade(context, const EnviosTulcanDeskScreen()),
+            ),
           if (sedeUsuario != 'Quito' && sedeUsuario != 'Guayaquil')
             _gridButton(
               Icons.account_balance_wallet,

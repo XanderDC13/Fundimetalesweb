@@ -43,7 +43,7 @@ class _ProformaOrdenDespachoDeskScreenState
   bool _clienteEncontrado = false;
   String _mensajeBusqueda = '';
   bool _entradaManualHabilitada = false;
-  bool _aplicarIVA = true;
+  bool _aplicarIVA = false;
 
   // Lista de items
   List<ItemOrdenDespacho> items = [];
@@ -482,10 +482,14 @@ class _ProformaOrdenDespachoDeskScreenState
   @override
   void initState() {
     super.initState();
-    _cargarSucursalUsuario();
-    _previsualizarNumeroProforma();
-    _previsualizarNumeroOrdenDespacho();
+    _inicializarPantalla();
     _cargarVendedores();
+  }
+
+  Future<void> _inicializarPantalla() async {
+    await _cargarSucursalUsuario(); // Primero espera la sede
+    await _previsualizarNumeroProforma(); // Luego carga con la sede ya conocida
+    await _previsualizarNumeroOrdenDespacho();
   }
 
   Widget _buildSelectorVendedor() {
@@ -538,9 +542,20 @@ class _ProformaOrdenDespachoDeskScreenState
   }
 
   Future<void> _previsualizarNumeroOrdenDespacho() async {
+    // Construir el nombre del doc según la sede
+    String docId;
+
+    if (sucursalUsuario == 'Quito') {
+      docId = 'orden_Quito';
+    } else if (sucursalUsuario == 'Guayaquil') {
+      docId = 'orden_Guayaquil';
+    } else {
+      docId = 'orden'; // Tulcán usa el doc original
+    }
+
     final ref = FirebaseFirestore.instance
         .collection('orden_proforma_counter')
-        .doc('orden');
+        .doc(docId);
 
     final doc = await ref.get();
 
@@ -593,12 +608,11 @@ class _ProformaOrdenDespachoDeskScreenState
   }
 
   Future<void> _descontarInventario() async {
-    if (_despachoSeleccionado == 'quito' ||
-        _despachoSeleccionado == 'guayaquil') {
-      print(
-        'ℹ️ Despacho seleccionado: $_despachoSeleccionado - No se descuenta inventario',
-      );
-      return; // Salir sin descontar
+    if (sucursalUsuario == 'Tulcán' &&
+        (_despachoSeleccionado == 'quito' ||
+            _despachoSeleccionado == 'guayaquil')) {
+      print('ℹ️ Usuario en Tulcán con despacho externo - No se descuenta');
+      return;
     }
     try {
       final usuario = await _obtenerDatosUsuario();
@@ -682,19 +696,34 @@ class _ProformaOrdenDespachoDeskScreenState
   }
 
   Future<void> _previsualizarNumeroProforma() async {
+    // Construir el nombre del doc según la sede
+    String docId;
+    int contadorInicial;
+
+    if (sucursalUsuario == 'Quito') {
+      docId = 'proforma_Quito';
+      contadorInicial = 0; // Quito empieza desde 1
+    } else if (sucursalUsuario == 'Guayaquil') {
+      docId = 'proforma_Guayaquil';
+      contadorInicial = 0; // Guayaquil empieza desde 1
+    } else {
+      docId = 'proforma'; // Tulcán usa el doc original
+      contadorInicial = 7400;
+    }
+
     final ref = FirebaseFirestore.instance
         .collection('orden_proforma_counter')
-        .doc('proforma');
+        .doc(docId);
 
     final doc = await ref.get();
 
     int numero;
 
     if (doc.exists) {
-      numero = (doc['contador'] ?? 7400) + 1;
+      numero = (doc['contador'] ?? contadorInicial) + 1;
     } else {
-      await ref.set({'contador': 7400});
-      numero = 7401;
+      await ref.set({'contador': contadorInicial});
+      numero = contadorInicial + 1;
     }
 
     setState(() {
@@ -1108,108 +1137,113 @@ class _ProformaOrdenDespachoDeskScreenState
 
           // ⭐ NUEVO: SELECTOR DE DESPACHO
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.location_on, color: Colors.grey[600], size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Seleccionar Despacho',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[700],
+          if (sucursalUsuario == 'Tulcán')
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        color: Colors.grey[600],
+                        size: 20,
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12),
-                Row(
-                  children: [
-                    // Botón Quito
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _despachoSeleccionado =
-                                _despachoSeleccionado == 'quito'
-                                    ? null
-                                    : 'quito';
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              _despachoSeleccionado == 'quito'
-                                  ? const Color(0xFF4682B4)
-                                  : Colors.grey[200],
-                          foregroundColor:
-                              _despachoSeleccionado == 'quito'
-                                  ? Colors.white
-                                  : Colors.grey[700],
-                          padding: EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: BorderSide(
-                              color:
+                      SizedBox(width: 8),
+                      Text(
+                        'Seleccionar Despacho',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+                  Row(
+                    children: [
+                      // Botón Quito
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _despachoSeleccionado =
                                   _despachoSeleccionado == 'quito'
-                                      ? const Color(0xFF4682B4)
-                                      : Colors.grey[300]!,
+                                      ? null
+                                      : 'quito';
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                _despachoSeleccionado == 'quito'
+                                    ? const Color(0xFF4682B4)
+                                    : Colors.grey[200],
+                            foregroundColor:
+                                _despachoSeleccionado == 'quito'
+                                    ? Colors.white
+                                    : Colors.grey[700],
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: BorderSide(
+                                color:
+                                    _despachoSeleccionado == 'quito'
+                                        ? const Color(0xFF4682B4)
+                                        : Colors.grey[300]!,
+                              ),
                             ),
                           ),
+                          child: const Text('Despacho Quito'),
                         ),
-                        child: const Text('Despacho Quito'),
                       ),
-                    ),
-                    SizedBox(width: 8),
-                    // Botón Guayaquil
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _despachoSeleccionado =
-                                _despachoSeleccionado == 'guayaquil'
-                                    ? null
-                                    : 'guayaquil';
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              _despachoSeleccionado == 'guayaquil'
-                                  ? const Color(0xFF4682B4)
-                                  : Colors.grey[200],
-                          foregroundColor:
-                              _despachoSeleccionado == 'guayaquil'
-                                  ? Colors.white
-                                  : Colors.grey[700],
-                          padding: EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: BorderSide(
-                              color:
+                      SizedBox(width: 8),
+                      // Botón Guayaquil
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _despachoSeleccionado =
                                   _despachoSeleccionado == 'guayaquil'
-                                      ? const Color(0xFF4682B4)
-                                      : Colors.grey[300]!,
+                                      ? null
+                                      : 'guayaquil';
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                _despachoSeleccionado == 'guayaquil'
+                                    ? const Color(0xFF4682B4)
+                                    : Colors.grey[200],
+                            foregroundColor:
+                                _despachoSeleccionado == 'guayaquil'
+                                    ? Colors.white
+                                    : Colors.grey[700],
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: BorderSide(
+                                color:
+                                    _despachoSeleccionado == 'guayaquil'
+                                        ? const Color(0xFF4682B4)
+                                        : Colors.grey[300]!,
+                              ),
                             ),
                           ),
+                          child: const Text('Despacho Guayaquil'),
                         ),
-                        child: const Text('Despacho Guayaquil'),
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8),
-              ],
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                ],
+              ),
             ),
-          ),
 
           // BOTÓN GUARDAR CLIENTE (solo visible en modo manual)
           if (_entradaManualHabilitada && !_clienteEncontrado)
@@ -2181,208 +2215,43 @@ class _ProformaOrdenDespachoDeskScreenState
   void _mostrarOpcionesGuardar() async {
     if (!_validarDatos()) return;
 
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Seleccione qué guardar',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
-
-              // Guardar solo Proforma
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _guardarSoloProforma();
-                  },
-                  icon: const Icon(Icons.receipt_long),
-                  label: const Text('Guardar solo Proforma'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4682B4),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Guardar solo Orden
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _guardarSoloOrden();
-                  },
-                  icon: const Icon(Icons.local_shipping),
-                  label: const Text('Guardar solo Orden de Despacho'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4682B4),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Guardar ambas
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _guardarAmbosDocumentos();
-                  },
-                  icon: const Icon(Icons.save_alt),
-                  label: const Text('Guardar Ambas'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[600],
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _guardarSoloProforma() async {
     showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (context) {
         return AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: const Color(0xFF4682B4)),
-              SizedBox(height: 16),
-              Text('Guardando proforma...'),
-            ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
+          title: const Text(
+            '¿Confirmar guardado?',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Text(
+            'Se guardarán la Proforma y la Orden de Despacho juntas.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(color: Colors.grey[700]),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _guardarAmbosDocumentos();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4682B4),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Guardar'),
+            ),
+          ],
         );
       },
     );
-
-    try {
-      await _guardarProformaInterno();
-
-      final user = FirebaseAuth.instance.currentUser;
-      final usuarioDoc =
-          await FirebaseFirestore.instance
-              .collection('usuarios_activos')
-              .doc(user?.uid)
-              .get();
-
-      final usuarioNombre =
-          usuarioDoc.exists
-              ? (usuarioDoc['nombre'] ?? 'Desconocido')
-              : 'Desconocido';
-
-      await FirebaseFirestore.instance.collection('auditoria_general').add({
-        'fecha': FieldValue.serverTimestamp(),
-        'usuario_nombre': usuarioNombre,
-        'usuario_uid': user?.uid ?? 'uid_desconocido',
-        'accion': 'Nueva proforma',
-        'detalle': 'Proforma N° $_numeroProforma',
-      });
-
-      Navigator.pop(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Proforma guardada correctamente'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 3),
-        ),
-      );
-
-      _limpiarFormularioCompleto();
-    } catch (e) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al guardar proforma: ${e.toString()}'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 4),
-        ),
-      );
-    }
-  }
-
-  void _guardarSoloOrden() async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: const Color(0xFF4682B4)),
-              SizedBox(height: 16),
-              Text('Guardando orden de despacho...'),
-            ],
-          ),
-        );
-      },
-    );
-
-    try {
-      await _guardarOrdenDespacho();
-
-      final user = FirebaseAuth.instance.currentUser;
-      final usuarioDoc =
-          await FirebaseFirestore.instance
-              .collection('usuarios_activos')
-              .doc(user?.uid)
-              .get();
-
-      final usuarioNombre =
-          usuarioDoc.exists
-              ? (usuarioDoc['nombre'] ?? 'Desconocido')
-              : 'Desconocido';
-
-      await FirebaseFirestore.instance.collection('auditoria_general').add({
-        'fecha': FieldValue.serverTimestamp(),
-        'usuario_nombre': usuarioNombre,
-        'usuario_uid': user?.uid ?? 'uid_desconocido',
-        'accion': 'Nueva orden de despacho',
-        'detalle': 'Orden N° $_numeroOrdenDespacho',
-      });
-
-      Navigator.pop(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Orden de Despacho guardada correctamente'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 3),
-        ),
-      );
-
-      _limpiarFormularioCompleto();
-    } catch (e) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al guardar orden: ${e.toString()}'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 4),
-        ),
-      );
-    }
   }
 
   void _guardarAmbosDocumentos() async {
@@ -2521,9 +2390,18 @@ class _ProformaOrdenDespachoDeskScreenState
 
     await FirebaseFirestore.instance.collection('proformas').add(proformaData);
 
+    String docIdProforma;
+    if (sedeOrigen == 'Quito') {
+      docIdProforma = 'proforma_Quito';
+    } else if (sedeOrigen == 'Guayaquil') {
+      docIdProforma = 'proforma_Guayaquil';
+    } else {
+      docIdProforma = 'proforma';
+    }
+
     final ref = FirebaseFirestore.instance
         .collection('orden_proforma_counter')
-        .doc('proforma');
+        .doc(docIdProforma);
     await ref.update({'contador': numeroAUsar});
   }
 
@@ -2566,9 +2444,18 @@ class _ProformaOrdenDespachoDeskScreenState
         .add(ordenData);
 
     // ✅ Incrementa el contador DESPUÉS de guardar exitosamente
+    String docIdOrden;
+    if (sucursalUsuario == 'Quito') {
+      docIdOrden = 'orden_Quito';
+    } else if (sucursalUsuario == 'Guayaquil') {
+      docIdOrden = 'orden_Guayaquil';
+    } else {
+      docIdOrden = 'orden';
+    }
+
     final ref = FirebaseFirestore.instance
         .collection('orden_proforma_counter')
-        .doc('orden');
+        .doc(docIdOrden);
     await ref.update({'contador': numeroAUsar});
   }
 

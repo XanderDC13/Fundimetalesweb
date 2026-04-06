@@ -2,6 +2,7 @@ import 'package:basefundi/desktop/administracion/cxc.dart';
 import 'package:basefundi/desktop/ajustes/editperfil_desk.dart';
 import 'package:basefundi/desktop/ajustes/feedback_desk.dart';
 import 'package:basefundi/desktop/dashboard_desk.dart';
+import 'package:basefundi/desktop/directorio/aceptarpedidosdesk.dart';
 import 'package:basefundi/desktop/directorio/contactos_desk.dart';
 import 'package:basefundi/desktop/directorio/proformas_desk.dart';
 import 'package:basefundi/desktop/fundicion/listado_empleados_desk.dart';
@@ -450,6 +451,19 @@ class _MainDeskLayoutState extends State<MainDeskLayout>
             _buildSubItem(
               label: 'CxC',
               onTap: () => _navigateToScreen(const CxcScreen()),
+            ),
+          ],
+        ),
+      // Agregar acceso a "EnviosTulcanDeskScreen" solo si la sede es Quito o Guayaquil
+      if (sedeLimitada)
+        _buildExpandableItem(
+          icon: Icons.local_shipping_outlined,
+          title: 'Envíos Tulcán',
+          menuKey: 'enviosTulcan',
+          subItems: [
+            _buildSubItem(
+              label: 'Envios',
+              onTap: () => _navigateToScreen(const EnviosTulcanDeskScreen()),
             ),
           ],
         ),

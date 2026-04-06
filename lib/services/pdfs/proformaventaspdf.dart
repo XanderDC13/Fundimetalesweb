@@ -5,7 +5,6 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
-
 class PDFGenerator {
   static Future<pw.Document> generarPDF({
     required String numeroProforma,
@@ -47,9 +46,11 @@ class PDFGenerator {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _buildPDFHeader(logoProvider, numeroProforma),
-                    pw.SizedBox(height: 10),
-                    _buildPDFClienteInfo(cliente, direccion, ciudad, correo, ruc, telefono),
+                    _buildPDFHeader(
+                      logoProvider,
+                      numeroProforma,
+                      DateTime.now(),
+                    ),
                     pw.SizedBox(height: 10),
                     _buildPDFItemsTable(items),
                     pw.SizedBox(height: 10),
@@ -71,6 +72,7 @@ class PDFGenerator {
   static pw.Widget _buildPDFHeader(
     pw.ImageProvider? logoProvider,
     String numeroProforma,
+    DateTime fecha,
   ) {
     return pw.Container(
       width: double.infinity,
@@ -152,7 +154,7 @@ class PDFGenerator {
             ),
           ),
 
-          // DERECHA: RUC, ORDEN, NÚMERO Y FECHA (20% del ancho)
+          // DERECHA: RUC, PROFORMA, NÚMERO Y FECHA (20% del ancho)
           pw.Expanded(
             flex: 2,
             child: pw.Container(
@@ -174,7 +176,7 @@ class PDFGenerator {
                   pw.Text(
                     numeroProforma,
                     style: pw.TextStyle(
-                      fontSize: 9,
+                      fontSize: 10,
                       fontWeight: pw.FontWeight.bold,
                       color: PdfColors.grey,
                     ),
@@ -185,11 +187,19 @@ class PDFGenerator {
                     mainAxisAlignment: pw.MainAxisAlignment.center,
                     mainAxisSize: pw.MainAxisSize.min,
                     children: [
-                      _buildFechaBox('D', '${DateTime.now().day}', 14),
+                      _buildFechaBox(
+                        'D',
+                        '${fecha.day.toString().padLeft(2, '0')}',
+                        18,
+                      ),
                       pw.SizedBox(width: 2),
-                      _buildFechaBox('M', '${DateTime.now().month}', 14),
+                      _buildFechaBox(
+                        'M',
+                        '${fecha.month.toString().padLeft(2, '0')}',
+                        18,
+                      ),
                       pw.SizedBox(width: 2),
-                      _buildFechaBox('A', '${DateTime.now().year}', 25),
+                      _buildFechaBox('A', '${fecha.year}', 28),
                     ],
                   ),
                 ],
@@ -207,7 +217,7 @@ class PDFGenerator {
       children: [
         pw.Text(
           label,
-          style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+          style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
         ),
         pw.Container(
           width: width,
@@ -225,83 +235,6 @@ class PDFGenerator {
     );
   }
 
-  static pw.Widget _buildPDFClienteInfo(
-    String cliente,
-    String direccion,
-    String ciudad,
-    String correo,
-    String ruc,
-    String telefono,
-  ) {
-    return pw.Container(
-      padding: pw.EdgeInsets.all(6),
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey300),
-        borderRadius: pw.BorderRadius.circular(6),
-      ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text(
-            'INFORMACIÓN DEL CLIENTE',
-            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
-          ),
-          pw.SizedBox(height: 4),
-
-          // FILA 1: Cliente y Nombre Comercial
-          pw.Row(
-            children: [
-              pw.Expanded(
-                child: pw.Text(
-                  'Cliente: $cliente',
-                  style: pw.TextStyle(fontSize: 9),
-                ),
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 3),
-
-          // FILA 2: RUC y Teléfono
-          pw.Row(
-            children: [
-              pw.Expanded(
-                child: pw.Text('RUC: $ruc', style: pw.TextStyle(fontSize: 9)),
-              ),
-              pw.Expanded(
-                child: pw.Text(
-                  'Teléfono: $telefono',
-                  style: pw.TextStyle(fontSize: 9),
-                ),
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 3),
-
-          // FILA 3: Ciudad y Dirección
-          pw.Row(
-            children: [
-              pw.Expanded(
-                child: pw.Text(
-                  'Ciudad: $ciudad',
-                  style: pw.TextStyle(fontSize: 9),
-                ),
-              ),
-              pw.Expanded(
-                child: pw.Text(
-                  'Dirección: $direccion',
-                  style: pw.TextStyle(fontSize: 9),
-                ),
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 3),
-
-          // FILA 4: Correo (ancho completo)
-          pw.Text('Correo: $correo', style: pw.TextStyle(fontSize: 9)),
-        ],
-      ),
-    );
-  }
 
   static pw.Widget _buildPDFItemsTable(List<ItemProforma> items) {
     return pw.Container(
@@ -485,7 +418,6 @@ class PDFGenerator {
                 ],
               ),
               pw.SizedBox(height: 3),
-              // Solo mostrar IVA si está habilitado
               if (aplicarIVA) ...[
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -590,9 +522,10 @@ class PDFGenerator {
   static Future<void> vistaPrevia({
     required String numeroProforma,
     required String cliente,
+    required String nombreComercial,
     required String direccion,
-    required String ciudad, // NUEVO CAMPO
-    required String correo, // NUEVO CAMPO
+    required String ciudad,
+    required String correo,
     required String ruc,
     required String telefono,
     required List<ItemProforma> items,
@@ -606,7 +539,7 @@ class PDFGenerator {
     final pdf = await generarPDF(
       numeroProforma: numeroProforma,
       cliente: cliente,
-      direccion: direccion,
+     direccion: direccion,
       ciudad: ciudad,
       correo: correo,
       ruc: ruc,
@@ -616,8 +549,8 @@ class PDFGenerator {
       aplicarIVA: aplicarIVA,
       validez: validez,
       saldo: saldo,
-      entrega: '',
-      lugar: '',
+      entrega: entrega,
+      lugar: lugar,
     );
 
     await Printing.layoutPdf(

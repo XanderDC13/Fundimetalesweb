@@ -94,6 +94,27 @@ class _AdministracionDeskScreenState extends State<AdministracionDeskScreen>
                         },
                       ),
 
+                      /*
+_buildBoton(
+  icon: Icons.account_balance_wallet,
+  titulo: 'CxC',
+  subtitulo: 'Cuentas por cobrar',
+  onTap: () {
+    // Solo Gerente podrá acceder a esta pantalla
+    navegarConFade(context, const CxcScreen());
+  },
+),
+
+_buildBoton(
+  icon: Icons.account_balance_wallet,
+  titulo: 'CxC',
+  subtitulo: 'Cuentas por cobrar',
+  onTap: () {
+    // Solo Gerente podrá acceder a esta pantalla
+    navegarConFade(context, const CxcScreen());
+  },
+),
+*/
                       const SizedBox(height: 32),
                     ],
                   ),

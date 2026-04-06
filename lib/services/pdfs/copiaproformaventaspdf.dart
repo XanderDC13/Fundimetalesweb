@@ -22,6 +22,16 @@ Future<void> generarProformaVentasPDF(Map<String, dynamic> proformaData) async {
     }
   }
 
+  // Leer condiciones guardadas (con valores por defecto si no existen)
+  final String validez = proformaData['validez']?.toString() ?? '30 DÍAS';
+  final String saldo =
+      proformaData['saldo']?.toString() ??
+      '50% PREVIA LA ENTREGA DE LOS PRODUCTOS';
+  final String entrega =
+      proformaData['entrega']?.toString() ?? 'SE ACUERDA CON EL COMPRADOR';
+  final String lugar =
+      proformaData['lugar']?.toString() ?? 'EN FÁBRICA FUNDIMETALES DEL NORTE';
+
   final pdf = pw.Document();
 
   pdf.addPage(
@@ -43,7 +53,6 @@ Future<void> generarProformaVentasPDF(Map<String, dynamic> proformaData) async {
                   pw.SizedBox(height: 10),
                   _buildClienteInfoVentas(
                     proformaData['cliente'] ?? '',
-                    proformaData['empresa'] ?? '',
                     proformaData['ruc'] ?? '',
                     proformaData['telefono'] ?? '',
                     proformaData['ciudad'] ?? '',
@@ -65,6 +74,9 @@ Future<void> generarProformaVentasPDF(Map<String, dynamic> proformaData) async {
                     proformaData['aplicar_iva'] ?? false,
                     proformaData['subtotal_0'] ?? '0.00',
                   ),
+                  pw.SizedBox(height: 10),
+                  // ← CONDICIONES AÑADIDAS
+                  _buildCondicionesVentas(validez, saldo, entrega, lugar),
                 ],
               ),
             ),
@@ -183,16 +195,6 @@ pw.Widget _buildHeaderVentas(
                 ),
                 pw.SizedBox(height: 2),
                 pw.Text(
-                  'P R O F O R M A',
-                  style: pw.TextStyle(
-                    fontSize: 9,
-                    fontWeight: pw.FontWeight.bold,
-                    letterSpacing: 1.0,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.SizedBox(height: 2),
-                pw.Text(
                   numeroProforma,
                   style: pw.TextStyle(
                     fontSize: 10,
@@ -206,11 +208,19 @@ pw.Widget _buildHeaderVentas(
                   mainAxisAlignment: pw.MainAxisAlignment.center,
                   mainAxisSize: pw.MainAxisSize.min,
                   children: [
-                    _buildFechaBoxVentas('D', '${fecha.day}', 14),
+                    _buildFechaBoxVentas(
+                      'D',
+                      '${fecha.day.toString().padLeft(2, '0')}',
+                      18,
+                    ),
                     pw.SizedBox(width: 2),
-                    _buildFechaBoxVentas('M', '${fecha.month}', 14),
+                    _buildFechaBoxVentas(
+                      'M',
+                      '${fecha.month.toString().padLeft(2, '0')}',
+                      18,
+                    ),
                     pw.SizedBox(width: 2),
-                    _buildFechaBoxVentas('A', '${fecha.year}', 18),
+                    _buildFechaBoxVentas('A', '${fecha.year}', 30),
                   ],
                 ),
               ],
@@ -248,12 +258,11 @@ pw.Widget _buildFechaBoxVentas(String label, String value, double width) {
 
 pw.Widget _buildClienteInfoVentas(
   String cliente,
-  String nombreComercial, 
   String ciRuc,
   String telefono,
-  String ciudad, 
+  String ciudad,
   String direccion,
-  String correo, 
+  String correo,
 ) {
   return pw.Container(
     padding: pw.EdgeInsets.all(6),
@@ -276,12 +285,6 @@ pw.Widget _buildClienteInfoVentas(
             pw.Expanded(
               child: pw.Text(
                 'Cliente: $cliente',
-                style: pw.TextStyle(fontSize: 9),
-              ),
-            ),
-            pw.Expanded(
-              child: pw.Text(
-                'Empresa: $nombreComercial',
                 style: pw.TextStyle(fontSize: 9),
               ),
             ),
@@ -340,7 +343,6 @@ pw.Widget? _buildEnvioInfoVentas(Map<String, dynamic> proformaData) {
   String transportista = proformaData['transportista']?.toString() ?? '';
   String fechaEnvio = proformaData['fecha_envio']?.toString() ?? '';
 
-  // Verificar si hay al menos un campo con información
   bool tieneInfoEnvio =
       transporte.trim().isNotEmpty ||
       destino.trim().isNotEmpty ||
@@ -479,7 +481,6 @@ pw.Widget _buildItemsTableVentas(List items) {
             ],
           ),
         ),
-        // Items con datos
         ...items.map(
           (item) => pw.Container(
             padding: pw.EdgeInsets.all(4),
@@ -539,7 +540,7 @@ pw.Widget _buildTotalesVentas(
   String iva,
   String total,
   bool aplicarIva,
-  String subtotal0, // Agregar este parámetro
+  String subtotal0,
 ) {
   return pw.Row(
     mainAxisAlignment: pw.MainAxisAlignment.end,
@@ -565,14 +566,10 @@ pw.Widget _buildTotalesVentas(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text('Subtotal 0%:', style: pw.TextStyle(fontSize: 9)),
-                pw.Text(
-                  '\$$subtotal0',
-                  style: pw.TextStyle(fontSize: 9),
-                ), // Usar subtotal0 aquí
+                pw.Text('\$$subtotal0', style: pw.TextStyle(fontSize: 9)),
               ],
             ),
             pw.SizedBox(height: 3),
-            // Solo mostrar IVA si está habilitado
             if (aplicarIva) ...[
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -610,5 +607,64 @@ pw.Widget _buildTotalesVentas(
         ),
       ),
     ],
+  );
+}
+
+// ← FUNCIÓN DE CONDICIONES AÑADIDA
+pw.Widget _buildCondicionesVentas(
+  String validez,
+  String saldo,
+  String entrega,
+  String lugar,
+) {
+  return pw.Center(
+    child: pw.Container(
+      padding: pw.EdgeInsets.all(6),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300),
+        borderRadius: pw.BorderRadius.circular(6),
+      ),
+      width: 350,
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.Text(
+            'CONDICIONES GENERALES DE LA OFERTA',
+            style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 3),
+          pw.Row(
+            children: [
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'Validez de la oferta: $validez',
+                      style: pw.TextStyle(fontSize: 7),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      'Forma de pago: $saldo',
+                      style: pw.TextStyle(fontSize: 7),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      'Plazo de entrega: $entrega',
+                      style: pw.TextStyle(fontSize: 7),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      'Lugar de entrega: $lugar',
+                      style: pw.TextStyle(fontSize: 7),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
   );
 }
