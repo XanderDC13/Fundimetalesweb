@@ -38,23 +38,19 @@ class _ProformaOrdenDespachoDeskScreenState
   String _numeroOrdenDespacho = '';
   Timer? _debounce;
   Timer? _debounceProducto;
-  // Estados para la búsqueda
   bool _isSearching = false;
   bool _clienteEncontrado = false;
   String _mensajeBusqueda = '';
   bool _entradaManualHabilitada = false;
   bool _aplicarIVA = false;
 
-  // Lista de items
   List<ItemOrdenDespacho> items = [];
 
-  // Formas de pago
   bool _efectivo = false;
   bool _dineroElectronico = false;
   bool _tarjetaCredito = false;
   bool _otros = false;
 
-  // NUEVAS VARIABLES
   final TextEditingController _numeroFacturaController =
       TextEditingController();
   final TextEditingController _valorDeclaradoController =
@@ -62,10 +58,9 @@ class _ProformaOrdenDespachoDeskScreenState
   String sucursalUsuario = '';
   Map<String, int> stockDisponibleBodega = {};
 
-  String? _vendedorSeleccionado; // nombre del vendedor
-  // ci_ruc para guardar
+  String? _vendedorSeleccionado;
   List<Map<String, dynamic>> _vendedores = [];
-  String? _despachoSeleccionado; // 'sin_despacho', 'Quito', 'Guayaquil'
+  String? _despachoSeleccionado;
 
   Future<void> _cargarVendedores() async {
     final cedulasUsuarios = [
@@ -79,7 +74,6 @@ class _ProformaOrdenDespachoDeskScreenState
 
     List<Map<String, dynamic>> lista = [];
 
-    // Cargar los 4 desde colección 'usuarios' con campo 'cedula'
     for (String cedula in cedulasUsuarios) {
       final snap =
           await FirebaseFirestore.instance
@@ -96,7 +90,6 @@ class _ProformaOrdenDespachoDeskScreenState
       }
     }
 
-    // Cargar el del RUC 0000000002 desde clientes
     final snapCliente =
         await FirebaseFirestore.instance
             .collection('clientes')
@@ -168,7 +161,6 @@ class _ProformaOrdenDespachoDeskScreenState
       return;
     }
 
-    // Crear nuevo item con los datos del formulario
     ItemOrdenDespacho nuevoItem = ItemOrdenDespacho();
     nuevoItem.refController.text = _formRefController.text;
     nuevoItem.descripcionController.text = _formDescripcionController.text;
@@ -178,8 +170,6 @@ class _ProformaOrdenDespachoDeskScreenState
 
     setState(() {
       items.add(nuevoItem);
-
-      // Limpiar SOLO el formulario
       _formRefController.clear();
       _formDescripcionController.clear();
       _formCantidadController.clear();
@@ -194,7 +184,6 @@ class _ProformaOrdenDespachoDeskScreenState
       _mensajeBusqueda =
           'Modo entrada manual activado. Complete los campos requeridos.';
 
-      // Solo llenar si están vacíos
       if (_telefonoController.text.isEmpty) {
         _telefonoController.text = '09XXXXXXXX';
       }
@@ -204,7 +193,6 @@ class _ProformaOrdenDespachoDeskScreenState
     });
   }
 
-  // Método para limpiar el formulario y volver al modo búsqueda
   void _limpiarFormulario() {
     setState(() {
       _ciRucController.clear();
@@ -213,7 +201,7 @@ class _ProformaOrdenDespachoDeskScreenState
       _direccionController.clear();
       _emailController.clear();
       _ciudadController.clear();
-      _entradaManualHabilitada = true; // CAMBIAR: de false a true
+      _entradaManualHabilitada = true;
       _clienteEncontrado = false;
       _mensajeBusqueda = '';
     });
@@ -252,7 +240,7 @@ class _ProformaOrdenDespachoDeskScreenState
 
       await FirebaseFirestore.instance.collection('clientes').add(clienteData);
 
-      Navigator.pop(context); // Cerrar diálogo de carga
+      Navigator.pop(context);
 
       setState(() {
         _clienteEncontrado = true;
@@ -267,7 +255,7 @@ class _ProformaOrdenDespachoDeskScreenState
         ),
       );
     } catch (e) {
-      Navigator.pop(context); // Cerrar diálogo de carga
+      Navigator.pop(context);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -439,7 +427,7 @@ class _ProformaOrdenDespachoDeskScreenState
           _clienteEncontrado = true;
           _isSearching = false;
           _mensajeBusqueda = 'Cliente encontrado correctamente.';
-          _entradaManualHabilitada = true; // MANTENER habilitada
+          _entradaManualHabilitada = true;
 
           _clienteController.text = cliente['nombre'] ?? '';
           _telefonoController.text = cliente['telefono'] ?? '';
@@ -453,7 +441,7 @@ class _ProformaOrdenDespachoDeskScreenState
           _isSearching = false;
           _mensajeBusqueda =
               'Cliente no encontrado. Puede ingresar datos manualmente.';
-          _entradaManualHabilitada = true; // MANTENER habilitada
+          _entradaManualHabilitada = true;
 
           _clienteController.clear();
           _telefonoController.clear();
@@ -468,7 +456,7 @@ class _ProformaOrdenDespachoDeskScreenState
         _clienteEncontrado = false;
         _isSearching = false;
         _mensajeBusqueda = 'Error al buscar cliente. Verifique la conexión.';
-        _entradaManualHabilitada = true; // MANTENER habilitada
+        _entradaManualHabilitada = true;
 
         _clienteController.clear();
         _telefonoController.clear();
@@ -487,8 +475,8 @@ class _ProformaOrdenDespachoDeskScreenState
   }
 
   Future<void> _inicializarPantalla() async {
-    await _cargarSucursalUsuario(); // Primero espera la sede
-    await _previsualizarNumeroProforma(); // Luego carga con la sede ya conocida
+    await _cargarSucursalUsuario();
+    await _previsualizarNumeroProforma();
     await _previsualizarNumeroOrdenDespacho();
   }
 
@@ -542,15 +530,29 @@ class _ProformaOrdenDespachoDeskScreenState
   }
 
   Future<void> _previsualizarNumeroOrdenDespacho() async {
-    // Construir el nombre del doc según la sede
-    String docId;
+    // FIX: leer la sede desde Firestore para asegurar el docId correcto
+    final user = FirebaseAuth.instance.currentUser;
+    String sedeReal = sucursalUsuario;
+    if (user != null) {
+      try {
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('usuarios_activos')
+                .doc(user.uid)
+                .get();
+        if (userDoc.exists) {
+          sedeReal = userDoc['sede'] ?? sucursalUsuario;
+        }
+      } catch (_) {}
+    }
 
-    if (sucursalUsuario == 'Quito') {
+    String docId;
+    if (sedeReal == 'Quito') {
       docId = 'orden_Quito';
-    } else if (sucursalUsuario == 'Guayaquil') {
+    } else if (sedeReal == 'Guayaquil') {
       docId = 'orden_Guayaquil';
     } else {
-      docId = 'orden'; // Tulcán usa el doc original
+      docId = 'orden';
     }
 
     final ref = FirebaseFirestore.instance
@@ -560,7 +562,6 @@ class _ProformaOrdenDespachoDeskScreenState
     final doc = await ref.get();
 
     int numero;
-
     if (doc.exists) {
       numero = (doc['contador'] ?? 0) + 1;
     } else {
@@ -607,8 +608,9 @@ class _ProformaOrdenDespachoDeskScreenState
     }
   }
 
-  Future<void> _descontarInventario() async {
-    if (sucursalUsuario == 'Tulcán' &&
+  // FIX: recibe la sede real como parámetro para no depender de sucursalUsuario
+  Future<void> _descontarInventario(String sedeReal) async {
+    if (sedeReal == 'Tulcán' &&
         (_despachoSeleccionado == 'quito' ||
             _despachoSeleccionado == 'guayaquil')) {
       print('ℹ️ Usuario en Tulcán con despacho externo - No se descuenta');
@@ -626,10 +628,9 @@ class _ProformaOrdenDespachoDeskScreenState
             int.tryParse(item.cantidadController.text) ?? 0;
         if (cantidadSolicitada <= 0) continue;
 
-        // Ruta al inventario de bodega de la sucursal
         final docInventario = FirebaseFirestore.instance
             .collection('inventarios')
-            .doc(usuario['sucursal']!)
+            .doc(sedeReal) // FIX: usar sedeReal en lugar de usuario['sucursal']
             .collection('procesos')
             .doc('bodega')
             .collection('productos')
@@ -639,18 +640,14 @@ class _ProformaOrdenDespachoDeskScreenState
         final cantidadActual =
             snapshot.exists ? (snapshot['cantidad'] ?? 0) : 0;
 
-        // Si no hay suficiente stock, agregar la diferencia antes de descontar
         if (cantidadActual < cantidadSolicitada) {
           final diferencia = cantidadSolicitada - cantidadActual;
 
-          // Agregar la diferencia al inventario
           await docInventario.set({
-            'cantidad':
-                cantidadSolicitada, // Ahora tiene exactamente lo que necesitamos
+            'cantidad': cantidadSolicitada,
             'ultima_actualizacion': timestamp,
           }, SetOptions(merge: true));
 
-          // Registrar entrada en kardex
           await FirebaseFirestore.instance
               .collection('kardex_movimientos')
               .add({
@@ -660,12 +657,11 @@ class _ProformaOrdenDespachoDeskScreenState
                 'fecha': timestamp,
                 'usuario_uid': usuario['uid']!,
                 'usuario_nombre': usuario['nombre']!,
-                'sucursal': usuario['sucursal']!,
+                'sucursal': sedeReal,
                 'motivo': 'Ajuste de inventario - Proforma N° $_numeroProforma',
               });
         }
 
-        // Ahora descontar toda la cantidad solicitada
         final snapshotActualizado = await docInventario.get();
         final cantidadFinal =
             snapshotActualizado.exists
@@ -677,7 +673,6 @@ class _ProformaOrdenDespachoDeskScreenState
           'ultima_actualizacion': timestamp,
         });
 
-        // Registrar salida en kardex
         await FirebaseFirestore.instance.collection('kardex_movimientos').add({
           'referencia': referencia,
           'tipo': 'salida',
@@ -685,29 +680,28 @@ class _ProformaOrdenDespachoDeskScreenState
           'fecha': timestamp,
           'usuario_uid': usuario['uid']!,
           'usuario_nombre': usuario['nombre']!,
-          'sucursal': usuario['sucursal']!,
+          'sucursal': sedeReal,
           'motivo': 'Proforma N° $_numeroProforma',
         });
       }
     } catch (e) {
       print('Error descontando inventario: $e');
-      throw e; // Propagar el error para manejarlo en _guardarAmbosDocumentos
+      throw e;
     }
   }
 
   Future<void> _previsualizarNumeroProforma() async {
-    // Construir el nombre del doc según la sede
     String docId;
     int contadorInicial;
 
     if (sucursalUsuario == 'Quito') {
       docId = 'proforma_Quito';
-      contadorInicial = 0; // Quito empieza desde 1
+      contadorInicial = 0;
     } else if (sucursalUsuario == 'Guayaquil') {
       docId = 'proforma_Guayaquil';
-      contadorInicial = 0; // Guayaquil empieza desde 1
+      contadorInicial = 0;
     } else {
-      docId = 'proforma'; // Tulcán usa el doc original
+      docId = 'proforma';
       contadorInicial = 7400;
     }
 
@@ -718,7 +712,6 @@ class _ProformaOrdenDespachoDeskScreenState
     final doc = await ref.get();
 
     int numero;
-
     if (doc.exists) {
       numero = (doc['contador'] ?? contadorInicial) + 1;
     } else {
@@ -736,7 +729,6 @@ class _ProformaOrdenDespachoDeskScreenState
     return MainDeskLayout(
       child: Column(
         children: [
-          // Cabecera
           Transform.translate(
             offset: const Offset(-0.5, 0),
             child: Container(
@@ -759,21 +751,14 @@ class _ProformaOrdenDespachoDeskScreenState
                   ),
                   Align(
                     alignment: Alignment.center,
-                    child: Text(
-                      'ORDEN Nº $_numeroOrdenDespacho / PROFORMA Nº $_numeroProforma',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    // FIX: cabecera adaptada según sede
+                    child: _buildTituloCabecera(),
                   ),
                 ],
               ),
             ),
           ),
 
-          // Contenido
           Expanded(
             child: Container(
               color: Colors.white,
@@ -790,17 +775,14 @@ class _ProformaOrdenDespachoDeskScreenState
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // FILA SUPERIOR: Cliente + Productos
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // CLIENTE (lado izquierdo)
                                     Expanded(
                                       flex: 1,
                                       child: _buildClienteSection(),
                                     ),
                                     const SizedBox(width: 16),
-                                    // PRODUCTOS (lado derecho, más pequeño)
                                     Expanded(
                                       flex: 1,
                                       child: Column(
@@ -815,17 +797,14 @@ class _ProformaOrdenDespachoDeskScreenState
                                 ),
                                 const SizedBox(height: 16),
 
-                                // FILA MEDIA: Lista de Productos + Resumen/Forma de Pago
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // LISTA DE PRODUCTOS AGREGADOS (lado izquierdo)
                                     Expanded(
                                       flex: 2,
                                       child: _buildListaProductosSection(),
                                     ),
                                     const SizedBox(width: 16),
-                                    // COLUMNA DERECHA: TOTALES + FORMA DE PAGO
                                     Expanded(
                                       flex: 1,
                                       child: Column(
@@ -843,7 +822,6 @@ class _ProformaOrdenDespachoDeskScreenState
                             ),
                           ),
                         ),
-                        // Action bar dentro del contenido
                         Padding(
                           padding: const EdgeInsets.all(32),
                           child: _buildActionBar(),
@@ -860,6 +838,29 @@ class _ProformaOrdenDespachoDeskScreenState
     );
   }
 
+  // FIX: título de cabecera adaptado según sede
+  Widget _buildTituloCabecera() {
+    if (sucursalUsuario == 'Tulcán') {
+      return Text(
+        'ORDEN Nº $_numeroOrdenDespacho / PROFORMA Nº $_numeroProforma',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    }
+    // Quito y Guayaquil siempre muestran ambos
+    return Text(
+      'ORDEN Nº $_numeroOrdenDespacho / PROFORMA Nº $_numeroProforma',
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
   Widget _buildClienteSection() {
     return _buildSection(
       title: 'Información del Cliente',
@@ -867,7 +868,6 @@ class _ProformaOrdenDespachoDeskScreenState
       color: Colors.grey[800]!,
       child: Column(
         children: [
-          // CAMPO DE CÉDULA PRIMERO
           Container(
             decoration: BoxDecoration(
               color: Colors.grey[100],
@@ -916,7 +916,6 @@ class _ProformaOrdenDespachoDeskScreenState
             ),
           ),
 
-          // MENSAJE DE ESTADO
           if (_mensajeBusqueda.isNotEmpty)
             Container(
               margin: EdgeInsets.only(top: 8),
@@ -1018,7 +1017,6 @@ class _ProformaOrdenDespachoDeskScreenState
                 ),
               ),
 
-              // Lista de sugerencias
               if (_mostrarSugerencias && _clientesSugeridos.isNotEmpty)
                 Container(
                   margin: EdgeInsets.only(top: 4),
@@ -1102,7 +1100,6 @@ class _ProformaOrdenDespachoDeskScreenState
             ],
           ),
 
-          // NUEVOS CAMPOS PARA ORDEN DE DESPACHO
           SizedBox(height: 12),
           Row(
             children: [
@@ -1135,7 +1132,6 @@ class _ProformaOrdenDespachoDeskScreenState
           const SizedBox(height: 12),
           _buildSelectorVendedor(),
 
-          // ⭐ NUEVO: SELECTOR DE DESPACHO
           const SizedBox(height: 16),
           if (sucursalUsuario == 'Tulcán')
             Container(
@@ -1169,7 +1165,6 @@ class _ProformaOrdenDespachoDeskScreenState
                   SizedBox(height: 12),
                   Row(
                     children: [
-                      // Botón Quito
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
@@ -1204,7 +1199,6 @@ class _ProformaOrdenDespachoDeskScreenState
                         ),
                       ),
                       SizedBox(width: 8),
-                      // Botón Guayaquil
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
@@ -1245,7 +1239,6 @@ class _ProformaOrdenDespachoDeskScreenState
               ),
             ),
 
-          // BOTÓN GUARDAR CLIENTE (solo visible en modo manual)
           if (_entradaManualHabilitada && !_clienteEncontrado)
             Container(
               margin: EdgeInsets.only(top: 16),
@@ -1276,7 +1269,6 @@ class _ProformaOrdenDespachoDeskScreenState
       color: Colors.grey[800]!,
       child: Column(
         children: [
-          // Campo REF con búsqueda y conversión a mayúsculas
           _buildTextField(
             controller: _formRefController,
             label: 'REF',
@@ -1291,7 +1283,6 @@ class _ProformaOrdenDespachoDeskScreenState
                 );
               }
 
-              // AGREGAR DEBOUNCE
               if (_debounceProducto?.isActive ?? false)
                 _debounceProducto!.cancel();
               _debounceProducto = Timer(const Duration(milliseconds: 500), () {
@@ -1301,7 +1292,6 @@ class _ProformaOrdenDespachoDeskScreenState
           ),
           SizedBox(height: 12),
 
-          // Campo Descripción
           _buildTextField(
             controller: _formDescripcionController,
             label: 'Descripción',
@@ -1310,7 +1300,6 @@ class _ProformaOrdenDespachoDeskScreenState
           ),
           SizedBox(height: 12),
 
-          // Fila con Cant, Precio Unit, Subtotal
           Row(
             children: [
               Expanded(
@@ -1346,7 +1335,6 @@ class _ProformaOrdenDespachoDeskScreenState
           ),
           SizedBox(height: 16),
 
-          // Botón Agregar
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -1375,7 +1363,6 @@ class _ProformaOrdenDespachoDeskScreenState
       color: Colors.grey[800]!,
       child: Row(
         children: [
-          // N° Factura (IZQUIERDA)
           Expanded(
             child: _buildTextField(
               controller: _numeroFacturaController,
@@ -1385,7 +1372,6 @@ class _ProformaOrdenDespachoDeskScreenState
             ),
           ),
           SizedBox(width: 12),
-          // Valor Declarado (DERECHA)
           Expanded(
             child: _buildTextField(
               controller: _valorDeclaradoController,
@@ -1400,7 +1386,6 @@ class _ProformaOrdenDespachoDeskScreenState
     );
   }
 
-  // Add this new method for the lista productos section:
   Widget _buildListaProductosSection() {
     return _buildSection(
       title: 'Lista Productos Agregados',
@@ -1408,7 +1393,6 @@ class _ProformaOrdenDespachoDeskScreenState
       color: Colors.grey[800]!,
       child: Column(
         children: [
-          // Header de la tabla
           Container(
             padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             decoration: BoxDecoration(
@@ -1478,7 +1462,6 @@ class _ProformaOrdenDespachoDeskScreenState
               ),
             )
           else
-            // Lista de productos (solo si hay items)
             ...items.asMap().entries.map((entry) {
               int index = entry.key;
               ItemOrdenDespacho item = entry.value;
@@ -1502,7 +1485,6 @@ class _ProformaOrdenDespachoDeskScreenState
       ),
       child: Row(
         children: [
-          // REF
           Expanded(
             flex: 1,
             child: Text(
@@ -1511,7 +1493,6 @@ class _ProformaOrdenDespachoDeskScreenState
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          // DESCRIPCIÓN
           Expanded(
             flex: 4,
             child: Text(
@@ -1520,7 +1501,6 @@ class _ProformaOrdenDespachoDeskScreenState
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          // CANTIDAD
           Expanded(
             flex: 1,
             child: Text(
@@ -1529,7 +1509,6 @@ class _ProformaOrdenDespachoDeskScreenState
               textAlign: TextAlign.center,
             ),
           ),
-          // PRECIO
           Expanded(
             flex: 1,
             child: Text(
@@ -1538,7 +1517,6 @@ class _ProformaOrdenDespachoDeskScreenState
               textAlign: TextAlign.right,
             ),
           ),
-          // SUBTOTAL
           Expanded(
             flex: 1,
             child: Text(
@@ -1551,7 +1529,6 @@ class _ProformaOrdenDespachoDeskScreenState
               textAlign: TextAlign.right,
             ),
           ),
-          // Botón eliminar
           SizedBox(
             width: 40,
             child: IconButton(
@@ -1594,7 +1571,6 @@ class _ProformaOrdenDespachoDeskScreenState
         List<double> preciosDisponibles = [];
         List<String> nombrePrecios = [];
 
-        // Leer precio20 y pvp directamente
         if (producto['precio20'] != null && producto['precio20'] > 0) {
           preciosDisponibles.add((producto['precio20']).toDouble());
           nombrePrecios.add('Precio 20%');
@@ -1605,7 +1581,6 @@ class _ProformaOrdenDespachoDeskScreenState
           nombrePrecios.add('PVP');
         }
 
-        // Si no tiene ninguno de estos precios, usar precio o costo como fallback
         if (preciosDisponibles.isEmpty) {
           if (producto['precio'] != null && producto['precio'] > 0) {
             preciosDisponibles.add((producto['precio']).toDouble());
@@ -1616,7 +1591,6 @@ class _ProformaOrdenDespachoDeskScreenState
           }
         }
 
-        // Si tiene múltiples precios, mostrar diálogo de selección
         if (preciosDisponibles.length >= 2) {
           double? precioSeleccionado = await _mostrarDialogoSeleccionPrecio(
             producto['nombre'] ?? '',
@@ -1676,13 +1650,10 @@ class _ProformaOrdenDespachoDeskScreenState
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Colors.white, // Fondo blanco forzado
+          backgroundColor: Colors.white,
           title: Text(
             'Seleccionar Precio',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.black, // Negro
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1692,13 +1663,13 @@ class _ProformaOrdenDespachoDeskScreenState
                 nombreProducto,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.black, // Negro
+                  color: Colors.black,
                 ),
               ),
               SizedBox(height: 16),
               Text(
                 'Seleccione el precio a usar:',
-                style: TextStyle(color: Colors.black), // Negro
+                style: TextStyle(color: Colors.black),
               ),
               SizedBox(height: 12),
               ...List.generate(precios.length, (index) {
@@ -1707,8 +1678,8 @@ class _ProformaOrdenDespachoDeskScreenState
                   child: OutlinedButton(
                     onPressed: () => Navigator.of(context).pop(precios[index]),
                     style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.white, // Fondo blanco
-                      foregroundColor: Colors.black, // Texto negro
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
                       padding: EdgeInsets.all(12),
                       side: BorderSide(color: Colors.blue),
                     ),
@@ -1719,14 +1690,14 @@ class _ProformaOrdenDespachoDeskScreenState
                           '${nombrePrecios[index]}:',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            color: Colors.black, // Negro
+                            color: Colors.black,
                           ),
                         ),
                         Text(
                           '\$${precios[index].toStringAsFixed(2)}',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: Colors.black, // Negro
+                            color: Colors.black,
                           ),
                         ),
                       ],
@@ -1741,7 +1712,7 @@ class _ProformaOrdenDespachoDeskScreenState
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 'Cancelar',
-                style: TextStyle(color: Colors.grey[700]), // Gris
+                style: TextStyle(color: Colors.grey[700]),
               ),
             ),
           ],
@@ -1775,7 +1746,6 @@ class _ProformaOrdenDespachoDeskScreenState
           _buildTotalRow('I.V.A. 0%:', '\$0.00'),
           SizedBox(height: 12),
 
-          // Switch para IVA
           Container(
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
@@ -1847,7 +1817,6 @@ class _ProformaOrdenDespachoDeskScreenState
           ),
           SizedBox(height: 16),
 
-          // Total final
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -2027,7 +1996,7 @@ class _ProformaOrdenDespachoDeskScreenState
     String? hintText,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
-    TextCapitalization textCapitalization = TextCapitalization.none, // AGREGAR
+    TextCapitalization textCapitalization = TextCapitalization.none,
     required void Function(dynamic value) onChanged,
   }) {
     return Container(
@@ -2045,9 +2014,8 @@ class _ProformaOrdenDespachoDeskScreenState
         enabled: enabled,
         keyboardType: keyboardType,
         maxLines: maxLines,
-        textCapitalization: textCapitalization, // AGREGAR
+        textCapitalization: textCapitalization,
         onChanged: (value) {
-          // Formatear texto según el tipo de campo
           if (label == 'Email') {
             if (value != value.toLowerCase()) {
               controller.value = controller.value.copyWith(
@@ -2058,7 +2026,6 @@ class _ProformaOrdenDespachoDeskScreenState
               );
             }
           } else if (label != 'Teléfono' && label != 'REF') {
-            // MODIFICAR: excluir REF
             if (value != value.toUpperCase()) {
               controller.value = controller.value.copyWith(
                 text: value.toUpperCase(),
@@ -2114,7 +2081,6 @@ class _ProformaOrdenDespachoDeskScreenState
       child: SafeArea(
         child: Row(
           children: [
-            // Botón Imprimir
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -2145,7 +2111,6 @@ class _ProformaOrdenDespachoDeskScreenState
               ),
             ),
             const SizedBox(width: 8),
-            // Botón Compartir
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -2176,7 +2141,6 @@ class _ProformaOrdenDespachoDeskScreenState
               ),
             ),
             const SizedBox(width: 8),
-            // Botón Guardar (ahora con opciones)
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -2191,7 +2155,7 @@ class _ProformaOrdenDespachoDeskScreenState
                   ],
                 ),
                 child: ElevatedButton(
-                  onPressed: _mostrarOpcionesGuardar, // 👈 CAMBIAR AQUÍ
+                  onPressed: _mostrarOpcionesGuardar,
                   child: const Text('Guardar'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
@@ -2212,52 +2176,121 @@ class _ProformaOrdenDespachoDeskScreenState
     );
   }
 
+  // FIX: diálogo de guardado con opciones para Tulcán, directo para Quito/Guayaquil
   void _mostrarOpcionesGuardar() async {
     if (!_validarDatos()) return;
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            '¿Confirmar guardado?',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          content: const Text(
-            'Se guardarán la Proforma y la Orden de Despacho juntas.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancelar',
-                style: TextStyle(color: Colors.grey[700]),
-              ),
+    if (sucursalUsuario == 'Tulcán') {
+      // Tulcán: mostrar opciones de qué guardar
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _guardarAmbosDocumentos();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4682B4),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Guardar'),
+            title: const Text(
+              '¿Qué desea guardar?',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
-          ],
-        );
-      },
-    );
+            content: const Text(
+              'Seleccione si desea guardar solo la Orden, solo la Proforma, o ambas.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Cancelar',
+                  style: TextStyle(color: Colors.grey[700]),
+                ),
+              ),
+              // Solo Orden
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _confirmarYGuardar(soloOrden: true, soloProforma: false);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 168, 168, 168),
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Solo Orden'),
+              ),
+              // Solo Proforma
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _confirmarYGuardar(soloOrden: false, soloProforma: true);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 168, 168, 168),
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Solo Proforma'),
+              ),
+              // Ambas
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _confirmarYGuardar(soloOrden: false, soloProforma: false);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4682B4),
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Ambas'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      // Quito y Guayaquil: siempre guardan ambas sin preguntar
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text(
+              '¿Confirmar guardado?',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: const Text(
+              'Se guardarán la Proforma y la Orden de Despacho juntas.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Cancelar',
+                  style: TextStyle(color: Colors.grey[700]),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _confirmarYGuardar(soloOrden: false, soloProforma: false);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4682B4),
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Guardar'),
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 
-  void _guardarAmbosDocumentos() async {
-    if (!_validarDatos()) return;
-
-    // Mostrar diálogo de carga
+  // FIX: función central de guardado que recibe qué guardar
+  void _confirmarYGuardar({
+    required bool soloOrden,
+    required bool soloProforma,
+  }) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -2276,45 +2309,67 @@ class _ProformaOrdenDespachoDeskScreenState
     );
 
     try {
-      // 1. Descontar inventario PRIMERO
-      await _descontarInventario();
-
-      // 2. Guardar Proforma
-      await _guardarProformaInterno();
-
-      // 3. Guardar Orden de Despacho
-      await _guardarOrdenDespacho();
-
+      // Obtener sede real desde Firestore una sola vez
       final user = FirebaseAuth.instance.currentUser;
-
-      // Buscar el nombre en la colección usuarios_activos
       final usuarioDoc =
           await FirebaseFirestore.instance
               .collection('usuarios_activos')
               .doc(user?.uid)
               .get();
 
+      final sedeReal =
+          usuarioDoc.exists ? (usuarioDoc['sede'] ?? 'Tulcán') : 'Tulcán';
       final usuarioNombre =
           usuarioDoc.exists
               ? (usuarioDoc['nombre'] ?? 'Desconocido')
               : 'Desconocido';
 
+      // Descontar inventario solo si se guarda algo con productos
+      await _descontarInventario(sedeReal);
+
+      String detalleAuditoria = '';
+
+      if (soloOrden) {
+        await _guardarOrdenDespachoInterno(
+          sedeReal,
+          incluirNumeroProforma: false,
+        );
+        detalleAuditoria = 'Orden de Despacho N° $_numeroOrdenDespacho';
+      } else if (soloProforma) {
+        await _guardarProformaInterno(sedeReal, numeroOrdenCruzado: '');
+        detalleAuditoria = 'Proforma N° $_numeroProforma';
+      } else {
+        // Ambas: se cruzan los números
+        await _guardarProformaInterno(
+          sedeReal,
+          numeroOrdenCruzado: _numeroOrdenDespacho,
+        );
+        await _guardarOrdenDespachoInterno(
+          sedeReal,
+          incluirNumeroProforma: true,
+        );
+        detalleAuditoria =
+            'Proforma N° $_numeroProforma | Orden N° $_numeroOrdenDespacho';
+      }
+
+      // Auditoría
       final auditoriaRef =
           FirebaseFirestore.instance.collection('auditoria_general').doc();
-
       await auditoriaRef.set({
         'fecha': FieldValue.serverTimestamp(),
         'usuario_nombre': usuarioNombre,
         'usuario_uid': user?.uid ?? 'uid_desconocido',
-        'accion': 'Nueva proforma y orden de despacho',
-        'detalle':
-            'Proforma N° $_numeroProforma | Orden N° $_numeroOrdenDespacho',
+        'accion':
+            soloOrden
+                ? 'Nueva orden de despacho'
+                : soloProforma
+                ? 'Nueva proforma'
+                : 'Nueva proforma y orden de despacho',
+        'detalle': detalleAuditoria,
       });
 
-      // Cerrar diálogo de carga
-      Navigator.pop(context);
+      Navigator.pop(context); // Cerrar diálogo de carga
 
-      // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -2327,9 +2382,7 @@ class _ProformaOrdenDespachoDeskScreenState
 
       _limpiarFormularioCompleto();
     } catch (e) {
-      // Cerrar diálogo de carga
       Navigator.pop(context);
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al guardar documentos: ${e.toString()}'),
@@ -2340,30 +2393,24 @@ class _ProformaOrdenDespachoDeskScreenState
     }
   }
 
-  // FUNCIÓN INTERNA PARA GUARDAR PROFORMA
-  Future<void> _guardarProformaInterno() async {
+  // FIX: recibe sedeReal y numeroOrdenCruzado como parámetros
+  Future<void> _guardarProformaInterno(
+    String sedeReal, {
+    required String numeroOrdenCruzado,
+  }) async {
     final numeroAUsar = int.parse(_numeroProforma);
-
-    // NUEVO: obtener sede del usuario logueado
-    final user = FirebaseAuth.instance.currentUser;
-    final usuarioDoc =
-        await FirebaseFirestore.instance
-            .collection('usuarios_activos')
-            .doc(user?.uid)
-            .get();
-    final sedeOrigen =
-        usuarioDoc.exists ? (usuarioDoc['sede'] ?? 'Tulcán') : 'Tulcán';
 
     final proformaData = {
       'numero': numeroAUsar,
-      'numero_orden': _numeroOrdenDespacho,
+      // Solo agrega numero_orden si no está vacío (cuando se guardan ambas)
+      if (numeroOrdenCruzado.isNotEmpty) 'numero_orden': numeroOrdenCruzado,
       'cliente': _clienteController.text,
       'ci_ruc': _ciRucController.text,
       'direccion': _direccionController.text,
       'telefono': _telefonoController.text,
       'vendedor_nombre': _vendedorSeleccionado ?? 'Sin asignar',
       'despacho': _despachoSeleccionado,
-      'sede_origen': sedeOrigen, // NUEVO
+      'sede_origen': sedeReal,
       'items':
           items
               .map(
@@ -2390,29 +2437,33 @@ class _ProformaOrdenDespachoDeskScreenState
 
     await FirebaseFirestore.instance.collection('proformas').add(proformaData);
 
+    // FIX: usar sedeReal para el docId del contador
     String docIdProforma;
-    if (sedeOrigen == 'Quito') {
+    if (sedeReal == 'Quito') {
       docIdProforma = 'proforma_Quito';
-    } else if (sedeOrigen == 'Guayaquil') {
+    } else if (sedeReal == 'Guayaquil') {
       docIdProforma = 'proforma_Guayaquil';
     } else {
       docIdProforma = 'proforma';
     }
 
+    // Solo incrementa el contador de proforma
     final ref = FirebaseFirestore.instance
         .collection('orden_proforma_counter')
         .doc(docIdProforma);
     await ref.update({'contador': numeroAUsar});
   }
 
-  // FUNCIÓN INTERNA PARA GUARDAR ORDEN DE DESPACHO (sin UI)
-  Future<void> _guardarOrdenDespacho() async {
-    // ✅ Usa el número ya asignado (NO lee el contador de nuevo)
+  // FIX: recibe sedeReal como parámetro, ya no usa sucursalUsuario
+  Future<void> _guardarOrdenDespachoInterno(
+    String sedeReal, {
+    bool incluirNumeroProforma = true,
+  }) async {
     final numeroAUsar = int.parse(_numeroOrdenDespacho);
 
     final ordenData = {
-      'numero': numeroAUsar, // ✅ Usa el número mostrado en pantalla
-      'numero_proforma': _numeroProforma,
+      'numero': numeroAUsar,
+      if (incluirNumeroProforma) 'numero_proforma': _numeroProforma,
       'cliente': _clienteController.text,
       'ci_ruc': _ciRucController.text,
       'email': _emailController.text,
@@ -2420,6 +2471,7 @@ class _ProformaOrdenDespachoDeskScreenState
       'ciudad': _ciudadController.text,
       'telefono': _telefonoController.text,
       'despacho': _despachoSeleccionado,
+      'sede_origen': sedeReal,
       'items':
           items
               .map(
@@ -2443,16 +2495,17 @@ class _ProformaOrdenDespachoDeskScreenState
         .collection('ordenes_despacho')
         .add(ordenData);
 
-    // ✅ Incrementa el contador DESPUÉS de guardar exitosamente
+    // FIX: usar sedeReal para el docId del contador de orden
     String docIdOrden;
-    if (sucursalUsuario == 'Quito') {
+    if (sedeReal == 'Quito') {
       docIdOrden = 'orden_Quito';
-    } else if (sucursalUsuario == 'Guayaquil') {
+    } else if (sedeReal == 'Guayaquil') {
       docIdOrden = 'orden_Guayaquil';
     } else {
       docIdOrden = 'orden';
     }
 
+    // Solo incrementa el contador de orden
     final ref = FirebaseFirestore.instance
         .collection('orden_proforma_counter')
         .doc(docIdOrden);
@@ -2475,7 +2528,6 @@ class _ProformaOrdenDespachoDeskScreenState
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
-
               Row(
                 children: [
                   Expanded(
@@ -2512,7 +2564,6 @@ class _ProformaOrdenDespachoDeskScreenState
     );
   }
 
-  // NUEVA FUNCIÓN PARA MOSTRAR OPCIONES DE IMPRESIÓN
   void _mostrarOpcionesImprimir() async {
     if (!_validarDatos()) return;
 
@@ -2529,7 +2580,6 @@ class _ProformaOrdenDespachoDeskScreenState
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
-
               Row(
                 children: [
                   Expanded(
@@ -2600,14 +2650,10 @@ class _ProformaOrdenDespachoDeskScreenState
     return total.toStringAsFixed(2);
   }
 
-  // NUEVAS FUNCIONES PARA LLAMAR A LOS PDF GENERATORS
-
   void _vistasPreviasProforma() async {
-    // Validar datos antes de generar
     if (!_validarDatos()) return;
 
     try {
-      // Llamar al ProformaPDFGenerator
       await ProformaPDFGenerator.showPreview(
         numeroProforma: _numeroProforma,
         cliente: _clienteController.text,
@@ -2646,11 +2692,9 @@ class _ProformaOrdenDespachoDeskScreenState
   }
 
   void _vistaPreviaOrdenDespacho() async {
-    // Validar datos antes de generar
     if (!_validarDatos()) return;
 
     try {
-      // Llamar al OrdenDespachoPDFGenerator
       await OrdenDespachoPDFGenerator.showPreview(
         numeroOrdenDespacho: _numeroOrdenDespacho,
         cliente: _clienteController.text,
@@ -2702,7 +2746,6 @@ class _ProformaOrdenDespachoDeskScreenState
       return false;
     }
 
-    // Verificar que al menos un item tenga datos
     bool tieneItems = items.any(
       (item) =>
           item.descripcionController.text.isNotEmpty ||
@@ -2718,6 +2761,7 @@ class _ProformaOrdenDespachoDeskScreenState
       );
       return false;
     }
+
     if (_vendedorSeleccionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -2727,6 +2771,7 @@ class _ProformaOrdenDespachoDeskScreenState
       );
       return false;
     }
+
     return true;
   }
 

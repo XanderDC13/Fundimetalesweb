@@ -51,6 +51,15 @@ class PDFGenerator {
                       numeroProforma,
                       DateTime.now(),
                     ),
+                    _buildPDFClienteInfo(
+                      cliente,
+                      ruc,
+                      telefono,
+                      ciudad,
+                      direccion,
+                      correo,
+                    ),
+
                     pw.SizedBox(height: 10),
                     _buildPDFItemsTable(items),
                     pw.SizedBox(height: 10),
@@ -211,6 +220,79 @@ class PDFGenerator {
     );
   }
 
+  static pw.Widget _buildPDFClienteInfo(
+    String cliente,
+    String ciRuc,
+    String telefono,
+    String ciudad,
+    String direccion,
+    String correo,
+  ) {
+    return pw.Container(
+      padding: pw.EdgeInsets.all(6),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300),
+        borderRadius: pw.BorderRadius.circular(6),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'INFORMACIÓN DEL CLIENTE',
+            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Row(
+            children: [
+              pw.Expanded(
+                child: pw.Text(
+                  'Cliente: $cliente',
+                  style: pw.TextStyle(fontSize: 9),
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 3),
+          pw.Row(
+            children: [
+              pw.Expanded(
+                child: pw.Text(
+                  'C.I/RUC: $ciRuc',
+                  style: pw.TextStyle(fontSize: 9),
+                ),
+              ),
+              pw.Expanded(
+                child: pw.Text(
+                  'Teléfono: $telefono',
+                  style: pw.TextStyle(fontSize: 9),
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 3),
+          pw.Row(
+            children: [
+              pw.Expanded(
+                child: pw.Text(
+                  'Ciudad: $ciudad',
+                  style: pw.TextStyle(fontSize: 9),
+                ),
+              ),
+              pw.Expanded(
+                child: pw.Text(
+                  'Dirección: $direccion',
+                  style: pw.TextStyle(fontSize: 9),
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 3),
+          pw.Text('Correo: $correo', style: pw.TextStyle(fontSize: 9)),
+        ],
+      ),
+    );
+  }
+
   static pw.Widget _buildFechaBox(String label, String value, double width) {
     return pw.Column(
       mainAxisSize: pw.MainAxisSize.min,
@@ -234,7 +316,6 @@ class PDFGenerator {
       ],
     );
   }
-
 
   static pw.Widget _buildPDFItemsTable(List<ItemProforma> items) {
     return pw.Container(
@@ -539,7 +620,7 @@ class PDFGenerator {
     final pdf = await generarPDF(
       numeroProforma: numeroProforma,
       cliente: cliente,
-     direccion: direccion,
+      direccion: direccion,
       ciudad: ciudad,
       correo: correo,
       ruc: ruc,

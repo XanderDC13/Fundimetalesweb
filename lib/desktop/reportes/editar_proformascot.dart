@@ -372,6 +372,47 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
     });
   }
 
+  Future<void> _actualizarOrden() async {
+    try {
+      final numeroProforma = widget.proforma['numero']?.toString();
+      if (numeroProforma == null || numeroProforma.isEmpty) return;
+
+      // Buscar la orden vinculada a esta proforma
+      final snap =
+          await FirebaseFirestore.instance
+              .collection('ordenes_despacho')
+              .where('numero_proforma', isEqualTo: numeroProforma)
+              .limit(1)
+              .get();
+
+      if (snap.docs.isEmpty) {
+        print('⚠️ No se encontró orden para la proforma: $numeroProforma');
+        return;
+      }
+
+      final docOrden = snap.docs.first;
+
+      // Mapear los items al formato de la orden (ref, descripcion, cantidad)
+      final itemsOrden =
+          _items
+              .map(
+                (item) => {
+                  'ref': item.codigoController.text,
+                  'descripcion': item.descripcionController.text,
+                  'cantidad': item.cantidadController.text,
+                },
+              )
+              .toList();
+
+      await docOrden.reference.update({'items': itemsOrden});
+
+      print('✅ Orden ${docOrden['numero']} actualizada correctamente');
+    } catch (e) {
+      print('Error actualizando orden: $e');
+      // No lanzamos el error para que no interrumpa el flujo principal
+    }
+  }
+
   // ── Guardar en Firestore ───────────────────────────────────────────────────
   Future<void> _guardar() async {
     setState(() => _guardando = true);
@@ -392,7 +433,8 @@ class _EditarProformaWidgetState extends State<_EditarProformaWidget> {
               'iva': _iva.toStringAsFixed(2),
               'total': _totalFinal.toStringAsFixed(2),
             });
-
+        await _actualizarOrden();
+        
         // ✅ AGREGADO: cerrar modal y mostrar snackbar
         if (mounted) {
           Navigator.of(context).pop();
