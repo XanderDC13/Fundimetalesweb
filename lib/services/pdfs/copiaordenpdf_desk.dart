@@ -4,24 +4,33 @@ import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'package:flutter/services.dart';
 
-Future<void> generarOrdenPDF(String numero, String? ciRuc) async {
-  // Convertir número a int si es posible
+Future<void> generarOrdenPDF(
+  String numero,
+  String? ciRuc, {
+  String sedeOrigen = '',
+}) async {
   final numeroInt = int.tryParse(numero);
 
-  // Una sola consulta optimizada
-  final query =
-      await FirebaseFirestore.instance
-          .collection('ordenes_despacho')
-          .where('numero', isEqualTo: numeroInt ?? numero)
-          .limit(1)
-          .get();
+  Query query = FirebaseFirestore.instance
+      .collection('ordenes_despacho')
+      .where('numero', isEqualTo: numeroInt ?? numero);
 
-  if (query.docs.isEmpty) {
-    print('No se encontró la orden de despacho con número: $numero');
+  if (sedeOrigen == 'Quito' || sedeOrigen == 'Guayaquil') {
+    query = query.where('sede_origen', isEqualTo: sedeOrigen);
+  } else {
+  if (ciRuc != null && ciRuc.isNotEmpty) {
+    query = query.where('ci_ruc', isEqualTo: ciRuc);
+  }
+}
+
+  final result = await query.limit(1).get();
+
+  if (result.docs.isEmpty) {
+    print('No se encontró la orden: $numero, sede: $sedeOrigen');
     return;
   }
 
-  final data = query.docs.first.data();
+  final data = result.docs.first.data() as Map<String, dynamic>;
   final fechaDocumento =
       (data['fecha'] as Timestamp?)?.toDate() ?? DateTime.now();
   // Cargar logo

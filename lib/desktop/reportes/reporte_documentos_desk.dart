@@ -1319,14 +1319,27 @@ class _ReporteDocumentosDeskScreenState
                                             onPressed:
                                                 (documento['proforma'] !=
                                                             null &&
-                                                        !isAnulado) // MODIFICAR
-                                                    ? () => generarProformaPDF(
-                                                      documento['numero_proforma']
+                                                        !isAnulado)
+                                                    ? () {
+                                                      final proforma =
+                                                          documento['proforma']
+                                                              as Map<
+                                                                String,
+                                                                dynamic
+                                                              >?;
+                                                      final sede =
+                                                          proforma?['sede_origen']
                                                               ?.toString() ??
-                                                          '',
-                                                      documento['ci_ruc']
-                                                          ?.toString(),
-                                                    )
+                                                          'Tulcán';
+                                                      generarProformaPDF(
+                                                        documento['numero_proforma']
+                                                                ?.toString() ??
+                                                            '',
+                                                        documento['ci_ruc']
+                                                            ?.toString(),
+                                                        sedeOrigen: sede,
+                                                      );
+                                                    }
                                                     : null,
                                             icon: const Icon(
                                               Icons.picture_as_pdf,
@@ -1366,13 +1379,34 @@ class _ReporteDocumentosDeskScreenState
                                             onPressed:
                                                 (documento['orden'] != null &&
                                                         !isAnulado)
-                                                    ? () => generarOrdenPDF(
-                                                      documento['numero_orden']
+                                                    ? () {
+                                                      final proforma =
+                                                          documento['proforma']
+                                                              as Map<
+                                                                String,
+                                                                dynamic
+                                                              >?;
+                                                      final orden =
+                                                          documento['orden']
+                                                              as Map<
+                                                                String,
+                                                                dynamic
+                                                              >?;
+                                                      final sede =
+                                                          orden?['sede_origen']
                                                               ?.toString() ??
-                                                          '',
-                                                      documento['ci_ruc']
-                                                          ?.toString(),
-                                                    )
+                                                          proforma?['sede_origen']
+                                                              ?.toString() ??
+                                                          'Tulcán';
+                                                      generarOrdenPDF(
+                                                        documento['numero_orden']
+                                                                ?.toString() ??
+                                                            '',
+                                                        documento['ci_ruc']
+                                                            ?.toString(),
+                                                        sedeOrigen: sede,
+                                                      );
+                                                    }
                                                     : null,
                                             icon: const Icon(
                                               Icons.picture_as_pdf,

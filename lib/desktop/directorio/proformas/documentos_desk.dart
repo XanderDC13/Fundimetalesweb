@@ -570,7 +570,13 @@ class _ProformaOrdenDespachoDeskScreenState
     }
 
     setState(() {
-      _numeroOrdenDespacho = numero.toString();
+      if (sedeReal == 'Quito') {
+        _numeroOrdenDespacho = 'Q-$numero';
+      } else if (sedeReal == 'Guayaquil') {
+        _numeroOrdenDespacho = 'G-$numero';
+      } else {
+        _numeroOrdenDespacho = numero.toString();
+      }
     });
   }
 
@@ -720,7 +726,13 @@ class _ProformaOrdenDespachoDeskScreenState
     }
 
     setState(() {
-      _numeroProforma = numero.toString();
+      if (sucursalUsuario == 'Quito') {
+        _numeroProforma = 'Q-$numero';
+      } else if (sucursalUsuario == 'Guayaquil') {
+        _numeroProforma = 'G-$numero';
+      } else {
+        _numeroProforma = numero.toString();
+      }
     });
   }
 
@@ -2398,7 +2410,10 @@ class _ProformaOrdenDespachoDeskScreenState
     String sedeReal, {
     required String numeroOrdenCruzado,
   }) async {
-    final numeroAUsar = int.parse(_numeroProforma);
+    final numeroLimpio = _numeroProforma
+        .replaceAll('Q-', '')
+        .replaceAll('G-', '');
+    final numeroAUsar = int.parse(numeroLimpio);
 
     final proformaData = {
       'numero': numeroAUsar,
@@ -2459,7 +2474,10 @@ class _ProformaOrdenDespachoDeskScreenState
     String sedeReal, {
     bool incluirNumeroProforma = true,
   }) async {
-    final numeroAUsar = int.parse(_numeroOrdenDespacho);
+    final numeroLimpio = _numeroOrdenDespacho
+        .replaceAll('Q-', '')
+        .replaceAll('G-', '');
+    final numeroAUsar = int.parse(numeroLimpio);
 
     final ordenData = {
       'numero': numeroAUsar,
