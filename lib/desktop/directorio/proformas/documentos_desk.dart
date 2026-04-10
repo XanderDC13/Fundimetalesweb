@@ -571,9 +571,9 @@ class _ProformaOrdenDespachoDeskScreenState
 
     setState(() {
       if (sedeReal == 'Quito') {
-        _numeroOrdenDespacho = 'Q-$numero';
+        _numeroOrdenDespacho = '$numero';
       } else if (sedeReal == 'Guayaquil') {
-        _numeroOrdenDespacho = 'G-$numero';
+        _numeroOrdenDespacho = '$numero';
       } else {
         _numeroOrdenDespacho = numero.toString();
       }
@@ -727,9 +727,9 @@ class _ProformaOrdenDespachoDeskScreenState
 
     setState(() {
       if (sucursalUsuario == 'Quito') {
-        _numeroProforma = 'Q-$numero';
+        _numeroProforma = '$numero';
       } else if (sucursalUsuario == 'Guayaquil') {
-        _numeroProforma = 'G-$numero';
+        _numeroProforma = '$numero';
       } else {
         _numeroProforma = numero.toString();
       }
@@ -2330,7 +2330,9 @@ class _ProformaOrdenDespachoDeskScreenState
               .get();
 
       final sedeReal =
-          usuarioDoc.exists ? (usuarioDoc['sede'] ?? 'Tulcán') : 'Tulcán';
+          usuarioDoc.exists
+              ? (usuarioDoc['sede'] ?? sucursalUsuario)
+              : sucursalUsuario;
       final usuarioNombre =
           usuarioDoc.exists
               ? (usuarioDoc['nombre'] ?? 'Desconocido')
@@ -2410,10 +2412,7 @@ class _ProformaOrdenDespachoDeskScreenState
     String sedeReal, {
     required String numeroOrdenCruzado,
   }) async {
-    final numeroLimpio = _numeroProforma
-        .replaceAll('Q-', '')
-        .replaceAll('G-', '');
-    final numeroAUsar = int.parse(numeroLimpio);
+    final numeroAUsar = int.parse(_numeroProforma);
 
     final proformaData = {
       'numero': numeroAUsar,
@@ -2466,7 +2465,7 @@ class _ProformaOrdenDespachoDeskScreenState
     final ref = FirebaseFirestore.instance
         .collection('orden_proforma_counter')
         .doc(docIdProforma);
-    await ref.update({'contador': numeroAUsar});
+    await ref.set({'contador': numeroAUsar}, SetOptions(merge: true));
   }
 
   // FIX: recibe sedeReal como parámetro, ya no usa sucursalUsuario
@@ -2474,10 +2473,7 @@ class _ProformaOrdenDespachoDeskScreenState
     String sedeReal, {
     bool incluirNumeroProforma = true,
   }) async {
-    final numeroLimpio = _numeroOrdenDespacho
-        .replaceAll('Q-', '')
-        .replaceAll('G-', '');
-    final numeroAUsar = int.parse(numeroLimpio);
+    final numeroAUsar = int.parse(_numeroOrdenDespacho);
 
     final ordenData = {
       'numero': numeroAUsar,
@@ -2527,7 +2523,7 @@ class _ProformaOrdenDespachoDeskScreenState
     final ref = FirebaseFirestore.instance
         .collection('orden_proforma_counter')
         .doc(docIdOrden);
-    await ref.update({'contador': numeroAUsar});
+    await ref.set({'contador': numeroAUsar}, SetOptions(merge: true));
   }
 
   void _mostrarOpcionesCompartir() async {
