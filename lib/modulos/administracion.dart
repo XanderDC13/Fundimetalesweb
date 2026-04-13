@@ -1,4 +1,7 @@
+import 'package:basefundi/desktop/administracion/cajaquito.dart';
 import 'package:basefundi/desktop/administracion/cxc.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:basefundi/services/navbar_desk.dart';
 import 'package:basefundi/services/transition.dart';
@@ -94,17 +97,40 @@ class _AdministracionDeskScreenState extends State<AdministracionDeskScreen>
                         },
                       ),
 
-                      /*
-_buildBoton(
-  icon: Icons.account_balance_wallet,
-  titulo: 'CxC',
-  subtitulo: 'Cuentas por cobrar',
-  onTap: () {
-    // Solo Gerente podrá acceder a esta pantalla
-    navegarConFade(context, const CxcScreen());
-  },
-),
+                      _buildBoton(
+                        icon: Icons.account_balance_wallet,
+                        titulo: 'Caja',
+                        subtitulo: 'Caja Quito y Guayaquil',
+                        onTap: () async {
+                          // Verificar si el usuario tiene rol de Gerente
+                          final user = FirebaseAuth.instance.currentUser;
+                          if (user != null) {
+                            final userDoc =
+                                await FirebaseFirestore.instance
+                                    .collection('usuarios_activos')
+                                    .doc(user.uid)
+                                    .get();
 
+                            if (userDoc.exists) {
+                              final rol = userDoc['rol'] ?? '';
+                              if (rol.toLowerCase() == 'gerente') {
+                                navegarConFade(context, const CajaScreen());
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Acceso denegado. Solo Gerentes pueden acceder.',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                    duration: Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        },
+                      ),
+                      /*
 _buildBoton(
   icon: Icons.account_balance_wallet,
   titulo: 'CxC',

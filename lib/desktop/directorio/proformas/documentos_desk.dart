@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:basefundi/services/localnotification/notification_service.dart';
 import 'package:basefundi/services/navbar_desk.dart';
 import 'package:basefundi/services/pdfs/compartirordenpdf_desk.dart';
 import 'package:basefundi/services/pdfs/compartirproformapdf_desk.dart';
@@ -2393,7 +2394,14 @@ class _ProformaOrdenDespachoDeskScreenState
           duration: Duration(seconds: 3),
         ),
       );
-
+      if (sedeReal == 'Quito' || sedeReal == 'Guayaquil') {
+        await NotificationService().notificarNuevaProforma(
+          sede: sedeReal,
+          numeroProforma: _numeroProforma,
+          cliente: _clienteController.text,
+          total: _calcularTotalFinal(),
+        );
+      }
       _limpiarFormularioCompleto();
     } catch (e) {
       Navigator.pop(context);

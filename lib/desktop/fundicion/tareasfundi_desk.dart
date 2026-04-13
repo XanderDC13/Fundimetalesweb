@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:basefundi/services/localnotification/notification_service.dart';
 import 'package:basefundi/services/navbar_desk.dart';
 import 'package:basefundi/services/pdfs/fundicionpdf.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -1629,7 +1630,15 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
                           }
 
                           await batch.commit();
-
+                          await NotificationService().notificarTareaCompletada(
+                            operadorNombre: widget.operadorNombre,
+                            referencia: tarea['referencia']?.toString() ?? '',
+                            cantidad:
+                                tipoCompletado == 'completa'
+                                    ? cantidadTotal
+                                    : cantidadCompletada,
+                            tipoCompletado: tipoCompletado,
+                          );
                           // Cerrar loading
                           Navigator.of(context).pop();
                           // Cerrar diálogo
@@ -2562,6 +2571,11 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
                             'fecha_asignacion': DateTime.now(),
                           });
                       debounce?.cancel();
+                      await NotificationService().notificarTareaAsignada(
+                        referencia: refTexto,
+                        prioridad: prioridad,
+                        cantidad: int.tryParse(cantidadCtrl.text) ?? 0,
+                      );
                       Navigator.of(context).pop();
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -2725,6 +2739,13 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
                                       'fecha_asignacion': Timestamp.now(),
                                       'estado': 'pendiente',
                                     });
+
+                                // ✅ NOTIFICACIÓN AQUÍ DENTRO DEL TRY
+                                await NotificationService().notificarTareaExtra(
+                                  operadorNombre: widget.operadorNombre,
+                                  tipoTarea: tipoTarea,
+                                );
+
                                 if (context.mounted) {
                                   Navigator.pop(context);
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -2934,7 +2955,11 @@ class _OperadorControlDeskScreenState extends State<OperadorControlDeskScreen>
                           .update({'productosAFundir': productosAFundir});
                     }
                     // ✅ FIN DEL BLOQUE NUEVO
-
+                    await NotificationService().notificarTareaAsignada(
+                      referencia: producto['referencia'],
+                      prioridad: prioridad,
+                      cantidad: producto['cantidadAFundir'] ?? 0,
+                    );
                     Navigator.of(context).pop();
 
                     ScaffoldMessenger.of(context).showSnackBar(

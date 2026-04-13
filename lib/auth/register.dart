@@ -726,22 +726,6 @@ class _RegisterScreenState extends State<RegisterScreen>
                                                 'Supervisor Fundicion',
                                               ),
                                             ),
-                                            DropdownMenuItem(
-                                              value: 'OperadorFundicion',
-                                              child: Text('Operador Fundicion'),
-                                            ),
-                                            DropdownMenuItem(
-                                              value: 'SupervisorMecanizado',
-                                              child: Text(
-                                                'Supervisor Mecanizado',
-                                              ),
-                                            ),
-                                            DropdownMenuItem(
-                                              value: 'OperadorMecanizado',
-                                              child: Text(
-                                                'Operador Mecanizado',
-                                              ),
-                                            ),
                                           ],
                                           onChanged:
                                               (value) => setState(
