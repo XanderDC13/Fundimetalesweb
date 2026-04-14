@@ -2,6 +2,8 @@ import 'package:basefundi/desktop/dash_bajostock_desk.dart';
 import 'package:basefundi/desktop/directorio/aceptarpedidosdesk.dart';
 import 'package:basefundi/desktop/fundicion/listado_empleados_desk.dart';
 import 'package:basefundi/desktop/fundicion/tareasextras_desk.dart';
+import 'package:basefundi/desktop/pedidos_sucursales/productos_solicitados.dart';
+import 'package:basefundi/desktop/pedidos_sucursales/productos_solicitar.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_empleados_desk.dart';
 import 'package:basefundi/desktop/personal/funciones/tareas_realizar_desk.dart';
 import 'package:basefundi/desktop/personal/insumos/insumos_desk.dart';
@@ -815,6 +817,12 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
             () => navegarConFade(context, const AdministracionDeskScreen()),
           ),
           _gridButton(
+            Icons.shopping_cart,
+            'Solicitudes',
+            () =>
+                navegarConFade(context, const ProductosSolicitadosScreenWeb()),
+          ),
+          _gridButton(
             Icons.local_fire_department,
             'Fundición',
             () => navegarConFade(context, const FundicionDeskScreen()),
@@ -855,6 +863,13 @@ class _DashboardScreenState extends State<DashboardDeskScreen>
               Icons.location_city,
               'Envíos',
               () => navegarConFade(context, const EnviosTulcanDeskScreen()),
+            ),
+          if (sedeUsuario == 'Quito' || sedeUsuario == 'Guayaquil')
+            _gridButton(
+              Icons.shopping_cart,
+              'Solicitar Productos',
+              () =>
+                  navegarConFade(context, const ProductosASolicitarScreenWeb()),
             ),
           if (sedeUsuario != 'Quito' && sedeUsuario != 'Guayaquil')
             _gridButton(

@@ -113,4 +113,21 @@ class NotificationService {
       );
     }
   }
+
+  // ✨ NUEVA FUNCIÓN: Notificar cuando se crea una solicitud de productos
+  Future<void> notificarSolicitudCreada({
+    required String sede,
+    required int cantidadProductos,
+    required double cantidadTotal,
+  }) async {
+    final tokens = await _obtenerTokensPorRol('Gerente');
+    for (var token in tokens) {
+      await _enviarNotificacion(
+        token: token,
+        titulo: '🛒 Nueva Solicitud de Productos',
+        mensaje:
+            'Sede $sede solicita $cantidadProductos productos (Total: $cantidadTotal unidades)',
+      );
+    }
+  }
 }
