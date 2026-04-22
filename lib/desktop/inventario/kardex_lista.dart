@@ -38,7 +38,8 @@ class _KardexListScreenState extends State<KardexListScreen> {
         final tipo = doc['tipo'] as String;
         final cantidad = (doc['cantidad'] ?? 0) as int;
 
-        if (tipo == 'entrada') {
+        if (tipo == 'entrada' || tipo == 'inventario_inicial') {
+          // ← CAMBIO
           totalEntradas += cantidad;
         } else if (tipo == 'salida') {
           totalSalidas += cantidad;
@@ -76,7 +77,7 @@ class _KardexListScreenState extends State<KardexListScreen> {
                   colors: [Color(0xFF2C3E50), Color(0xFF34495E)],
                 ),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 38), 
+              padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 38),
               child: Column(
                 children: [
                   Row(

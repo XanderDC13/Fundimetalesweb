@@ -32,8 +32,15 @@ class Producto {
       codigo: map['codigo'] ?? '',
       referencia: map['referencia'] ?? '',
       nombre: map['nombre'] ?? '',
-      precio: (map['precio'] ?? 0).toDouble(),
-      cantidad: map['general'] ?? map['cantidad'] ?? 0,
+      // Antes: (map['precio'] ?? 0).toDouble()  ← falla si viene como String
+      precio:
+          double.tryParse(map['precio']?.toString() ?? '0') ??
+          double.tryParse(map['precios']?['pvp']?.toString() ?? '0') ??
+          0.0,
+      cantidad:
+          num.tryParse(map['general']?.toString() ?? '') ??
+          num.tryParse(map['cantidad']?.toString() ?? '') ??
+          0,
       categoria: map['categoria'] ?? 'Sin categoría',
       stockPorProceso: {},
     );
@@ -84,6 +91,9 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<Proceso> procesos = [];
   StreamSubscription<QuerySnapshot>? _ventasSubscription;
+  List<Map<String, dynamic>> _resultados = [];
+  bool _haBuscado = false;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -95,6 +105,7 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
   void dispose() {
     _searchController.dispose();
     _ventasSubscription?.cancel();
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -114,6 +125,39 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
     }
   }
 
+  Future<void> _buscarProductos(String query) async {
+    if (query.trim().length < 1) {
+      setState(() {
+        _resultados = [];
+        _haBuscado = false;
+      });
+      return;
+    }
+
+    final snapshot = await _firestore.collection('productos').get();
+    final filtrados =
+        snapshot.docs.where((doc) {
+          final data = doc.data();
+          final nombre = (data['nombre'] ?? '').toString().toLowerCase();
+          final codigo = (data['codigo'] ?? '').toString().toLowerCase();
+          final ref = (data['referencia'] ?? '').toString().toLowerCase();
+          final q = query.toLowerCase();
+          final categoria = (data['categoria'] ?? '').toString();
+
+          final coincideBusqueda =
+              nombre.contains(q) || codigo.contains(q) || ref.contains(q);
+          final coincideCategoria =
+              categoriaSeleccionada == 'Todas' ||
+              categoria == categoriaSeleccionada;
+          return coincideBusqueda && coincideCategoria;
+        }).toList();
+
+    setState(() {
+      _resultados = filtrados.map((doc) => doc.data()).toList();
+      _haBuscado = true;
+    });
+  }
+
   Future<T?> _navegarConFade<T>(BuildContext context, Widget pantalla) {
     return Navigator.of(context).push<T>(
       PageRouteBuilder(
@@ -124,76 +168,6 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
         transitionDuration: const Duration(milliseconds: 150),
       ),
     );
-  }
-
-  Future<Map<String, Map<String, int>>> _cargarStockPorProcesos(
-    List<String> codigosProductos,
-  ) async {
-    Map<String, Map<String, int>> stockMap = {};
-
-    // Inicializar el mapa para todos los productos y procesos
-    for (String codigo in codigosProductos) {
-      stockMap[codigo] = {};
-      for (var proceso in procesos) {
-        stockMap[codigo]![proceso.id] = 0;
-      }
-    }
-
-    // Cargar stock de inventarios por proceso
-    for (var proceso in procesos) {
-      try {
-        final inventarioSnapshot =
-            await _firestore
-                .collection('inventarios')
-                .doc(proceso.id)
-                .collection('productos')
-                .where(
-                  FieldPath.documentId,
-                  whereIn: codigosProductos.take(10).toList(),
-                )
-                .get();
-
-        for (var doc in inventarioSnapshot.docs) {
-          final codigo = doc.id;
-          final cantidad = (doc.data()['cantidad'] ?? 0) as int;
-          if (stockMap.containsKey(codigo)) {
-            stockMap[codigo]![proceso.id] = cantidad;
-          }
-        }
-      } catch (e) {
-        print('Error cargando inventario para proceso ${proceso.id}: $e');
-      }
-    }
-
-    // Restar rezagos
-    try {
-      for (var proceso in procesos) {
-        final rezagosSnapshot =
-            await _firestore
-                .collection('inventarios')
-                .doc('rezagos')
-                .collection('productos')
-                .where(
-                  FieldPath.documentId,
-                  whereIn: codigosProductos.take(10).toList(),
-                )
-                .get();
-
-        for (var doc in rezagosSnapshot.docs) {
-          final codigo = doc.id;
-          final cantidad = (doc.data()['cantidad'] ?? 0) as int;
-          if (stockMap.containsKey(codigo) &&
-              stockMap[codigo]!.containsKey(proceso.id)) {
-            stockMap[codigo]![proceso.id] =
-                (stockMap[codigo]![proceso.id] ?? 0) - cantidad;
-          }
-        }
-      }
-    } catch (e) {
-      print('Error procesando rezagos: $e');
-    }
-
-    return stockMap;
   }
 
   Future<void> eliminarProductoPorCodigo(String codigo, String nombre) async {
@@ -422,6 +396,14 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                     setState(() {
                                       searchQuery = value;
                                     });
+                                    if (_debounce?.isActive ?? false)
+                                      _debounce!.cancel();
+                                    _debounce = Timer(
+                                      const Duration(milliseconds: 600),
+                                      () {
+                                        _buscarProductos(value);
+                                      },
+                                    );
                                   },
                                 ),
                               ),
@@ -491,6 +473,8 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                             categoriaSeleccionada =
                                                 nuevaCategoria;
                                           });
+                                          // Agrega esta línea:
+                                          _buscarProductos(searchQuery);
                                         }
                                       },
                                     ),
@@ -570,164 +554,101 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
 
                         // Lista de productos con stock por proceso
                         Expanded(
-                          child: StreamBuilder<QuerySnapshot>(
-                            stream:
-                                _firestore.collection('productos').snapshots(),
-                            builder: (context, snapshot) {
-                              if (!snapshot.hasData) {
-                                return const Center(
-                                  child: CircularProgressIndicator(),
-                                );
-                              }
-
-                              // Convertir de Firestore a Producto local
-                              final productos =
-                                  snapshot.data!.docs
-                                      .map((doc) {
-                                        final data =
-                                            doc.data() as Map<String, dynamic>;
-                                        return Producto(
-                                          codigo: data['codigo'] ?? doc.id,
-                                          referencia: data['referencia'] ?? '',
-                                          nombre: data['nombre'] ?? '',
-                                          precio:
-                                              (data['precios']?['pvp'] ?? 0)
-                                                  .toDouble(),
-                                          cantidad: 0,
-                                          categoria:
-                                              data['categoria'] ??
-                                              'Sin categoría',
-                                        );
-                                      })
-                                      .where((p) {
-                                        final coincideBusqueda =
-                                            p.nombre.toLowerCase().contains(
-                                              searchQuery.toLowerCase(),
-                                            ) ||
-                                            p.codigo.toLowerCase().contains(
-                                              searchQuery.toLowerCase(),
-                                            ) ||
-                                            p.referencia.toLowerCase().contains(
-                                              searchQuery.toLowerCase(),
-                                            );
-                                        final coincideCategoria =
-                                            categoriaSeleccionada == 'Todas' ||
-                                            p.categoria ==
-                                                categoriaSeleccionada;
-                                        return coincideBusqueda &&
-                                            coincideCategoria;
-                                      })
-                                      .toList();
-
-                              final total = productos.length;
-
-                              return Column(
-                                children: [
-                                  // Contador de productos
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 32,
-                                      vertical: 8,
-                                    ),
-                                    child: Row(
+                          child:
+                              !_haBuscado
+                                  ? const Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
+                                        Icon(
+                                          Icons.search,
+                                          size: 64,
+                                          color: Colors.grey,
+                                        ),
+                                        SizedBox(height: 16),
                                         Text(
-                                          'Total: $total productos en "${categoriaSeleccionada == 'Todas' ? 'Todas las categorías' : categoriaSeleccionada}"',
-                                          style: const TextStyle(
+                                          'Escribe el nombre, código o referencia\npara buscar productos',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Colors.grey,
                                             fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black87,
                                           ),
                                         ),
                                       ],
                                     ),
-                                  ),
-
-                                  // Grid de productos
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 32,
+                                  )
+                                  : _resultados.isEmpty
+                                  ? Center(
+                                    child: Text(
+                                      'Sin resultados para "$searchQuery"',
+                                      style: const TextStyle(
+                                        color: Colors.grey,
                                       ),
-                                      child: FutureBuilder<
-                                        Map<String, Map<String, int>>
-                                      >(
-                                        future: _cargarStockPorProcesos(
-                                          productos
-                                              .map((p) => p.codigo)
-                                              .toList(),
+                                    ),
+                                  )
+                                  : Column(
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 32,
+                                          vertical: 8,
                                         ),
-                                        builder: (context, stockSnapshot) {
-                                          if (stockSnapshot.connectionState ==
-                                              ConnectionState.waiting) {
-                                            return const Center(
-                                              child: Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  CircularProgressIndicator(),
-                                                  SizedBox(height: 16),
-                                                  Text(
-                                                    'Calculando stocks por proceso...',
-                                                  ),
-                                                ],
+                                        child: Row(
+                                          children: [
+                                            Text(
+                                              'Total: ${_resultados.length} productos',
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.black87,
                                               ),
-                                            );
-                                          }
-
-                                          final stockMap =
-                                              stockSnapshot.data ?? {};
-
-                                          return GridView.builder(
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 32,
+                                          ),
+                                          child: GridView.builder(
                                             padding: const EdgeInsets.only(
                                               bottom: 10,
                                             ),
-                                            itemCount: productos.length,
+                                            itemCount: _resultados.length,
                                             gridDelegate:
                                                 const SliverGridDelegateWithFixedCrossAxisCount(
-                                                  crossAxisCount:
-                                                      6, // Cambiado de 4 a 6
-                                                  crossAxisSpacing:
-                                                      12, // Reducido de 16 a 12
-                                                  mainAxisSpacing:
-                                                      12, // Reducido de 16 a 12
-                                                  childAspectRatio:
-                                                      1.2, // Reducido de 0.8 a 0.7
+                                                  crossAxisCount: 6,
+                                                  crossAxisSpacing: 12,
+                                                  mainAxisSpacing: 12,
+                                                  childAspectRatio: 1.2,
                                                 ),
                                             itemBuilder: (context, index) {
-                                              final producto = productos[index];
-                                              final stockPorProceso =
-                                                  stockMap[producto.codigo] ??
-                                                  {};
-
-                                              // Calcular stock total
-                                              stockPorProceso.values.fold(
-                                                0,
-                                                (sum, stock) => sum + stock,
+                                              final producto = Producto.fromMap(
+                                                _resultados[index],
                                               );
-
                                               return GestureDetector(
                                                 onTap: () {
                                                   showDialog(
                                                     context: context,
-                                                    builder: (context) {
-                                                      return Dialog(
-                                                        shape: RoundedRectangleBorder(
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                12,
-                                                              ),
+                                                    builder:
+                                                        (context) => Dialog(
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  12,
+                                                                ),
+                                                          ),
+                                                          child: SizedBox(
+                                                            width: 400,
+                                                            child:
+                                                                EditInvProdDeskScreen(
+                                                                  producto:
+                                                                      producto,
+                                                                ),
+                                                          ),
                                                         ),
-                                                        child: SizedBox(
-                                                          width: 400,
-                                                          child:
-                                                              EditInvProdDeskScreen(
-                                                                producto:
-                                                                    producto,
-                                                              ),
-                                                        ),
-                                                      );
-                                                    },
                                                   );
                                                 },
                                                 child: Container(
@@ -736,39 +657,31 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                     borderRadius:
                                                         BorderRadius.circular(
                                                           12,
-                                                        ), // Reducido de 16 a 12
+                                                        ),
                                                     border: Border.all(
                                                       color:
-                                                          Colors
-                                                              .grey
-                                                              .shade400, // gris/plomo
+                                                          Colors.grey.shade400,
                                                       width: 1.5,
                                                     ),
-
                                                     boxShadow: [
                                                       BoxShadow(
                                                         color: Colors.grey
-                                                            .withOpacity(
-                                                              0.08,
-                                                            ), // Reducido de 0.1 a 0.08
-                                                        blurRadius:
-                                                            6, // Reducido de 8 a 6
+                                                            .withOpacity(0.08),
+                                                        blurRadius: 6,
                                                         offset: const Offset(
                                                           0,
                                                           1,
-                                                        ), // Reducido de (0, 2) a (0, 1)
+                                                        ),
                                                       ),
                                                     ],
                                                   ),
                                                   padding: const EdgeInsets.all(
                                                     6,
-                                                  ), // Reducido de 8 a 6
+                                                  ),
                                                   child: Column(
                                                     mainAxisSize:
-                                                        MainAxisSize
-                                                            .min, // Añadido para compactar
+                                                        MainAxisSize.min,
                                                     children: [
-                                                      // Ícono del producto
                                                       Container(
                                                         decoration: BoxDecoration(
                                                           color:
@@ -778,25 +691,21 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                           borderRadius:
                                                               BorderRadius.circular(
                                                                 8,
-                                                              ), // Reducido de 12 a 8
+                                                              ),
                                                         ),
                                                         padding:
                                                             const EdgeInsets.all(
                                                               4,
-                                                            ), // Reducido de 6 a 4
+                                                            ),
                                                         child: const Icon(
                                                           Icons.construction,
-                                                          size:
-                                                              24, // Reducido de 24 a 20
+                                                          size: 24,
                                                           color: Color(
                                                             0xFF2C3E50,
                                                           ),
                                                         ),
                                                       ),
-                                                      const SizedBox(
-                                                        height: 4,
-                                                      ), // Reducido de 6 a 4
-                                                      // Nombre del producto
+                                                      const SizedBox(height: 4),
                                                       Text(
                                                         producto.nombre,
                                                         textAlign:
@@ -808,21 +717,18 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                         style: const TextStyle(
                                                           fontWeight:
                                                               FontWeight.w600,
-                                                          fontSize:
-                                                              12, // Reducido de 11 a 10
+                                                          fontSize: 12,
                                                           color: Color(
                                                             0xFF2C3E50,
                                                           ),
                                                         ),
                                                       ),
-
-                                                      // Referencia si existe
                                                       if (producto
                                                           .referencia
                                                           .isNotEmpty) ...[
                                                         const SizedBox(
                                                           height: 2,
-                                                        ), // Añadido pequeño espacio
+                                                        ),
                                                         Text(
                                                           'Ref: ${producto.referencia}',
                                                           textAlign:
@@ -831,21 +737,20 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                           overflow:
                                                               TextOverflow
                                                                   .ellipsis,
-                                                          style: const TextStyle(
-                                                            fontSize:
-                                                                10, // Reducido de 9 a 8
-                                                            color: Colors.grey,
-                                                            fontStyle:
-                                                                FontStyle
-                                                                    .italic,
-                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 10,
+                                                                color:
+                                                                    Colors.grey,
+                                                                fontStyle:
+                                                                    FontStyle
+                                                                        .italic,
+                                                              ),
                                                         ),
                                                       ],
-
                                                       const SizedBox(
                                                         height: 30,
-                                                      ), // Reducido de 10 a 6
-                                                      // Botones de acción
+                                                      ),
                                                       Row(
                                                         mainAxisAlignment:
                                                             MainAxisAlignment
@@ -857,7 +762,7 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                               borderRadius:
                                                                   BorderRadius.circular(
                                                                     8,
-                                                                  ), // Reducido de 12 a 8
+                                                                  ),
                                                               onTap: () async {
                                                                 final resultado = await _navegarConFade(
                                                                   context,
@@ -873,7 +778,6 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                                             .precio,
                                                                   ),
                                                                 );
-
                                                                 if (resultado !=
                                                                     null) {
                                                                   await _firestore
@@ -897,21 +801,24 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                                         'fecha_creacion':
                                                                             Timestamp.now(),
                                                                       });
+                                                                  // Refresca resultados
+                                                                  _buscarProductos(
+                                                                    searchQuery,
+                                                                  );
                                                                 }
                                                               },
                                                               child: const Padding(
                                                                 padding:
                                                                     EdgeInsets.all(
                                                                       4,
-                                                                    ), // Reducido de 6 a 4
+                                                                    ),
                                                                 child: Icon(
                                                                   Icons
                                                                       .edit_outlined,
                                                                   color: Color(
                                                                     0xFF4682B4,
                                                                   ),
-                                                                  size:
-                                                                      20, // Reducido de 18 a 16
+                                                                  size: 20,
                                                                 ),
                                                               ),
                                                             ),
@@ -922,28 +829,31 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                               borderRadius:
                                                                   BorderRadius.circular(
                                                                     8,
-                                                                  ), // Reducido de 12 a 8
-                                                              onTap: () {
-                                                                eliminarProductoPorCodigo(
+                                                                  ),
+                                                              onTap: () async {
+                                                                await eliminarProductoPorCodigo(
                                                                   producto
                                                                       .codigo,
                                                                   producto
                                                                       .nombre,
+                                                                );
+                                                                // Refresca resultados
+                                                                _buscarProductos(
+                                                                  searchQuery,
                                                                 );
                                                               },
                                                               child: const Padding(
                                                                 padding:
                                                                     EdgeInsets.all(
                                                                       4,
-                                                                    ), // Reducido de 6 a 4
+                                                                    ),
                                                                 child: Icon(
                                                                   Icons
                                                                       .delete_outline,
                                                                   color:
                                                                       Colors
                                                                           .redAccent,
-                                                                  size:
-                                                                      20, // Reducido de 18 a 16
+                                                                  size: 20,
                                                                 ),
                                                               ),
                                                             ),
@@ -955,15 +865,11 @@ class _TotalInvDeskScreenState extends State<TotalInvDeskScreen> {
                                                 ),
                                               );
                                             },
-                                          );
-                                        },
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ),
-                                ],
-                              );
-                            },
-                          ),
                         ),
                       ],
                     ),

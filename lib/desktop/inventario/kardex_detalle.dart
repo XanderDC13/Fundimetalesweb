@@ -21,6 +21,7 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
   DateTime? fechaInicio;
   DateTime? fechaFin;
   String tipoFiltro = 'Todos';
+  String sucursalFiltro = 'Todas'; // ← NUEVO
 
   final DateFormat dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
@@ -67,6 +68,7 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
       fechaInicio = null;
       fechaFin = null;
       tipoFiltro = 'Todos';
+      sucursalFiltro = 'Todas'; // ← NUEVO
     });
   }
 
@@ -223,8 +225,7 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
                           Icons.arrow_back_ios,
                           color: Colors.white,
                         ),
-                        onPressed:
-                            () => Navigator.pop(context), // ← CAMBIAR AQUÍ
+                        onPressed: () => Navigator.pop(context),
                       ),
                       Expanded(
                         child: Column(
@@ -265,6 +266,38 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
+                // ← NUEVO: Filtro de sucursal
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: DropdownButton<String>(
+                    value: sucursalFiltro,
+                    isExpanded: true,
+                    underline: Container(),
+                    icon: const Icon(
+                      Icons.location_on,
+                      color: Color(0xFF4682B4),
+                    ),
+                    items:
+                        ['Todas', 'Guayaquil', 'Quito', 'Tulcán'].map((s) {
+                          return DropdownMenuItem<String>(
+                            value: s,
+                            child: Text(s),
+                          );
+                        }).toList(),
+                    onChanged: (valor) {
+                      setState(() {
+                        sucursalFiltro = valor!;
+                      });
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
                 // Filtro de tipo
                 Container(
                   decoration: BoxDecoration(
@@ -340,17 +373,21 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
 
           const SizedBox(height: 16),
 
-          const SizedBox(height: 16),
-
           // Tabla de movimientos
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream:
-                  FirebaseFirestore.instance
-                      .collection('kardex_movimientos')
-                      .where('referencia', isEqualTo: widget.referencia)
-                      .orderBy('fecha', descending: true)
-                      .snapshots(),
+              stream: () {
+                // ← NUEVO: query con filtro de sucursal igual que mobile
+                Query query = FirebaseFirestore.instance
+                    .collection('kardex_movimientos')
+                    .where('referencia', isEqualTo: widget.referencia);
+
+                if (sucursalFiltro != 'Todas') {
+                  query = query.where('sucursal', isEqualTo: sucursalFiltro);
+                }
+
+                return query.orderBy('fecha', descending: true).snapshots();
+              }(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -401,7 +438,7 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
                       return true;
                     }).toList();
 
-                // Calcular totales
+                // ← CORREGIDO: igual que mobile, incluye inventario_inicial en entradas
                 int totalEntradas = 0;
                 int totalSalidas = 0;
                 int totalRechazos = 0;
@@ -411,7 +448,7 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
                   final tipo = data['tipo'] as String;
                   final cantidad = (data['cantidad'] ?? 0) as int;
 
-                  if (tipo == 'entrada') {
+                  if (tipo == 'inventario_inicial' || tipo == 'entrada') {
                     totalEntradas += cantidad;
                   } else if (tipo == 'salida') {
                     totalSalidas += cantidad;
@@ -544,11 +581,12 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
                                         .compareTo(b['fecha'] as DateTime),
                                   );
 
-                              // Calcular saldos acumulados desde el más antiguo
+                              // ← CORREGIDO: igual que mobile, incluye inventario_inicial en saldo acumulado
                               int saldoAcumulado = 0;
 
                               for (var fila in filasOrdenadas) {
-                                if (fila['tipo'] == 'entrada') {
+                                if (fila['tipo'] == 'inventario_inicial' ||
+                                    fila['tipo'] == 'entrada') {
                                   saldoAcumulado += fila['cantidad'] as int;
                                 } else if (fila['tipo'] == 'salida' ||
                                     fila['tipo'] == 'rechazo') {
@@ -639,12 +677,7 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
                                     Map<String, dynamic> fila =
                                         filasReversed[index];
 
-                                    // Calcular inventario inicial
-                                    // Si es la primera fila (más reciente), el inventario inicial es el saldo de la siguiente fila
-                                    // Si es cualquier otra fila, el inventario inicial es el saldo de la fila anterior
                                     int inventarioInicial = 0;
-
-                                    // La fila siguiente en el tiempo (anterior en la lista reversed)
                                     int indexAnteriorEnTiempo =
                                         filasOrdenadas.length - 1 - index - 1;
                                     if (indexAnteriorEnTiempo >= 0) {
@@ -693,10 +726,14 @@ class _KardexDetailScreenState extends State<KardexDetailScreen> {
                                             ),
                                           ),
                                         ),
+                                        // ← CORREGIDO: igual que mobile, muestra cantidad si es inventario_inicial
                                         DataCell(
                                           Center(
                                             child: Text(
-                                              '$inventarioInicial',
+                                              fila['tipo'] ==
+                                                      'inventario_inicial'
+                                                  ? '${fila['cantidad']}'
+                                                  : '$inventarioInicial',
                                               style: const TextStyle(
                                                 fontSize: 13,
                                                 color: Colors.grey,

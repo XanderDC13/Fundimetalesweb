@@ -33,8 +33,6 @@ class _InventarioProcesoDeskScreenState
   final List<Map<String, String>> procesos = [
     {'value': 'todos', 'label': 'Todos los procesos'},
     {'value': 'bruto', 'label': 'Bruto'},
-    {'value': 'mecanizado', 'label': 'Mecanizado'},
-    {'value': 'pintura', 'label': 'Pintura'},
     {'value': 'bodega', 'label': 'Bodega'},
   ];
 
@@ -805,12 +803,7 @@ class _InventarioProcesoDeskScreenState
   Future<List<Map<String, dynamic>>>
   _obtenerProductosDeTodosLosProcesos() async {
     final List<Map<String, dynamic>> todosLosProductos = [];
-    final List<String> procesosInventario = [
-      'bruto',
-      'mecanizado',
-      'pintura',
-      'bodega',
-    ];
+    final List<String> procesosInventario = ['bruto', 'bodega'];
 
     // Determinar qué sedes consultar
     final List<String> sedesToQuery =
@@ -955,8 +948,17 @@ class _InventarioProcesoDeskScreenState
                 cumpleFiltroFecha = false;
               }
             }
+            bool cumpleSede = true;
+            if (!esSuperAdmin) {
+              cumpleSede = data['sede'] == sedeUsuario;
+            } else if (sedeSeleccionada != 'todas') {
+              cumpleSede = data['sede'] == sedeSeleccionada;
+            }
 
-            return cumpleBusqueda && cumpleProceso && cumpleFiltroFecha;
+            return cumpleBusqueda &&
+                cumpleProceso &&
+                cumpleFiltroFecha &&
+                cumpleSede;
           }).toList();
 
       if (filtered.isEmpty) {
